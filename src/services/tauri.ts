@@ -30,6 +30,12 @@ import {
   ErrorLogFilter,
   ErrorLogStats,
 } from '../types/errorLog';
+import {
+  DependencyInfo,
+  DependencyInstallProgress,
+  FirstRunStatus,
+  SystemDiagnostics,
+} from '../types/dependencies';
 
 export interface SystemInfo {
   os: string;
@@ -266,6 +272,24 @@ export const TauriService = {
     if (!selected) return [];
     if (Array.isArray(selected)) return selected;
     return [selected];
+  },
+
+  async selectFile(options?: {
+    extensions?: string[];
+    title?: string;
+    filters?: { name: string; extensions: string[] }[];
+  }): Promise<string | null> {
+    if (!isTauri()) return null;
+    const filters = options?.filters ?? (options?.extensions ? [{ name: 'Arquivos suportados', extensions: options.extensions }] : undefined);
+    const selected = await openDialog({
+      multiple: false,
+      directory: false,
+      title: options?.title ?? 'Selecionar arquivo',
+      filters,
+    });
+    if (!selected) return null;
+    if (Array.isArray(selected)) return selected[0] || null;
+    return selected;
   },
 
   async selectFolder(title?: string): Promise<string | null> {
@@ -514,6 +538,153 @@ export const TauriService = {
         callback(event.payload);
       }
     ).then((unlisten) => {
+      unlistenFn = unlisten;
+    });
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
+  },
+
+  // --- DEPENDENCY MANAGER & SETUP CENTER COMMANDS ---
+  async getSystemDiagnostics(): Promise<SystemDiagnostics> {
+    if (!isTauri()) {
+      return {
+        osVersion: 'Windows 11 (x64 Mock)',
+        arch: 'x86_64',
+        webview2Available: true,
+        webview2Version: '120.0',
+        appDataPath: 'C:\\Users\\Mock\\AppData\\Local\\ArceTools',
+        binariesPath: 'C:\\Users\\Mock\\AppData\\Local\\ArceTools\\binaries',
+        hasWritePermission: true,
+        availableDiskSpaceMb: 45000,
+        internetConnected: true,
+        dependencies: [
+          {
+            id: 'ffmpeg',
+            name: 'FFmpeg Multimídia',
+            description: 'Conversão, compressão e recorte de áudio e vídeo',
+            category: 'audio_video',
+            status: 'not_installed',
+            origin: 'unknown',
+            isManaged: false,
+            canInstall: true,
+            canUpdate: false,
+            canRemove: false,
+          },
+          {
+            id: 'ffprobe',
+            name: 'ffprobe Inspector',
+            description: 'Inspeção de metadados, codecs e durações de mídia',
+            category: 'audio_video',
+            status: 'not_installed',
+            origin: 'unknown',
+            isManaged: false,
+            canInstall: true,
+            canUpdate: false,
+            canRemove: false,
+          },
+          {
+            id: 'yt-dlp',
+            name: 'yt-dlp Downloader',
+            description: 'Motor de download de fontes permitidas sem DRM',
+            category: 'download',
+            status: 'not_installed',
+            origin: 'unknown',
+            isManaged: false,
+            canInstall: true,
+            canUpdate: false,
+            canRemove: false,
+          },
+          {
+            id: 'libreoffice',
+            name: 'LibreOffice Headless',
+            description: 'Conversão Word (.docx) para PDF (opcional)',
+            category: 'documents',
+            status: 'optional',
+            origin: 'unknown',
+            isManaged: false,
+            canInstall: true,
+            canUpdate: false,
+            canRemove: false,
+          },
+          {
+            id: 'webview2',
+            name: 'WebView2 Runtime',
+            description: 'Ambiente de renderização visual da interface',
+            category: 'system',
+            status: 'ready',
+            version: '120.0',
+            origin: 'system_path',
+            isManaged: false,
+            canInstall: false,
+            canUpdate: false,
+            canRemove: false,
+          },
+        ],
+      };
+    }
+    return await invoke<SystemDiagnostics>('get_system_diagnostics');
+  },
+
+  async getDependenciesStatus(): Promise<DependencyInfo[]> {
+    if (!isTauri()) {
+      const diag = await this.getSystemDiagnostics();
+      return diag.dependencies;
+    }
+    return await invoke<DependencyInfo[]>('get_dependencies_status');
+  },
+
+  async installDependency(name: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('install_dependency', { name });
+  },
+
+  async updateDependency(name: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('update_dependency', { name });
+  },
+
+  async removeManagedDependency(name: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('remove_managed_dependency', { name });
+  },
+
+  async verifyDependency(name: string): Promise<DependencyInfo> {
+    if (!isTauri()) {
+      const deps = await this.getDependenciesStatus();
+      return deps.find((d) => d.id === name) || deps[0];
+    }
+    return await invoke<DependencyInfo>('verify_dependency', { name });
+  },
+
+  async setCustomLibreOfficePath(path: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('set_custom_libreoffice_path', { path });
+  },
+
+  async getFirstRunStatus(): Promise<FirstRunStatus> {
+    if (!isTauri()) {
+      return {
+        isFirstRun: true,
+        completed: false,
+        dismissed: false,
+        allEssentialReady: false,
+      };
+    }
+    return await invoke<FirstRunStatus>('get_first_run_status');
+  },
+
+  async completeFirstRun(status: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('complete_first_run', { status });
+  },
+
+  onDependencyInstallProgress(callback: (progress: DependencyInstallProgress) => void) {
+    if (!isTauri()) return () => {};
+    let unlistenFn: (() => void) | null = null;
+    listen<DependencyInstallProgress>('dependency-install-progress', (event) => {
+      callback(event.payload);
+    }).then((unlisten) => {
       unlistenFn = unlisten;
     });
     return () => {

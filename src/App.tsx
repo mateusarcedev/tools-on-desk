@@ -21,6 +21,7 @@ import { ImagesScreen } from './components/screens/ImagesScreen';
 import { PosterStudioScreen } from './components/screens/PosterStudioScreen';
 import { HistoryScreen } from './components/screens/HistoryScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { SetupCenterModal } from './components/setup/SetupCenterModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [setupCenterOpen, setSetupCenterOpen] = useState(false);
 
   const [historyTab, setHistoryTab] = useState<'activities' | 'diagnostics'>('activities');
   const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
@@ -69,11 +71,12 @@ export const App: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [loadedTasks, loadedHistory, sysInfo, savedTheme] = await Promise.all([
+      const [loadedTasks, loadedHistory, sysInfo, savedTheme, firstRun] = await Promise.all([
         TauriService.getTasks(),
         TauriService.getHistory(),
         TauriService.getSystemInfo(),
         TauriService.getPreference('theme'),
+        TauriService.getFirstRunStatus(),
       ]);
 
       setTasks(loadedTasks);
@@ -81,6 +84,10 @@ export const App: React.FC = () => {
 
       if (savedTheme) {
         setThemePref(savedTheme as ThemePreference);
+      }
+
+      if (firstRun.isFirstRun || (!firstRun.completed && !firstRun.dismissed && !firstRun.allEssentialReady)) {
+        setSetupCenterOpen(true);
       }
 
       setSettings((prev) => ({
@@ -383,6 +390,7 @@ export const App: React.FC = () => {
                   if (patch.themePref) setThemePref(patch.themePref);
                 }}
                 onShowToast={showToast}
+                onOpenSetupCenter={() => setSetupCenterOpen(true)}
               />
             )}
           </ErrorBoundary>
@@ -411,6 +419,17 @@ export const App: React.FC = () => {
         onToggleTasks={() => setTasksOpen(true)}
         onCycleTheme={cycleTheme}
         onToggleCollapse={() => setCollapsed((prev) => !prev)}
+        onOpenSetupCenter={() => setSetupCenterOpen(true)}
+      />
+
+      <SetupCenterModal
+        isOpen={setupCenterOpen}
+        onClose={() => setSetupCenterOpen(false)}
+        onFinished={() => {
+          setSetupCenterOpen(false);
+          loadData();
+        }}
+        onShowToast={showToast}
       />
 
       <ToastContainer toasts={toasts} />

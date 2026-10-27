@@ -155,3 +155,37 @@ Este documento registra as principais decisões de arquitetura de software adota
   1. Normalizar as consultas SQL no SQLite usando `UPPER(severity) = UPPER(?)`, `UPPER(status) = UPPER(?)`, `LOWER(module) = LOWER(?)` e timestamps relativos do SQLite (`datetime('now', '-24 hours')`, `datetime('now', '-7 days')`, `datetime('now', '-30 days')`).
   2. Implementar uma janela de deduplicação temporal de 3 segundos em `Db::insert_error_log`, descartando entradas repetidas de `(error_code, module, technical_details/user_message)`.
 - **Consequências**: Filtros 100% confiáveis e consistentes entre frontend e backend, e prevenção contra tempestades de eventos no banco de dados local.
+
+---
+
+## ADR 018: Assistente de Inicialização (Setup Center) e Desacoplamento Modular
+- **Status**: Aprovado e Implementado (Missão 05)
+- **Contexto**: Usuários finais não-técnicos não devem precisar abrir PowerShell, executar comandos `winget` ou configurar variáveis de ambiente. Ao mesmo tempo, ferramentas que não necessitam de executáveis externos (como Poster Studio, Inspector de PDF, compressão e Lanczos3) não devem ser bloqueadas quando o usuário não tiver internet ou optar por configurar depois.
+- **Decisão**: Implementar o `SetupCenterModal` com 4 etapas (Boas-vindas $\rightarrow$ Verificação do Sistema $\rightarrow$ Configuração de Ferramentas $\rightarrow$ Tudo Pronto), persistindo o estado na tabela `preferences` do SQLite local e permitindo dispensar ("Configurar depois") ou reabrir pelas Configurações e Command Palette (`Ctrl+K`).
+- **Consequências**:
+  - Experiência acolhedora e acessível a qualquer perfil de usuário.
+  - Zero bloqueio arbitrário de módulos nativos.
+  - Estado preservado de forma confiável no banco de dados local.
+
+---
+
+## ADR 019: Instalação Isolada por Usuário em `%LOCALAPPDATA%`
+- **Status**: Aprovado e Implementado (Missão 05)
+- **Contexto**: Instalar executáveis em `C:\Program Files` requer elevação de privilégios de administrador (telas UAC do Windows), o que pode ser bloqueado em máquinas corporativas ou assustar usuários leigos. Além disso, modificar o `PATH` global pode conflitar com outras versões de ferramentas instaladas no sistema.
+- **Decisão**: Direcionar toda a instalação e gerenciamento de binários externos para a pasta do usuário em `%LOCALAPPDATA%\ArceTools\binaries\`.
+- **Consequências**:
+  - Instalação e atualização 100% funcionais sem solicitar permissões de administrador.
+  - Sem poluição do `PATH` do sistema operacional.
+  - Desinstalação e remoção limpas e isoladas.
+
+---
+
+## ADR 020: Prevenção contra Ataques de Travessia em ZIP (*Zip Slip*) e Substituição Atômica
+- **Status**: Aprovado e Implementado (Missão 05)
+- **Contexto**: O download e extração automatizados de pacotes compactados externos (`ffmpeg.zip`) criam risco de ataques do tipo *Zip Slip* (entradas contendo `../../` visando sobrescrever arquivos do sistema operacional). Além disso, atualizar o executável `yt-dlp.exe` em execução direta pode corromper o arquivo se o processo for interrompido no meio.
+- **Decisão**:
+  1. Utilizar a API `entry.enclosed_name()` da crate `zip` para validar cada entrada do arquivo compactado, abortando a extração caso haja qualquer escape do diretório base.
+  2. Implementar fluxo atômico de atualização para executáveis simples com arquivo temporário (`.tmp`), teste funcional de `--version` em staging e renomeação com backup (`.old`) para permitir rollback automático em caso de falha.
+- **Consequências**:
+  - Proteção criptográfica e estrutural completa contra ataques de travessia de caminho.
+  - Atualizações seguras sem risco de corrupção ou perda do motor anterior funcional.

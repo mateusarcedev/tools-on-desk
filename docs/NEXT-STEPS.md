@@ -1,10 +1,10 @@
-# ARCE TOOLS — Próximos Passos (Pós-Missão 04)
+# ARCE TOOLS — Próximos Passos (Pós-Missão 05)
 
-Com a **Missão 04 totalmente concluída** (Auditoria Geral, Correção de Bugs, Experiência do Usuário e Distribuição Windows com Instalador NSIS), este documento consolida o estado alcançado e estabelece o roteiro para os ciclos pós-lançamento.
+Com a **Missão 05 totalmente concluída** (Instalação Inteligente, Gerenciamento de Dependências e Experiência de Primeiro Uso com Setup Center), este documento consolida o estado do produto e traça o roteiro para os ciclos subsequentes.
 
 ---
 
-## 1. Conquistas Consolidadas (Missões 01 a 04)
+## 1. Conquistas Consolidadas (Missões 01 a 05)
 
 1. **Shell Desktop Premium**: 9 telas completas, design system Geist, modo escuro/claro nativo, atalhos de teclado globais (`Ctrl+K`, `Ctrl+J`) e controle de janela sem decorações duplicadas no Windows 11.
 2. **Poster Studio Avançado**: Paridade matemática com Rasterbator, 6 etapas, silhueta humana de 1,80 m, DPI tracking, retícula Halftone mono/color, Floyd-Steinberg e PDF milimétrico.
@@ -13,12 +13,13 @@ Com a **Missão 04 totalmente concluída** (Auditoria Geral, Correção de Bugs,
 5. **Document Engine**: PDF Inspector, união de PDFs com renumeração de identificadores de nós, divisão de PDFs (todos, intervalos, cada N), organizador e rotacionador de páginas sem sobrescrever original, compressão estrutural Deflate com medição real de bytes, conversor Word para PDF via LibreOffice headless com isolamento de perfil e conversor PDF para Word via docx-rs.
 6. **Central de Erros e Diagnósticos**: Tabela SQLite `error_logs` indexada, sanitização multicamadas com lookahead guard negativo, deduplicação temporal de 3 segundos, cópia nativa via Win32 clipboard (`arboard`), busca global não-paginada ("Copiar todos" e "Copiar filtrados"), exportação de relatórios estruturados nos formatos TXT e JSON e feedback visual no botão de cópia.
 7. **Robustez de Processos no Windows**: Encerramento forçado de árvore de processos (`taskkill /F /T /PID`) prevenindo subprocessos netos órfãos ao cancelar tarefas.
-8. **Distribuição Oficial Windows**: Geração bem-sucedida do instalador nativo NSIS (`Arce Tools_0.1.0_x64-setup.exe`, 3,97 MB) com desinstalação limpa e atalhos de sistema.
-9. **Desempenho Comprovado**: Inicialização a frio em 1,69 s, a quente em 934 ms, consumo de RAM em repouso de 28 MB (processo principal) e 141 MB (total com WebView2), 0,00% de uso de CPU em repouso.
+8. **Distribuição Oficial Windows**: Geração bem-sucedida do instalador nativo NSIS (`Arce Tools_0.1.0_x64-setup.exe`, 4,68 MB) com instalação por usuário (`currentUser`), desinstalação limpa e atalhos de sistema.
+9. **Setup Center & DependencyManager**: Assistente interativo de 4 etapas para primeira abertura, diagnóstico instantâneo de SO/disco/permissões, instalação assistida de FFmpeg/yt-dlp com validação de integridade SHA-256 e proteção Zip Slip, e interface completa em Configurações.
+10. **Desempenho Comprovado**: Inicialização a frio < 2,9 s, consumo de RAM em repouso de 26 MB (processo principal Rust) e 0,00% de uso de CPU em repouso.
 
 ---
 
-## 2. Roteiro Pós-Missão 04
+## 2. Roteiro Pós-Missão 05
 
 ### 2.1 Rebranding Definitivo e Identidade Visual Final
 - Aplicação do nome comercial definitivo escolhido pelo proprietário do produto.

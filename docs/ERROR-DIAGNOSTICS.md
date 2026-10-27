@@ -94,3 +94,19 @@ O módulo `src-tauri/src/utils/sanitizer.rs` aplica um pipeline robusto com 7 ca
 - Utiliza a crate `arboard` para interagir diretamente com a API Win32 do Windows (`OpenClipboard`, `SetClipboardData`).
 - Elimina restrições e permissões de segurança de WebView2 e iframes.
 - Possui fallback transparente para a API `navigator.clipboard`.
+
+---
+
+## 5. Códigos de Erro de Dependências (Missão 05)
+
+O subsistema `DependencyManager` registra incidentes na Central de Diagnósticos com códigos padronizados:
+
+- `DEPENDENCY_NOT_FOUND`: Executável ausente em todos os 4 níveis de busca.
+- `DEPENDENCY_DOWNLOAD_FAILED`: Falha de conexão TLS/HTTPS durante o download de pacotes.
+- `DEPENDENCY_HASH_MISMATCH`: Divergência no checksum criptográfico SHA-256 do arquivo baixado.
+- `DEPENDENCY_INSTALL_FAILED`: Falha na descompactação segura ou gravação do binário.
+- `DEPENDENCY_VERSION_UNSUPPORTED`: Versão incompatível do executável no sistema.
+- `DEPENDENCY_PERMISSION_DENIED`: Sem permissão de gravação em `%LOCALAPPDATA%\ArceTools\binaries\`.
+- `DEPENDENCY_VALIDATION_FAILED`: O binário baixado não respondeu com sucesso ao teste funcional (`--version`).
+- `DEPENDENCY_UPDATE_FAILED`: Falha durante a substituição atômica de um executável gerenciado.
+- `DEPENDENCY_ROLLBACK_FAILED`: Falha ao reverter para a versão `.old` após erro de atualização.

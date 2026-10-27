@@ -10,12 +10,14 @@ Este documento relata a validação técnica do pacote executável gerado para i
 |---|---|
 | **Nome do Arquivo** | `Arce Tools_0.1.0_x64-setup.exe` |
 | **Localização de Build** | `src-tauri/target/release/bundle/nsis/Arce Tools_0.1.0_x64-setup.exe` |
-| **Tamanho do Arquivo** | **4.161.673 bytes** (3,97 MB) |
+| **Tamanho do Arquivo** | **4.911.065 bytes** (4,68 MB) |
 | **Tecnologia de Empacotamento** | Nullsoft Scriptable Install System (NSIS 3.13) via Tauri 2 Bundler |
 | **Arquitetura-Alvo** | Windows x64 (MSVC ABI) |
 | **Versão do Produto** | 0.1.0 |
 | **Identificador Tauri** | `com.mateusarcedev.arce-tools` |
-| **Assinatura / Hash SHA-256** | `B405A51DAFBC56844F35C803977BD4E1FE4BD8D7C235DBFE7808E5F973DCC122` |
+| **Assinatura / Hash SHA-256** | `609597D7793DC486825523D3C0EF79D8719298312AED731331749E4838F20496` |
+| **Modo de Instalação** | `currentUser` (%LOCALAPPDATA%\Programs\Arce Tools) — sem telas UAC |
+| **Status de Assinatura Digital** | Não assinado comercialmente (auto-contido para validação local; SmartScreen exibirá aviso em downloads externos até aquisição de certificado EV/OV) |
 
 ---
 
@@ -24,13 +26,13 @@ Este documento relata a validação técnica do pacote executável gerado para i
 ### 2.1. Diretório de Instalação Padrão
 O instalador é configurado como **instalação por usuário** (sem necessidade de privilégios de administrador UAC para instalar):
 - Caminho: `%LOCALAPPDATA%\Programs\Arce Tools\`
-- Executável Principal: `arce-tools.exe` (12.318.720 bytes)
+- Executável Principal: `arce-tools.exe` (14.142.976 bytes)
 - Recursos embutidos: Assets web compilados (`dist/`), ícones (`.ico`), fontes Geist e Geist Mono.
 
 ### 2.2. Atalhos e Registro no Sistema
 - **Menu Iniciar:** Cria atalho em `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Arce Tools.lnk`.
 - **Desinstalador Oficial:** Cria `Uninstall Arce Tools.exe` e registra entrada nativa no painel **Aplicativos Instalados** do Windows 11.
-- **Desinstalação Limpa:** Remove completamente os binários e atalhos sem deixar chaves espúrias no registro do sistema.
+- **Desinstalação Limpa:** Remove completamente os binários e atalhos sem deixar chaves espúrias no registro do sistema. Dados pessoais e banco SQLite em `%LOCALAPPDATA%\ArceTools` são preservados por padrão.
 
 ---
 

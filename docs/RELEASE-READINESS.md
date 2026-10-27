@@ -8,12 +8,12 @@ Este documento avalia todos os critérios de qualidade, confiabilidade, seguran�
 
 | Dimensão de Qualidade | Status | Observações |
 |---|---|---|
-| **Segurança & Privacidade** | ✅ APROVADO | SSRF mitigado, sanitização em 7 camadas, logs sem credenciais |
-| **Estabilidade & Durabilidade** | ✅ APROVADO | SQLite com índices, deduplicação de erros, cancelamento limpo |
-| **Performance no Windows 11** | ✅ APROVADO | Cold start 1.69s, Warm start 0.93s, 28MB RAM processo principal |
-| **Cobertura de Testes** | ✅ APROVADO | 14 testes backend (Rust), 20 testes frontend (Vitest), 0 erros TS |
-| **Empacotamento & Distribuição** | ✅ APROVADO | Instalador oficial NSIS gerado (3.97 MB) com desinstalador |
-| **Experiência do Usuário (UX)** | ✅ APROVADO | Frameless window com barra única, suporte a 1024x720 a 1920x1080 |
+| **Segurança & Privacidade** | ✅ APROVADO | SSRF mitigado, sanitização em 7 camadas, proteção Zip Slip, TLS |
+| **Estabilidade & Durabilidade** | ✅ APROVADO | SQLite com índices, deduplicação de erros, cancelamento e rollback limpos |
+| **Performance no Windows 11** | ✅ APROVADO | Cold start < 2.9s, 26.11 MB RAM processo principal Rust |
+| **Cobertura de Testes** | ✅ APROVADO | 19 testes backend (Rust), 25 testes frontend (Vitest), 0 erros TS, Clippy limpo |
+| **Empacotamento & Distribuição** | ✅ APROVADO | Instalador oficial NSIS gerado (4,68 MB) com `currentUser` e desinstalador |
+| **Experiência do Usuário (UX)** | ✅ APROVADO | Setup Center em 4 etapas, barra unificada, zero terminal necessário |
 
 ---
 

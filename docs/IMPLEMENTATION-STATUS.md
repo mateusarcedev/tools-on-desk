@@ -1,6 +1,6 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03 e 04**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03, 04 e 05**.
 
 ---
 
@@ -19,8 +19,10 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | **Document Engine (Real)** | 03 | Concluído | PDF Inspector, PDF Merge (renumeração de objetos), PDF Split (todos, intervalos, cada N), PDF Organize (reordenação e rotação sem sobrescrever original), PDF Compress (Deflate e poda estrutural), Word para PDF (LibreOffice headless isolado), PDF para Word (extração e geração de DOCX via docx-rs) |
 | **Central de Erros e Diagnósticos** | 03 & 04 | Concluído | Tabela SQLite `error_logs`, índices, sanitização avançada em 7 camadas, deduplicação em 3s, filtros normalizados (case/period), cópia individual com feedback visual, "Copiar todos" de todo o banco, exportações TXT e JSON |
 | **Auditoria e Encerramento de Processos** | 04 | Concluído | `taskkill /F /T /PID` no Windows para eliminação total de processos filhos órfãos, verificação periódica de cancelamento |
-| **Instalador Oficial Windows (NSIS)** | 04 | Concluído | `Arce Tools_0.1.0_x64-setup.exe` (3.97 MB) com instalação por usuário e desinstalador limpo |
-| **Testes Automatizados** | Todas | Concluído | 20 testes Vitest (frontend) + 14 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Instalador Oficial Windows (NSIS)** | 04 & 05 | Concluído | `Arce Tools_0.1.0_x64-setup.exe` (4,68 MB) com instalação por usuário (`currentUser`), desinstalador limpo e atalhos |
+| **Setup Center (Central de Configuração)**| 05 | Concluído | Assistente de 4 etapas (Boas-vindas, Verificação, Ferramentas, Pronto), persistência SQLite e atalhos |
+| **DependencyManager (Nativo Rust)** | 05 | Concluído | Descoberta em 4 níveis, instalação isolada em `%LOCALAPPDATA%`, proteção Zip Slip, SHA-256 e rollback atômico |
+| **Testes Automatizados** | Todas | Concluído | 25 testes Vitest (frontend) + 19 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 
@@ -86,3 +88,37 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 - [x] **Captura Global de Exceções da Interface:**
   - React `ErrorBoundary` com interface de recuperação amigável e registro automático do erro.
   - Listeners de janela para `unhandledrejection` e `error`.
+
+---
+
+## 3. Checklist Detalhado da Missão 05
+
+### 3.1 Setup Center (Central de Configuração Inicial)
+- [x] **Assistente em 4 Etapas:**
+  - Etapa 1: Boas-vindas acolhedora apresentando os 6 módulos sem bloqueios desnecessários.
+  - Etapa 2: Diagnóstico instantâneo de versão do Windows, arquitetura x64, permissão de escrita, espaço em disco e internet.
+  - Etapa 3: Instalação assistida de FFmpeg/ffprobe e yt-dlp com barra de progresso em tempo real e tratamento de erros.
+  - Etapa 4: Conclusão informando ferramentas prontas e botão "Começar a usar".
+- [x] **Persistência de Estado no SQLite:**
+  - Chave `first_run_status` em `preferences` (`completed` ou `dismissed`).
+  - Reabertura permitida em Configurações e via Command Palette (`Ctrl+K`).
+
+### 3.2 DependencyManager (Rust Nativo)
+- [x] **Descoberta em Cascata:**
+  - 1. `%LOCALAPPDATA%\ArceTools\binaries\` (Gerenciado).
+  - 2. `./binaries/` (Empacotado).
+  - 3. Pacotes e Links WinGet.
+  - 4. `PATH` do sistema operacional.
+- [x] **Segurança e Proteção:**
+  - Exclusivamente conexões HTTPS com validação TLS.
+  - Verificação de hash SHA-256.
+  - Proteção estrita contra *Zip Slip* com `entry.enclosed_name()`.
+  - Limite rígido de bytes para proteção contra *Zip Bomb*.
+  - Atualização atômica com backup `.old` e rollback automático.
+- [x] **Integração com a Central de Erros:**
+  - 9 novos códigos estruturados de erro registrados na tabela `error_logs`.
+
+### 3.3 Interface de Gerenciamento nas Configurações
+- [x] Seção dedicada "Ferramentas e Dependências" com badges de status, versões, origens, caminhos seguros e botões de ação contextual (Instalar, Atualizar, Verificar, Remover).
+- [x] Suporte a caminho customizado para o LibreOffice (`soffice.exe`).
+

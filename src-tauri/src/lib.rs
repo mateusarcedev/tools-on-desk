@@ -1,3 +1,5 @@
+#![allow(dead_code, clippy::collapsible_if, clippy::should_implement_trait, clippy::large_enum_variant)]
+
 pub mod commands;
 pub mod domain;
 pub mod engines;
@@ -84,6 +86,15 @@ pub fn run() {
             commands::clear_error_logs,
             commands::log_frontend_error,
             commands::copy_to_clipboard,
+            commands::get_system_diagnostics,
+            commands::get_dependencies_status,
+            commands::install_dependency,
+            commands::update_dependency,
+            commands::remove_managed_dependency,
+            commands::verify_dependency,
+            commands::set_custom_libreoffice_path,
+            commands::get_first_run_status,
+            commands::complete_first_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

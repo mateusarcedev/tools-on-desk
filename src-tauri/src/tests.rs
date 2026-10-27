@@ -669,4 +669,118 @@ mod tests {
         // On headless CI / virtual desktop without display server, clipboard may return Ok or Err, but function must not panic
         let _ = res;
     }
+
+    #[test]
+    fn test_managed_binaries_directory_and_write_permission() {
+        let dir = crate::engines::DependencyManager::get_managed_binaries_dir();
+        assert!(dir.exists());
+        let has_perm = crate::engines::DependencyManager::check_directory_write_permission(&dir);
+        assert!(has_perm);
+    }
+
+    #[test]
+    fn test_first_run_status_lifecycle() {
+        let db = Db::new_in_memory().unwrap();
+
+        // 1. Initial state (first run)
+        let initial = crate::engines::DependencyManager::get_first_run_status(&db).unwrap();
+        assert!(initial.is_first_run);
+        assert!(!initial.completed);
+        assert!(!initial.dismissed);
+
+        // 2. Complete setup
+        crate::engines::DependencyManager::set_first_run_status(&db, "completed").unwrap();
+        let completed = crate::engines::DependencyManager::get_first_run_status(&db).unwrap();
+        assert!(!completed.is_first_run);
+        assert!(completed.completed);
+        assert!(!completed.dismissed);
+
+        // 3. Dismiss setup
+        crate::engines::DependencyManager::set_first_run_status(&db, "dismissed").unwrap();
+        let dismissed = crate::engines::DependencyManager::get_first_run_status(&db).unwrap();
+        assert!(!dismissed.is_first_run);
+        assert!(!dismissed.completed);
+        assert!(dismissed.dismissed);
+    }
+
+    #[test]
+    fn test_zip_slip_security_prevention() {
+        use std::io::Write;
+        let temp_dir = std::env::temp_dir().join("arce_test_zip_slip");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let zip_file_path = temp_dir.join("malicious.zip");
+        let file = std::fs::File::create(&zip_file_path).unwrap();
+        let mut zip_writer = zip::ZipWriter::new(file);
+
+        // Intentionally create an entry with directory traversal attempt
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        zip_writer.start_file("../../evil_slip.exe", options).unwrap();
+        zip_writer.write_all(b"malicious payload").unwrap();
+        zip_writer.finish().unwrap();
+
+        let extract_target = temp_dir.join("extract_out");
+        std::fs::create_dir_all(&extract_target).unwrap();
+
+        // Must reject extraction due to path traversal
+        let result = crate::engines::DependencyManager::extract_ffmpeg_safe(&zip_file_path, &extract_target);
+        assert!(result.is_err());
+        let err_str = result.err().unwrap().to_string();
+        assert!(err_str.contains("Zip Slip") || err_str.contains("travessia"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_extract_valid_ffmpeg_and_ffprobe_zip() {
+        use std::io::Write;
+        let temp_dir = std::env::temp_dir().join("arce_test_valid_zip");
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let zip_file_path = temp_dir.join("valid_ffmpeg.zip");
+        let file = std::fs::File::create(&zip_file_path).unwrap();
+        let mut zip_writer = zip::ZipWriter::new(file);
+
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        // Add dummy ffmpeg and ffprobe inside subfolder (standard ffmpeg release structure)
+        let ffmpeg_name = if cfg!(windows) { "ffmpeg-7.1/bin/ffmpeg.exe" } else { "ffmpeg-7.1/bin/ffmpeg" };
+        let ffprobe_name = if cfg!(windows) { "ffmpeg-7.1/bin/ffprobe.exe" } else { "ffmpeg-7.1/bin/ffprobe" };
+
+        zip_writer.start_file(ffmpeg_name, options).unwrap();
+        zip_writer.write_all(b"dummy ffmpeg binary").unwrap();
+
+        zip_writer.start_file(ffprobe_name, options).unwrap();
+        zip_writer.write_all(b"dummy ffprobe binary").unwrap();
+
+        zip_writer.finish().unwrap();
+
+        let extract_target = temp_dir.join("extract_out");
+        std::fs::create_dir_all(&extract_target).unwrap();
+
+        let (f1, f2) = crate::engines::DependencyManager::extract_ffmpeg_safe(&zip_file_path, &extract_target).unwrap();
+        assert!(f1.is_file());
+        assert!(f2.is_file());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[tokio::test]
+    async fn test_inspect_tool_with_missing_binary() {
+        let info = crate::engines::DependencyManager::inspect_tool(
+            "unknown_binary_xyz_123",
+            "Teste",
+            "Desc",
+            "test",
+        )
+        .await;
+
+        assert_eq!(info.status, crate::domain::DependencyStatus::NotInstalled);
+        assert!(info.can_install);
+        assert!(!info.is_managed);
+    }
 }

@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod dependency;
 pub mod document;
 pub mod download;
 pub mod error_log;
@@ -10,6 +11,10 @@ pub mod task;
 pub mod video;
 
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
+pub use dependency::{
+    DependencyInfo, DependencyInstallProgress, DependencyOrigin, DependencyStatus, FirstRunStatus,
+    SystemDiagnostics,
+};
 pub use document::{
     DocumentOperationResult, LibreOfficeStatus, PdfCompressOptions, PdfInfo, PdfMergeOptions,
     PdfOrganizeOptions, PdfPageAction, PdfPageInfo, PdfSplitOptions, PdfToDocxOptions,

@@ -6,15 +6,16 @@ O design foi rigorosamente reproduzido a partir do protótipo oficial do **Claud
 
 ---
 
-## 📦 Distribuição Oficial Windows 11 (Missão 04)
+## 📦 Distribuição Oficial Windows 11 (Missões 04 e 05)
 
 O aplicativo conta com instalador nativo **NSIS** oficial gerado para arquitetura x64 com runtime WebView2 integrado do sistema:
 
 - **Instalador Oficial:** `src-tauri/target/release/bundle/nsis/Arce Tools_0.1.0_x64-setup.exe`
-- **Tamanho do Instalador:** **3,97 MB** (4.161.673 bytes)
-- **Hash SHA-256:** `B405A51DAFBC56844F35C803977BD4E1FE4BD8D7C235DBFE7808E5F973DCC122`
-- **Executável Principal:** `src-tauri/target/release/arce-tools.exe` (11,75 MB / 12.318.720 bytes)
-- **Desinstalação:** Suporte a desinstalação limpa via Painel de Controle e Menu Iniciar.
+- **Tamanho do Instalador:** **4,68 MB** (4.911.065 bytes)
+- **Hash SHA-256:** `609597D7793DC486825523D3C0EF79D8719298312AED731331749E4838F20496`
+- **Executável Principal:** `src-tauri/target/release/arce-tools.exe` (13,48 MB / 14.142.976 bytes)
+- **Modo de Instalação:** `currentUser` (%LOCALAPPDATA%\Programs\Arce Tools) — sem necessidade de permissões de administrador (UAC).
+- **Desinstalação:** Suporte a desinstalação limpa via Painel de Controle e Menu Iniciar, com preservação de dados e histórico no SQLite.
 
 ---
 
@@ -128,6 +129,19 @@ Medições realizadas em ambiente de produção com o binário release nativo:
 - Paleta universal de comandos (`Ctrl+K`) e gaveta de tarefas ativas (`Ctrl+J`).
 - Barra de título unificada sem bordas duplicadas do Windows 11 (`decorations: false` e `data-tauri-drag-region`).
 
+### 9. Central de Configuração Inicial (Setup Center) & DependencyManager (Missão 05)
+- **Assistente Interativo de Primeiro Uso (Setup Center):**
+  - Exibido automaticamente na primeira abertura ou reaberto pelas Configurações / Command Palette.
+  - 4 etapas: Boas-vindas $\rightarrow$ Diagnóstico do Sistema $\rightarrow$ Configuração de Ferramentas $\rightarrow$ Tudo Pronto.
+  - Diagnóstico instantâneo de SO, arquitetura, permissão de gravação e espaço livre em disco.
+- **DependencyManager Nativo (Rust):**
+  - Descoberta inteligente em cascata: pasta gerenciada `%LOCALAPPDATA%\ArceTools\binaries\`, `./binaries/`, WinGet e `PATH`.
+  - Instalação assistida de FFmpeg/ffprobe e yt-dlp com validação TLS, hash SHA-256 e barra de progresso em tempo real.
+  - Proteção rígida contra ataques de travessia em arquivos compactados (*Zip Slip*).
+  - Atualização atômica com rollback automático em caso de falha.
+  - Remoção segura restrita à pasta gerenciada sem afetar utilitários globais do sistema operacional.
+- **Seção Ferramentas e Dependências nas Configurações:** Visão geral de status, origens, versões, caminhos seguros e botões contextuais (Instalar, Atualizar, Verificar, Remover e Configurar caminho para LibreOffice).
+
 ---
 
 ## 🛠️ Stack Tecnológica
@@ -153,7 +167,7 @@ A base de código conta com cobertura completa em frontend e backend:
 ```bash
 # Execução dos testes de interface e componentes (Vitest)
 pnpm test
-# Resultado: 20/20 testes aprovados (100% de sucesso)
+# Resultado: 25/25 testes aprovados (100% de sucesso)
 
 # Verificação estrita de tipagem TypeScript
 pnpm build
@@ -161,7 +175,11 @@ pnpm build
 
 # Execução dos testes unitários de backend nativo (Cargo MSVC)
 cargo test --lib
-# Resultado: 14/14 testes aprovados (100% de sucesso)
+# Resultado: 19/19 testes aprovados (100% de sucesso)
+
+# Verificação de linter e estilo Rust
+cargo clippy --lib -- -D warnings
+# Resultado: 0 warnings, aprovado
 ```
 
 ---

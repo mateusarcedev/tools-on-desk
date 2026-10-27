@@ -18,6 +18,9 @@ pub enum AppError {
     #[error("Erro de área de transferência: {0}")]
     Clipboard(String),
 
+    #[error("Erro no gerenciamento de dependências: {0}")]
+    Dependency(String),
+
     #[error("Tarefa '{0}' não encontrada")]
     TaskNotFound(String),
 
@@ -51,6 +54,27 @@ impl AppError {
                 }
             }
             AppError::Clipboard(_) => "CLIPBOARD_ERROR",
+            AppError::Dependency(msg) => {
+                if msg.contains("não encontrada") || msg.contains("not found") {
+                    "DEPENDENCY_NOT_FOUND"
+                } else if msg.contains("hash") || msg.contains("integridade") || msg.contains("checksum") {
+                    "DEPENDENCY_HASH_MISMATCH"
+                } else if msg.contains("download") || msg.contains("baixar") {
+                    "DEPENDENCY_DOWNLOAD_FAILED"
+                } else if msg.contains("permissão") || msg.contains("permission") {
+                    "DEPENDENCY_PERMISSION_DENIED"
+                } else if msg.contains("versão") || msg.contains("incompatível") {
+                    "DEPENDENCY_VERSION_UNSUPPORTED"
+                } else if msg.contains("validação") || msg.contains("validar") {
+                    "DEPENDENCY_VALIDATION_FAILED"
+                } else if msg.contains("atualização") || msg.contains("update") {
+                    "DEPENDENCY_UPDATE_FAILED"
+                } else if msg.contains("rollback") {
+                    "DEPENDENCY_ROLLBACK_FAILED"
+                } else {
+                    "DEPENDENCY_INSTALL_FAILED"
+                }
+            }
             AppError::TaskNotFound(_) => "TASK_NOT_FOUND",
             AppError::InvalidInput(msg) => {
                 if msg.contains("SSRF") || msg.contains("local") || msg.contains("privad") {
@@ -67,6 +91,7 @@ impl AppError {
     pub fn user_friendly_message(&self) -> String {
         match self {
             AppError::Document(msg) => msg.clone(),
+            AppError::Dependency(msg) => msg.clone(),
             AppError::InvalidInput(msg) => msg.clone(),
             AppError::Canceled => "A operação foi cancelada antes da conclusão.".to_string(),
             AppError::TaskNotFound(id) => format!("A tarefa '{}' não foi localizada no sistema.", id),

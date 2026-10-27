@@ -4,104 +4,128 @@ import { Button } from '../common/Button';
 import { Switch } from '../common/Switch';
 import { AppSettings, ThemePreference } from '../../types/settings';
 import { TauriService } from '../../services/tauri';
-import { ExternalToolsStatus } from '../../types/tools';
-import { LibreOfficeStatus } from '../../types/document';
 import { ErrorLogStats } from '../../types/errorLog';
+import { DependencyInfo, DependencyInstallProgress } from '../../types/dependencies';
 
 interface SettingsScreenProps {
   settings: AppSettings;
   onUpdateSettings: (newSettings: Partial<AppSettings>) => void;
   onShowToast: (msg: string, kind?: 'ok' | 'err' | 'warn') => void;
+  onOpenSetupCenter?: () => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   settings,
   onUpdateSettings,
   onShowToast,
+  onOpenSetupCenter,
 }) => {
-  const [toolsStatus, setToolsStatus] = useState<ExternalToolsStatus | null>(null);
-  const [libreOfficeStatus, setLibreOfficeStatus] = useState<LibreOfficeStatus | null>(null);
   const [errorStats, setErrorStats] = useState<ErrorLogStats | null>(null);
   const [retentionDays, setRetentionDays] = useState<number>(30);
 
+  const [dependencies, setDependencies] = useState<DependencyInfo[]>([]);
+  const [installingDep, setInstallingDep] = useState<string | null>(null);
+  const [installProgress, setInstallProgress] = useState<DependencyInstallProgress | null>(null);
+
+  const loadDependencies = async () => {
+    try {
+      const deps = await TauriService.getDependenciesStatus();
+      setDependencies(deps);
+    } catch (err) {
+      console.warn('Failed to load dependencies:', err);
+    }
+  };
+
   useEffect(() => {
-    TauriService.checkExternalTools()
-      .then((status) => setToolsStatus(status))
-      .catch(() => {});
-
-    TauriService.checkLibreOfficeStatus()
-      .then((status) => setLibreOfficeStatus(status))
-      .catch(() => {});
-
     TauriService.getErrorStats()
       .then((stats) => setErrorStats(stats))
       .catch(() => {});
+
+    loadDependencies();
+
+    const unlisten = TauriService.onDependencyInstallProgress((prog) => {
+      setInstallProgress(prog);
+      if (prog.phase === 'completed') {
+        loadDependencies();
+      }
+    });
+
+    return () => {
+      unlisten();
+    };
   }, []);
+
+  const handleInstallDep = async (depId: string) => {
+    setInstallingDep(depId);
+    onShowToast(`Iniciando instalação de ${depId}...`, 'ok');
+    try {
+      await TauriService.installDependency(depId);
+      onShowToast(`Componente ${depId} instalado e validado com sucesso!`, 'ok');
+      await loadDependencies();
+    } catch (err: any) {
+      onShowToast(`Erro ao instalar ${depId}: ${err?.message || err}`, 'err');
+    } finally {
+      setInstallingDep(null);
+      setInstallProgress(null);
+    }
+  };
+
+  const handleUpdateDep = async (depId: string) => {
+    setInstallingDep(depId);
+    onShowToast(`Buscando atualizações para ${depId}...`, 'ok');
+    try {
+      await TauriService.updateDependency(depId);
+      onShowToast(`Componente ${depId} atualizado com sucesso!`, 'ok');
+      await loadDependencies();
+    } catch (err: any) {
+      onShowToast(`Erro ao atualizar ${depId}: ${err?.message || err}`, 'err');
+    } finally {
+      setInstallingDep(null);
+      setInstallProgress(null);
+    }
+  };
+
+  const handleVerifyDep = async (depId: string) => {
+    onShowToast(`Verificando integridade de ${depId}...`);
+    try {
+      const updated = await TauriService.verifyDependency(depId);
+      setDependencies((prev) => prev.map((d) => (d.id === depId ? updated : d)));
+      onShowToast(`Verificação concluída: status ${updated.status}`);
+    } catch (err: any) {
+      onShowToast(`Falha na checagem: ${err?.message || err}`, 'err');
+    }
+  };
+
+  const handleRemoveDep = async (depId: string) => {
+    try {
+      await TauriService.removeManagedDependency(depId);
+      onShowToast(`Componente gerenciado ${depId} removido com sucesso.`);
+      await loadDependencies();
+    } catch (err: any) {
+      onShowToast(`Erro ao remover: ${err?.message || err}`, 'err');
+    }
+  };
+
+  const handleSelectLibreOfficeCustom = async () => {
+    const selected = await TauriService.selectFile({
+      title: 'Localizar soffice.exe do LibreOffice',
+      filters: [{ name: 'Executável', extensions: ['exe'] }],
+    });
+    if (selected) {
+      try {
+        await TauriService.setCustomLibreOfficePath(selected);
+        onShowToast('Caminho do LibreOffice configurado com sucesso!');
+        await loadDependencies();
+      } catch (err: any) {
+        onShowToast(`Falha ao validar LibreOffice: ${err?.message || err}`, 'err');
+      }
+    }
+  };
 
   const themes: { id: ThemePreference; label: string; icon: string }[] = [
     { id: 'Escuro', label: 'Escuro', icon: 'moon' },
     { id: 'Claro', label: 'Claro', icon: 'sun' },
     { id: 'Sistema', label: 'Sistema', icon: 'system' },
-  ];
-
-  const components = [
-    {
-      id: 'rust',
-      name: 'Motor Rust Nativo',
-      desc: 'Cálculos matemáticos, persistência SQLite e geração de PDF',
-      ver: '1.99 MSVC',
-      status: 'installed',
-    },
-    {
-      id: 'image',
-      name: 'Motor de Imagens (Rust)',
-      desc: 'Decodificação e codificação PNG/JPEG com Lanczos3',
-      ver: '0.25 (Lanczos3)',
-      status: 'installed',
-    },
-    {
-      id: 'ffmpeg',
-      name: 'FFmpeg Multimídia',
-      desc: 'Conversão, compressão e recorte de áudio e vídeo de alta performance',
-      ver: toolsStatus?.ffmpeg.available
-        ? `${toolsStatus.ffmpeg.version?.split(' ')[2] || '8.1.1'} (${toolsStatus.ffmpeg.license || 'Operacional'})`
-        : 'Não detectado',
-      status: toolsStatus?.ffmpeg.available ? 'installed' : 'missing',
-    },
-    {
-      id: 'ffprobe',
-      name: 'ffprobe Inspector',
-      desc: 'Inspeção precisa de streams, codecs, taxas de amostragem e durações',
-      ver: toolsStatus?.ffprobe.available
-        ? `${toolsStatus.ffprobe.version?.split(' ')[2] || '8.1.1'}`
-        : 'Não detectado',
-      status: toolsStatus?.ffprobe.available ? 'installed' : 'missing',
-    },
-    {
-      id: 'ytdlp',
-      name: 'yt-dlp',
-      desc: 'Downloads de fontes permitidas sem bypass de DRM e com respeito a direitos autorais',
-      ver: toolsStatus?.ytDlp.available
-        ? `${toolsStatus.ytDlp.version || '2026.10.26'} (${toolsStatus.ytDlp.license || 'Unlicense'})`
-        : 'Não detectado',
-      status: toolsStatus?.ytDlp.available ? 'installed' : 'missing',
-    },
-    {
-      id: 'docengine',
-      name: 'Document Engine (lopdf + docx-rs)',
-      desc: 'Inspeção, divisão, mesclagem, rotação e conversão estruturada PDF ↔ DOCX',
-      ver: 'lopdf 0.46 + docx-rs 0.4',
-      status: 'installed',
-    },
-    {
-      id: 'lo',
-      name: 'LibreOffice Headless',
-      desc: 'Conversões avançadas de Word para PDF com fidelidade de layout e fontes',
-      ver: libreOfficeStatus?.isAvailable
-        ? `${libreOfficeStatus.version || 'Ativo'} (${libreOfficeStatus.path || 'Local'})`
-        : 'Não detectado',
-      status: libreOfficeStatus?.isAvailable ? 'installed' : 'missing',
-    },
   ];
 
   const handleSelectDownloadFolder = async () => {
@@ -393,7 +417,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
         />
       </div>
 
-      {/* Components & Engine Status */}
+      {/* Ferramentas e Dependências (Missão 05) */}
       <div
         style={{
           background: 'var(--surface)',
@@ -402,52 +426,288 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           padding: 20,
           display: 'flex',
           flexDirection: 'column',
-          gap: 12,
+          gap: 16,
         }}
       >
-        <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--fg)', margin: 0 }}>
-          Motores e Componentes do Sistema
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--fg)', margin: 0 }}>
+              Ferramentas e Dependências
+            </h2>
+            <div style={{ fontSize: '12px', color: 'var(--fg-dim)', marginTop: 2 }}>
+              Gerencie os utilitários externos, instalações isoladas por usuário e atualizações automáticas.
+            </div>
+          </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {components.map((c) => (
-            <div
-              key={c.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 12px',
-                background: 'var(--surface-2)',
-                borderRadius: 8,
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 600, fontSize: '12.5px', color: 'var(--fg)' }}>
-                  {c.name}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--fg-dim)', marginTop: 2 }}>
-                  {c.desc}
-                </div>
+          {onOpenSetupCenter && (
+            <Button size="sm" variant="secondary" onClick={onOpenSetupCenter}>
+              <Icon name="tool" size={14} /> Reabrir Assistente de Configuração
+            </Button>
+          )}
+        </div>
+
+        {/* Active installation / update progress banner */}
+        {installingDep && (
+          <div
+            style={{
+              background: 'var(--surface-2)',
+              border: '1px solid var(--mint)',
+              borderRadius: 8,
+              padding: 14,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--mint)' }}>
+                Processando: {installingDep}
               </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    fontFamily: 'var(--mono)',
-                    fontSize: '11px',
-                    color: c.status === 'installed' ? 'var(--mint)' : 'var(--fg-faint)',
-                    background: 'var(--surface)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    border: '1px solid var(--line)',
-                  }}
-                >
-                  {c.ver}
-                </span>
+              <div style={{ fontSize: '12px', fontFamily: 'var(--mono)', color: 'var(--fg)' }}>
+                {installProgress?.percentage || 0}%
               </div>
             </div>
-          ))}
+
+            <div style={{ width: '100%', height: 4, background: 'var(--surface)', borderRadius: 2, overflow: 'hidden' }}>
+              <div
+                style={{
+                  height: '100%',
+                  width: `${installProgress?.percentage || 0}%`,
+                  background: 'var(--mint)',
+                  transition: 'width 0.2s ease',
+                }}
+              />
+            </div>
+
+            <div style={{ fontSize: '11px', color: 'var(--fg-dim)' }}>
+              {installProgress?.message || 'Transferindo dados com validação TLS/SHA-256...'}
+            </div>
+          </div>
+        )}
+
+        {/* Managed & External Dependencies List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {dependencies.map((dep) => {
+            const formatOrigin = (orig: string) => {
+              switch (orig) {
+                case 'managed':
+                  return 'Gerenciado pelo Arce Tools (%LOCALAPPDATA%)';
+                case 'win_get':
+                  return 'Instalação WinGet';
+                case 'system_path':
+                  return 'PATH do Sistema';
+                case 'custom_path':
+                  return 'Caminho Personalizado';
+                default:
+                  return 'Não instalado';
+              }
+            };
+
+            const getBadge = () => {
+              switch (dep.status) {
+                case 'ready':
+                  return (
+                    <span
+                      style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--mint)',
+                        background: 'rgba(21, 245, 186, 0.1)',
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid rgba(21, 245, 186, 0.25)',
+                      }}
+                    >
+                      Pronto
+                    </span>
+                  );
+                case 'not_installed':
+                  return (
+                    <span
+                      style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--amber)',
+                        background: 'rgba(255, 170, 0, 0.1)',
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid rgba(255, 170, 0, 0.25)',
+                      }}
+                    >
+                      Não instalado
+                    </span>
+                  );
+                case 'optional':
+                  return (
+                    <span
+                      style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--fg-dim)',
+                        background: 'var(--surface-2)',
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid var(--line)',
+                      }}
+                    >
+                      Opcional
+                    </span>
+                  );
+                default:
+                  return (
+                    <span
+                      style={{
+                        fontFamily: 'var(--mono)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: 'var(--pink)',
+                        background: 'rgba(255, 77, 141, 0.1)',
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        border: '1px solid rgba(255, 77, 141, 0.25)',
+                      }}
+                    >
+                      Falha na checagem
+                    </span>
+                  );
+              }
+            };
+
+            return (
+              <div
+                key={dep.id}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                  padding: '12px 14px',
+                  background: 'var(--surface-2)',
+                  border: '1px solid var(--line)',
+                  borderRadius: 10,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--fg)' }}>
+                        {dep.name}
+                      </span>
+                      {getBadge()}
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: 'var(--fg-dim)', marginTop: 2 }}>
+                      {dep.description}
+                    </div>
+                  </div>
+
+                  {/* Actions depending on state */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {(dep.status === 'not_installed' || dep.canInstall) && (
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        disabled={!!installingDep}
+                        onClick={() => handleInstallDep(dep.id)}
+                      >
+                        Instalar
+                      </Button>
+                    )}
+
+                    {dep.canUpdate && dep.status === 'ready' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!!installingDep}
+                        onClick={() => handleUpdateDep(dep.id)}
+                      >
+                        Atualizar
+                      </Button>
+                    )}
+
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={!!installingDep}
+                      onClick={() => handleVerifyDep(dep.id)}
+                    >
+                      Verificar
+                    </Button>
+
+                    {dep.isManaged && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={!!installingDep}
+                        onClick={() => handleRemoveDep(dep.id)}
+                      >
+                        Remover
+                      </Button>
+                    )}
+
+                    {dep.id === 'libreoffice' && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={!!installingDep}
+                        onClick={handleSelectLibreOfficeCustom}
+                      >
+                        Configurar caminho
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metadata Row */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 8,
+                    paddingTop: 8,
+                    borderTop: '1px solid rgba(255, 255, 255, 0.04)',
+                    fontSize: '11px',
+                  }}
+                >
+                  <div>
+                    <span style={{ color: 'var(--fg-dim)' }}>Versão: </span>
+                    <span style={{ fontFamily: 'var(--mono)', color: 'var(--fg)' }}>
+                      {dep.version || 'Não detectada'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span style={{ color: 'var(--fg-dim)' }}>Origem: </span>
+                    <span style={{ color: 'var(--fg)' }}>{formatOrigin(dep.origin)}</span>
+                  </div>
+
+                  {dep.path && (
+                    <div style={{ gridColumn: '1 / -1', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--fg-dim)' }}>Caminho: </span>
+                      <span style={{ fontFamily: 'var(--mono)', color: 'var(--fg-faint)', fontSize: '10.5px' }}>
+                        {dep.path}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Native Engines Summary */}
+        <div style={{ paddingTop: 8, borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--fg-dim)' }}>
+            Componentes Nativos Internos (Sem Dependências Externas):
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: '11px', color: 'var(--fg-dim)' }}>
+            <div>• Motor Rust Nativo 1.99 MSVC</div>
+            <div>• Motor de Imagens (Lanczos3)</div>
+            <div>• Poster Studio (PDF 1.4 Vectorial)</div>
+            <div>• Document Engine (lopdf + docx-rs)</div>
+            <div>• Banco de Dados SQLite (rusqlite WAL)</div>
+          </div>
         </div>
       </div>
 

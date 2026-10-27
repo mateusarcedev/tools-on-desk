@@ -20,6 +20,7 @@ interface CommandPaletteProps {
   onToggleTasks: () => void;
   onCycleTheme: () => void;
   onToggleCollapse: () => void;
+  onOpenSetupCenter?: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -29,6 +30,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onToggleTasks,
   onCycleTheme,
   onToggleCollapse,
+  onOpenSetupCenter,
 }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -213,6 +215,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         onToggleCollapse();
       },
     },
+    ...(onOpenSetupCenter
+      ? [
+          {
+            id: 'act-setup-center',
+            label: 'Configurar Ferramentas (Setup Center)',
+            icon: 'tool',
+            hint: 'Assistente',
+            group: 'Ações' as const,
+            keywords: 'dependencias ffmpeg yt-dlp setup instalacao componentes primeiro uso',
+            run: () => {
+              onClose();
+              onOpenSetupCenter();
+            },
+          },
+        ]
+      : []),
   ];
 
   const norm = (s: string) =>

@@ -139,6 +139,19 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
 - **Acesso Nativo ao Clipboard Win32:** Interação direta com as APIs `OpenClipboard` e `SetClipboardData` via crate `arboard 3.7`.
 - **Exportações Globais:** Consulta não-paginada de todo o histórico no SQLite via `get_all_error_logs_for_export`, permitindo cópia e exportação integral em formatos estruturados TXT e JSON.
 
+### 3.8 Gerenciador de Dependências (`dependency_manager.rs` — Missão 05)
+- **Descoberta em Cascata (4 Níveis):** Resolução ordenada por prioridade (Gerenciado `%LOCALAPPDATA%\ArceTools\binaries\` $\rightarrow$ Empacotado $\rightarrow$ WinGet $\rightarrow$ `PATH`).
+- **Instalação Isolada sem Privilégios Administrativos:** Instalação e atualização sem necessidade de elevação UAC.
+- **Segurança Criptográfica & Zip Slip Guard:** Conexões exclusivamente HTTPS com verificação TLS, validação de hash SHA-256 e proteção rígida contra travessia de caminho com `entry.enclosed_name()`.
+- **Atualização Atômica com Rollback:** Download em arquivo temporário `.tmp`, validação funcional de `--version` em staging e substituição atômica com backup `.old` e rollback automático em caso de falha.
+- **Remoção Segura de Gerenciados:** Exclusão restrita a arquivos do diretório gerenciado, sem alterar o sistema operacional.
+
+### 3.9 Central de Configuração Inicial (Setup Center — Missão 05)
+- Assistente interativo em 4 etapas (Boas-vindas $\rightarrow$ Verificação do Sistema $\rightarrow$ Configuração de Ferramentas $\rightarrow$ Tudo Pronto).
+- Diagnóstico automático de OS, arquitetura, permissão de escrita e espaço em disco.
+- Barra de progresso em tempo real durante downloads de componentes (`dependency-install-progress`).
+- Persistência no SQLite (`first_run_status`) e reabertura fácil pelas Configurações ou `Ctrl+K`.
+
 ---
 
 ## 4. Contratos IPC Atualizados (Tauri Commands)
@@ -180,12 +193,21 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
 | `clear_error_logs` | `olderThanDays: Option<u32>` | `u64` | Limpa erros respeitando a política de retenção |
 | `get_error_stats` | Nenhum | `ErrorStats` | Retorna contagens de erros e tamanho do banco em KB |
 | `copy_to_clipboard` | `text: String` | `()` | Copia texto diretamente para a área de transferência Win32 |
+| `get_system_diagnostics`| Nenhum | `SystemDiagnostics` | Retorna diagnóstico do sistema (SO, arch, disco, permissão, ferramentas) |
+| `get_dependencies_status`| Nenhum | `Vec<DependencyInfo>` | Retorna status, origens e versões de todas as ferramentas externas |
+| `install_dependency` | `name: String` | `()` | Instala assistidamente FFmpeg ou yt-dlp com validação e hash |
+| `update_dependency` | `name: String` | `()` | Executa atualização atômica com rollback para yt-dlp ou FFmpeg |
+| `remove_managed_dependency` | `name: String` | `()` | Remove de forma segura binário gerenciado em `%LOCALAPPDATA%` |
+| `verify_dependency` | `name: String` | `DependencyInfo` | Re-executa verificação funcional imediata de um utilitário |
+| `set_custom_libreoffice_path` | `path: String` | `()` | Configura caminho customizado validado para `soffice.exe` |
+| `get_first_run_status` | Nenhum | `FirstRunStatus` | Consulta estado da primeira inicialização no SQLite |
+| `complete_first_run` | `status: String` | `()` | Grava status (`completed` ou `dismissed`) no SQLite |
 | `get_system_info` | Nenhum | `SystemInfo` | Pastas padrão do sistema e SO |
 | `open_path_in_explorer` | `path: String` | `()` | Revela arquivo ou pasta no Windows Explorer |
 
 ---
 
-## 5. Arquitetura de Empacotamento e Distribuição Windows (Missão 04)
+## 5. Arquitetura de Empacotamento e Distribuição Windows (Missões 04 e 05)
 
 ```mermaid
 flowchart TD
@@ -196,8 +218,8 @@ flowchart TD
     end
 
     subgraph OutputArtifacts ["Artefatos de Saída"]
-        Exe["Executável Principal (11,75 MB)\narce-tools.exe"]
-        Installer["Instalador Oficial NSIS (3,97 MB)\nArce Tools_0.1.0_x64-setup.exe"]
+        Exe["Executável Principal (13,48 MB)\narce-tools.exe"]
+        Installer["Instalador Oficial NSIS (4,68 MB)\nArce Tools_0.1.0_x64-setup.exe"]
     end
 
     subgraph RuntimeModel ["Modelo de Descoberta em Tempo de Execução"]
@@ -214,6 +236,6 @@ flowchart TD
     Exe -.-> RuntimeModel
 ```
 
-1. **Instalador Oficial NSIS Nativo**: Empacota o executável Rust e os assets do frontend compilados em um instalador assinado e autocontido de 3,97 MB (`Arce Tools_0.1.0_x64-setup.exe`).
-2. **Desacoplamento de Utilitários Pesados**: Os utilitários FFmpeg e yt-dlp (~480 MB) são mantidos desacoplados, com suporte a detecção em cascata (App Dir $\rightarrow$ LocalAppData $\rightarrow$ WinGet $\rightarrow$ PATH) e instalação assistida com um clique na aba Configurações.
-3. **Desinstalação Limpa**: Registro completo no Painel de Controle do Windows com limpeza de arquivos temporários e atalhos no Menu Iniciar.
+1. **Instalador Oficial NSIS Nativo**: Empacota o executável Rust e os assets do frontend compilados em um instalador assinado e autocontido de 4,68 MB (`Arce Tools_0.1.0_x64-setup.exe`), configurado com `installMode: "currentUser"` para instalação livre de telas UAC.
+2. **Setup Center & DependencyManager**: Na primeira abertura, o aplicativo detecta automaticamente ferramentas ausentes e oferece instalação com 1 clique diretamente na pasta do usuário em `%LOCALAPPDATA%\ArceTools\binaries\`.
+3. **Desinstalação Limpa**: Registro completo no Painel de Controle do Windows com limpeza de arquivos temporários e atalhos no Menu Iniciar. Preservação de dados do usuário e banco SQLite em `%LOCALAPPDATA%\ArceTools`.
