@@ -62,7 +62,8 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
   - Microsoft C++ Build Tools (Visual Studio 2022).
   - Windows 11 SDK.
   - WebView2 Runtime.
-- **Compilação**:
+- **Compilação e Assets Embutidos**:
+  - O `Cargo.toml` possui `[features] default = ["custom-protocol"]` para garantir que `tauri-codegen` sempre incorpore os arquivos estáticos de `../dist` diretamente no executável binário final.
   - Para compilar no Windows host a partir do repositório compartilhado WSL2:
     ```powershell
     $env:CARGO_TARGET_DIR = "C:\Users\marce\AppData\Local\Temp\arce-target"
@@ -70,6 +71,7 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
     cargo test
     cargo build --release
     ```
+  - O executável de release gerado fica em `$env:CARGO_TARGET_DIR\release\arce-tools.exe` e é espelhado para `src-tauri/target/release/arce-tools.exe`.
 - **Testes Automatizados**:
   - Antes de submeter alterações, sempre execute:
     - Frontend: `pnpm test`
