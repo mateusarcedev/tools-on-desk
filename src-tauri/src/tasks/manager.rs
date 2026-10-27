@@ -49,7 +49,7 @@ impl TaskManager {
         let concurrency_clone = concurrency_limit.clone();
 
         // Background worker loop
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let semaphore = Arc::new(Semaphore::new(concurrency_clone.load(Ordering::SeqCst)));
 
             while let Some((task, job)) = job_rx.recv().await {
@@ -68,7 +68,7 @@ impl TaskManager {
                     tokens.lock().insert(task_id.clone(), cancel_flag.clone());
                 }
 
-                tokio::spawn(async move {
+                tauri::async_runtime::spawn(async move {
                     let _permit = permit;
 
                     // Update status to processing
@@ -102,7 +102,7 @@ impl TaskManager {
                             if cancel_check.load(Ordering::SeqCst) {
                                 Err(AppError::Canceled)
                             } else {
-                                tokio::task::spawn_blocking(move || {
+                                tauri::async_runtime::spawn_blocking(move || {
                                     PosterEngine::generate_pdf(&opts, progress_cb)
                                 })
                                 .await
@@ -114,7 +114,7 @@ impl TaskManager {
                             if cancel_check.load(Ordering::SeqCst) {
                                 Err(AppError::Canceled)
                             } else {
-                                tokio::task::spawn_blocking(move || {
+                                tauri::async_runtime::spawn_blocking(move || {
                                     let res = ImageEngine::convert_batch(&opts, progress_cb)?;
                                     Ok(format!("{} imagens convertidas", res.len()))
                                 })
@@ -127,7 +127,7 @@ impl TaskManager {
                             if cancel_check.load(Ordering::SeqCst) {
                                 Err(AppError::Canceled)
                             } else {
-                                tokio::task::spawn_blocking(move || {
+                                tauri::async_runtime::spawn_blocking(move || {
                                     ImageEngine::images_to_pdf(&opts, progress_cb)
                                 })
                                 .await
