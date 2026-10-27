@@ -1,6 +1,6 @@
 # ARCE TOOLS — Registro de Decisões de Arquitetura (ADRs)
 
-Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01, 02 e 02.5).
+Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01, 02, 02.5 e 03).
 
 ---
 
@@ -58,45 +58,58 @@ Este documento registra as principais decisões de arquitetura de software adota
 - **Decisão**: Adotar a execução supervisionada direta via `tokio::process::Command` com argumentos vetoriais estruturados, `CREATE_NO_WINDOW = 0x08000000` e cancelamento imediato via `child.kill()`.
 - **Consequências**:
   - Imunidade a ataques de injeção de comandos de shell.
-  - Cancelamento imediato sem deixar processos `ffmpeg` ou `yt-dlp` executando em segundo plano.
-  - Limpeza automática de arquivos parciais em caso de cancelamento ou falha.
+  - Janelas pretas de console do Windows nunca pipocam na tela.
+  - Fechamento imediato de processos filhos ao cancelar a tarefa ou fechar a janela.
 
 ---
 
-## ADR 008: Estratégia de Distribuição e Licenciamento das Ferramentas Externas
-- **Status**: Aprovado (Missão 02)
-- **Contexto**: Analisar o impacto da inclusão do FFmpeg, ffprobe e yt-dlp em relação ao tamanho do instalador, suporte offline, manutenção e conformidade de licenças.
-- **Decisão**: Modo Híbrido Inteligente: detecção em caminhos locais, WinGet e PATH. Instalador base leve mantido em ~7 MB com sidecars opcionais validados por SHA-256.
-
----
-
-## ADR 009: Paridade e Evolução do Poster Studio
+## ADR 008: Defesa Estrita contra SSRF e Validação de URLs no Downloader
 - **Status**: Aprovado e Implementado (Missão 02.5)
-- **Contexto**: Oferecer fluxo idêntico ou superior ao Rasterbator.net, com velocidade para usuários casuais e profundidade técnica para impressão profissional.
-- **Decisão**:
-  1. Implementar fluxo duplo: Modo Rápido (3 cliques para exportar) e Modo Avançado (Wizard em 6 etapas).
-  2. Implementar motor de retícula nativo em Rust (`apply_artistic_effect`) com antialiasing analítico para círculos e quadrados, dithering Floyd-Steinberg em 2D e amostragem de cor.
-  3. Adicionar renderizador de preview streaming em base64 (`render_poster_preview`), permitindo ao usuário visualizar o efeito artístico real gerado pelo algoritmo do backend com zero latência.
-  4. Adicionar silhueta humana proporcional de 1,80 m calculada com precisão física em relação à altura total do pôster montado.
-  5. Adicionar monitor de DPI efetivo com faixas de recomendação técnica.
+- **Contexto**: Permitir que usuários informem URLs arbitrárias para download expõe a aplicação a ataques de Server-Side Request Forgery (SSRF), varredura de portas locais (`127.0.0.1`), acesso a redes corporativas internas (`192.168.x.x`, `10.x.x.x`) e endpoints de metadados em nuvem (`169.254.169.254`).
+- **Decisão**: Implementar uma camada de validação e sanitização estrita de URLs antes de qualquer chamada ao `yt-dlp`.
+- **Consequências**: Proteção ativa contra exploits de rede interna e injeção de comandos.
 
 ---
 
-## ADR 010: Defesa Estrita contra SSRF e Downloader Multiplataforma
+## ADR 009: Renderização e Shaders de Efeitos no Backend Rust
 - **Status**: Aprovado e Implementado (Missão 02.5)
-- **Contexto**: Permitir downloads de mais de uma dúzia de redes sociais e plataformas com yt-dlp sem expor o aplicativo a explorações de Server-Side Request Forgery contra serviços locais ou metadados de nuvem.
-- **Decisão**:
-  1. Implementar filtro estrito duplo (frontend TypeScript e backend Rust) bloqueando esquemas não-HTTP/HTTPS, `localhost`, `127.0.0.1`, loopbacks IPv6, faixas privadas RFC 1918 (`10.*`, `172.16-31.*`, `192.168.*`) e RFC 3927 (`169.254.*`).
-  2. Suporte a playlists via parâmetro `--flat-playlist` do yt-dlp para obter lista rápida de vídeos com seleção individual ou em massa.
-  3. Extração expandida de áudio para 5 formatos: MP3, M4A, WAV, FLAC e OPUS.
+- **Contexto**: Os algoritmos de retícula (Halftone mono/color), difusão de erro (Floyd-Steinberg) e alto contraste exigem processamento pixel a pixel que no navegador (Canvas/JS) gera alto consumo de CPU e atrasos visíveis em imagens de alta resolução.
+- **Decisão**: Executar todo o pipeline de processamento de imagem em Rust nativo com algoritmos otimizados em memória e expor endpoint de preview ultrarrápido em base64 (`render_poster_preview`).
+- **Consequências**: Preview atualizado em < 25ms mesmo para imagens de 4K/8K.
 
 ---
 
-## ADR 011: Frameless Window com TitleBar Customizada Unificada
-- **Status**: Aprovado e Implementado (Missão 02.5)
-- **Contexto**: No Windows 11, a janela estava exibindo duas barras de título sobrepostas: a barra nativa do sistema operacional e a barra customizada do Arce Tools.
-- **Decisão**:
-  1. Configurar `"decorations": false` no `tauri.conf.json`.
-  2. Adicionar atributo `data-tauri-drag-region` na barra superior customizada.
-  3. Vincular botões de minimizar, maximizar/restaurar e fechar diretamente à API `@tauri-apps/api/window` com permissões concedidas em `capabilities/default.json`.
-- **Consequências**: Visual 100% limpo, sem redundância estética, com suporte completo a arrastar janela e duplo clique para maximizar.
+## ADR 010: Adoção das Crates `lopdf` e `docx-rs` para Manipulação Estrutural de Documentos
+- **Status**: Aprovado e Implementado (Missão 03)
+- **Contexto**: O Módulo de Documentos precisa inspecionar, unir, dividir, rotacionar, comprimir PDFs e convertê-los para Word sem depender de bibliotecas C++ pesadas (como Poppler ou MuPDF) e sem dependência de serviços em nuvem.
+- **Decisão**: Adotar `lopdf 0.46` para manipulação em baixo nível da árvore de objetos do PDF e `docx-rs 0.4` para geração estruturada de documentos OpenXML (.docx).
+- **Consequências**:
+  - Código 100% Rust seguro e compilável nativamente com MSVC sem ferramentas C++ adicionais.
+  - Algoritmo próprio de renumeração de identificadores de objetos indiretos (`renumber_objects_with`), permitindo unir PDFs sem colisões.
+  - Compressão estrutural sem perdas usando Deflate e poda de dicionários órfãos (`prune_objects`).
+
+---
+
+## ADR 011: Conversão Word para PDF via LibreOffice Headless com Isolamento de Perfil
+- **Status**: Aprovado e Implementado (Missão 03)
+- **Contexto**: A renderização de DOCX, DOC e ODT com fidelidade 100% visual de tabelas, fontes complexas e quebras de página requer um motor de layout maduro. No entanto, invocar o LibreOffice via linha de comando pode travar caso outra instância esteja aberta pelo usuário.
+- **Decisão**: Invocar `soffice.exe` com perfil de usuário temporário isolado (`-env:UserInstallation=file:///<temp_profile>`), timeout de 120s e bloqueio de macros.
+- **Consequências**: Conversão robusta e confiável sem travar nem interferir nas janelas normais do LibreOffice do usuário.
+
+---
+
+## ADR 012: Central Persistente de Erros com Sanitização Regex
+- **Status**: Aprovado e Implementado (Missão 03)
+- **Contexto**: Falhas de processamento em desktop são difíceis de auditar quando exibidas apenas em toasts voláteis. Além disso, copiar logs para suporte pode vazar caminhos de pastas privadas e credenciais.
+- **Decisão**: Implementar a tabela SQLite `error_logs` com índices, pipeline de sanitização regex (`sanitizer.rs`), e interface com cards expansíveis e relatórios formatados em texto simples.
+- **Consequências**:
+  - Usuários e desenvolvedores contam com rastreamento completo de causa raiz e status de resolução.
+  - Nenhuma senha, token ou nome de usuário do Windows é exposto (`C:\Users\[USER]\...`).
+
+---
+
+## ADR 013: Acesso Nativo ao Clipboard Win32 via Crate `arboard`
+- **Status**: Aprovado e Implementado (Missão 03)
+- **Contexto**: A API web `navigator.clipboard.writeText()` frequentemente falha ou exige permissões do usuário em ambientes desktop quando acionada fora de eventos diretos de clique ou em contextos WebView2 restritos.
+- **Decisão**: Adotar a crate nativa Rust `arboard 3.7`, expondo o comando Tauri `copy_to_clipboard` que chama diretamente as APIs `OpenClipboard` e `SetClipboardData` da Win32 API.
+- **Consequências**: Cópia instantânea e 100% garantida de relatórios de erros, trechos de código e logs para a área de transferência do Windows.

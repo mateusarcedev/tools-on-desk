@@ -5,6 +5,8 @@ import { Switch } from '../common/Switch';
 import { AppSettings, ThemePreference } from '../../types/settings';
 import { TauriService } from '../../services/tauri';
 import { ExternalToolsStatus } from '../../types/tools';
+import { LibreOfficeStatus } from '../../types/document';
+import { ErrorLogStats } from '../../types/errorLog';
 
 interface SettingsScreenProps {
   settings: AppSettings;
@@ -18,10 +20,21 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onShowToast,
 }) => {
   const [toolsStatus, setToolsStatus] = useState<ExternalToolsStatus | null>(null);
+  const [libreOfficeStatus, setLibreOfficeStatus] = useState<LibreOfficeStatus | null>(null);
+  const [errorStats, setErrorStats] = useState<ErrorLogStats | null>(null);
+  const [retentionDays, setRetentionDays] = useState<number>(30);
 
   useEffect(() => {
     TauriService.checkExternalTools()
       .then((status) => setToolsStatus(status))
+      .catch(() => {});
+
+    TauriService.checkLibreOfficeStatus()
+      .then((status) => setLibreOfficeStatus(status))
+      .catch(() => {});
+
+    TauriService.getErrorStats()
+      .then((stats) => setErrorStats(stats))
       .catch(() => {});
   }, []);
 
@@ -74,11 +87,20 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       status: toolsStatus?.ytDlp.available ? 'installed' : 'missing',
     },
     {
+      id: 'docengine',
+      name: 'Document Engine (lopdf + docx-rs)',
+      desc: 'Inspeção, divisão, mesclagem, rotação e conversão estruturada PDF ↔ DOCX',
+      ver: 'lopdf 0.46 + docx-rs 0.4',
+      status: 'installed',
+    },
+    {
       id: 'lo',
       name: 'LibreOffice Headless',
-      desc: 'Conversões avançadas de Word para PDF com fidelidade de fontes',
-      ver: 'Missão 03',
-      status: 'missing',
+      desc: 'Conversões avançadas de Word para PDF com fidelidade de layout e fontes',
+      ver: libreOfficeStatus?.isAvailable
+        ? `${libreOfficeStatus.version || 'Ativo'} (${libreOfficeStatus.path || 'Local'})`
+        : 'Não detectado',
+      status: libreOfficeStatus?.isAvailable ? 'installed' : 'missing',
     },
   ];
 
@@ -426,6 +448,146 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Diagnostics and Error Logs Section */}
+      <div
+        style={{
+          background: 'var(--surface)',
+          border: '1px solid var(--line)',
+          borderRadius: 12,
+          padding: 20,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--fg)', margin: '0 0 4px' }}>
+            Diagnósticos e Registros de Erros
+          </h2>
+          <div style={{ fontSize: '12px', color: 'var(--fg-dim)' }}>
+            Gerencie o histórico persistente de erros e diagnósticos técnicos mantidos no SQLite local.
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10 }}>
+          <div
+            style={{
+              background: 'var(--surface-2)',
+              borderRadius: 8,
+              padding: '10px 14px',
+            }}
+          >
+            <div style={{ fontSize: '11px', color: 'var(--fg-dim)' }}>Registros Armazenados</div>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--fg)', marginTop: 2 }}>
+              {errorStats?.total ?? 0}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: 'var(--surface-2)',
+              borderRadius: 8,
+              padding: '10px 14px',
+            }}
+          >
+            <div style={{ fontSize: '11px', color: 'var(--pink)' }}>Não Resolvidos</div>
+            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--pink)', marginTop: 2 }}>
+              {errorStats?.unresolved ?? 0}
+            </div>
+          </div>
+
+          <div
+            style={{
+              background: 'var(--surface-2)',
+              borderRadius: 8,
+              padding: '10px 14px',
+            }}
+          >
+            <div style={{ fontSize: '11px', color: 'var(--fg-dim)' }}>Uso em Disco (SQLite)</div>
+            <div
+              style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: 'var(--mint)',
+                marginTop: 2,
+                fontFamily: 'var(--mono)',
+              }}
+            >
+              {((errorStats?.databaseSizeBytes || 0) / 1024).toFixed(1)} KB
+            </div>
+          </div>
+        </div>
+
+        {/* Retention Policy */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--fg)' }}>
+              Política de retenção de registros
+            </div>
+            <div style={{ fontSize: '11.5px', color: 'var(--fg-dim)', marginTop: 2 }}>
+              Registros com data anterior ao período selecionado podem ser eliminados
+            </div>
+          </div>
+
+          <select
+            value={retentionDays}
+            onChange={(e) => setRetentionDays(parseInt(e.target.value, 10))}
+            style={{
+              height: 32,
+              background: 'var(--surface-2)',
+              border: '1px solid var(--line)',
+              borderRadius: 6,
+              padding: '0 10px',
+              color: 'var(--fg)',
+              fontSize: '12px',
+              outline: 'none',
+            }}
+          >
+            <option value={7}>Manter últimos 7 dias</option>
+            <option value={30}>Manter últimos 30 dias</option>
+            <option value={90}>Manter últimos 90 dias</option>
+            <option value={0}>Limpar todos os registros</option>
+          </select>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={async () => {
+              const allLogs = await TauriService.getAllErrorLogsForExport();
+              const jsonStr = JSON.stringify(allLogs, null, 2);
+              const blob = new Blob([jsonStr], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `arce-tools-diagnostico-completo-${new Date().toISOString().slice(0, 10)}.json`;
+              a.click();
+              URL.revokeObjectURL(url);
+              onShowToast('Relatório completo exportado com sucesso!');
+            }}
+          >
+            Exportar relatório JSON
+          </Button>
+
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={async () => {
+              const days = retentionDays === 0 ? undefined : retentionDays;
+              const count = await TauriService.clearErrorLogs(days);
+              const updated = await TauriService.getErrorStats();
+              setErrorStats(updated);
+              onShowToast(`${count} registros removidos de acordo com a política selecionada`, 'warn');
+            }}
+          >
+            {retentionDays === 0 ? 'Limpar todo o histórico' : `Limpar registros > ${retentionDays} dias`}
+          </Button>
         </div>
       </div>
     </div>

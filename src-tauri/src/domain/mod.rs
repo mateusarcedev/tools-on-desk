@@ -1,5 +1,7 @@
 pub mod audio;
+pub mod document;
 pub mod download;
+pub mod error_log;
 pub mod history;
 pub mod image;
 pub mod media;
@@ -8,7 +10,13 @@ pub mod task;
 pub mod video;
 
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
+pub use document::{
+    DocumentOperationResult, LibreOfficeStatus, PdfCompressOptions, PdfInfo, PdfMergeOptions,
+    PdfOrganizeOptions, PdfPageAction, PdfPageInfo, PdfSplitOptions, PdfToDocxOptions,
+    WordToPdfOptions,
+};
 pub use download::{DownloadFormatOption, DownloadOptions, MediaDownloadInfo, PlaylistItemInfo, YtDlpStatus};
+pub use error_log::{CreateErrorLogPayload, ErrorLogEntry, ErrorLogFilter, ErrorLogStats};
 pub use history::HistoryEntry;
 pub use image::{ImageConvertOptions, ImagesToPdfOptions};
 pub use media::{AudioStreamInfo, MediaInfo, VideoStreamInfo};

@@ -21,12 +21,16 @@ import { ImagesScreen } from './components/screens/ImagesScreen';
 import { PosterStudioScreen } from './components/screens/PosterStudioScreen';
 import { HistoryScreen } from './components/screens/HistoryScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
   const [screen, setScreen] = useState<ScreenId>('home');
   const [collapsed, setCollapsed] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+
+  const [historyTab, setHistoryTab] = useState<'activities' | 'diagnostics'>('activities');
+  const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
 
   const [themePref, setThemePref] = useState<ThemePreference>('Escuro');
   const [sysDark, setSysDark] = useState(true);
@@ -102,6 +106,44 @@ export const App: React.FC = () => {
     } catch {
       // fallback
     }
+  }, []);
+
+  // Global Frontend Error Logging
+  useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const msg = event.reason?.message || String(event.reason);
+      TauriService.logFrontendError({
+        severity: 'error',
+        source: 'unhandled_promise_rejection',
+        module: 'ui',
+        operation: 'async_event',
+        errorCode: 'UNHANDLED_PROMISE',
+        userMessage: 'Ocorreu um erro assíncrono interno na interface.',
+        technicalDetails: msg,
+        sanitizedStack: event.reason?.stack,
+      }).catch(() => {});
+    };
+
+    const handleWindowError = (event: ErrorEvent) => {
+      TauriService.logFrontendError({
+        severity: 'error',
+        source: 'window_error',
+        module: 'ui',
+        operation: 'script_execution',
+        errorCode: 'WINDOW_SCRIPT_ERROR',
+        userMessage: event.message || 'Erro inesperado na aplicação.',
+        technicalDetails: `${event.filename}:${event.lineno}:${event.colno}`,
+        sanitizedStack: event.error?.stack,
+      }).catch(() => {});
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    window.addEventListener('error', handleWindowError);
+
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+      window.removeEventListener('error', handleWindowError);
+    };
   }, []);
 
   // Listen to Tauri events for background task engine
@@ -285,61 +327,65 @@ export const App: React.FC = () => {
             background: 'var(--bg)',
           }}
         >
-          {screen === 'home' && (
-            <HomeScreen
-              onNavigate={setScreen}
-              tasks={tasks}
-              history={history}
-              onFilesDropped={handleHomeFilesDropped}
-              onOpenExplorer={handleOpenExplorer}
-            />
-          )}
+          <ErrorBoundary>
+            {screen === 'home' && (
+              <HomeScreen
+                onNavigate={setScreen}
+                tasks={tasks}
+                history={history}
+                onFilesDropped={handleHomeFilesDropped}
+                onOpenExplorer={handleOpenExplorer}
+              />
+            )}
 
-          {screen === 'downloads' && (
-            <DownloadsScreen onShowToast={showToast} />
-          )}
+            {screen === 'downloads' && (
+              <DownloadsScreen onShowToast={showToast} />
+            )}
 
-          {screen === 'documents' && (
-            <DocumentsScreen onShowToast={showToast} />
-          )}
+            {screen === 'documents' && (
+              <DocumentsScreen onShowToast={showToast} />
+            )}
 
-          {screen === 'audio' && <AudioScreen onShowToast={showToast} />}
+            {screen === 'audio' && <AudioScreen onShowToast={showToast} />}
 
-          {screen === 'video' && <VideoScreen onShowToast={showToast} />}
+            {screen === 'video' && <VideoScreen onShowToast={showToast} />}
 
-          {screen === 'images' && (
-            <ImagesScreen
-              onShowToast={showToast}
-              onOpenExplorer={handleOpenExplorer}
-            />
-          )}
+            {screen === 'images' && (
+              <ImagesScreen
+                onShowToast={showToast}
+                onOpenExplorer={handleOpenExplorer}
+              />
+            )}
 
-          {screen === 'posters' && (
-            <PosterStudioScreen
-              onShowToast={showToast}
-              onOpenExplorer={handleOpenExplorer}
-            />
-          )}
+            {screen === 'posters' && (
+              <PosterStudioScreen
+                onShowToast={showToast}
+                onOpenExplorer={handleOpenExplorer}
+              />
+            )}
 
-          {screen === 'history' && (
-            <HistoryScreen
-              history={history}
-              onRefreshHistory={loadData}
-              onOpenExplorer={handleOpenExplorer}
-              onShowToast={showToast}
-            />
-          )}
+            {screen === 'history' && (
+              <HistoryScreen
+                history={history}
+                onRefreshHistory={loadData}
+                onOpenExplorer={handleOpenExplorer}
+                onShowToast={showToast}
+                initialTab={historyTab}
+                highlightTaskId={highlightTaskId}
+              />
+            )}
 
-          {screen === 'settings' && (
-            <SettingsScreen
-              settings={{ ...settings, themePref }}
-              onUpdateSettings={(patch) => {
-                setSettings((prev) => ({ ...prev, ...patch }));
-                if (patch.themePref) setThemePref(patch.themePref);
-              }}
-              onShowToast={showToast}
-            />
-          )}
+            {screen === 'settings' && (
+              <SettingsScreen
+                settings={{ ...settings, themePref }}
+                onUpdateSettings={(patch) => {
+                  setSettings((prev) => ({ ...prev, ...patch }));
+                  if (patch.themePref) setThemePref(patch.themePref);
+                }}
+                onShowToast={showToast}
+              />
+            )}
+          </ErrorBoundary>
         </main>
       </div>
 
@@ -351,6 +397,11 @@ export const App: React.FC = () => {
         tasks={tasks}
         onTaskUpdated={loadData}
         onShowToast={showToast}
+        onNavigateToError={(taskId) => {
+          setHistoryTab('diagnostics');
+          setHighlightTaskId(taskId);
+          setScreen('history');
+        }}
       />
 
       <CommandPalette

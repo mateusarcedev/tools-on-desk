@@ -4,6 +4,7 @@ pub mod engines;
 pub mod error;
 pub mod storage;
 pub mod tasks;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;
@@ -66,6 +67,23 @@ pub fn run() {
             commands::fetch_download_info,
             commands::start_download,
             commands::check_external_tools,
+            commands::inspect_pdf,
+            commands::check_libreoffice_status,
+            commands::start_pdf_merge,
+            commands::start_pdf_split,
+            commands::start_pdf_organize,
+            commands::start_pdf_compress,
+            commands::start_word_to_pdf,
+            commands::start_pdf_to_docx,
+            commands::get_error_logs,
+            commands::get_all_error_logs_for_export,
+            commands::get_error_stats,
+            commands::get_error_log_by_id,
+            commands::get_error_log_by_task_id,
+            commands::resolve_error_log,
+            commands::clear_error_logs,
+            commands::log_frontend_error,
+            commands::copy_to_clipboard,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

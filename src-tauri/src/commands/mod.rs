@@ -1,5 +1,7 @@
 pub mod audio;
+pub mod documents;
 pub mod downloads;
+pub mod errors;
 pub mod history;
 pub mod images;
 pub mod poster;
@@ -8,7 +10,9 @@ pub mod tasks;
 pub mod video;
 
 pub use audio::*;
+pub use documents::*;
 pub use downloads::*;
+pub use errors::*;
 pub use history::*;
 pub use images::*;
 pub use poster::*;

@@ -1,18 +1,23 @@
 use crate::domain::{
-    AudioConvertOptions, AudioTrimOptions, DownloadOptions, HistoryEntry, ImageConvertOptions,
-    ImagesToPdfOptions, PosterOptions, Task, TaskStatus, VideoCompressOptions, VideoConvertOptions,
-    VideoExtractAudioOptions, VideoExtractFrameOptions, VideoTrimOptions,
+    AudioConvertOptions, AudioTrimOptions, DownloadOptions, ErrorLogEntry, HistoryEntry,
+    ImageConvertOptions, ImagesToPdfOptions, PdfCompressOptions, PdfMergeOptions,
+    PdfOrganizeOptions, PdfSplitOptions, PdfToDocxOptions, PosterOptions, Task, TaskStatus,
+    VideoCompressOptions, VideoConvertOptions, VideoExtractAudioOptions, VideoExtractFrameOptions,
+    VideoTrimOptions, WordToPdfOptions,
 };
-use crate::engines::{AudioEngine, DownloadEngine, ImageEngine, PosterEngine, VideoEngine};
+use crate::engines::{
+    AudioEngine, DocumentEngine, DownloadEngine, ImageEngine, PosterEngine, VideoEngine,
+};
 use crate::error::{AppError, AppResult};
 use crate::storage::Db;
-use chrono::Local;
+use chrono::{Local, Utc};
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, Semaphore};
+use uuid::Uuid;
 
 pub enum TaskJob {
     Poster(PosterOptions),
@@ -26,6 +31,13 @@ pub enum TaskJob {
     VideoExtractAudio(VideoExtractAudioOptions),
     VideoExtractFrame(VideoExtractFrameOptions),
     DownloadMedia(DownloadOptions),
+    // Document Jobs
+    PdfMerge(PdfMergeOptions),
+    PdfSplit(PdfSplitOptions),
+    PdfOrganize(PdfOrganizeOptions),
+    PdfCompress(PdfCompressOptions),
+    WordToPdf(WordToPdfOptions),
+    PdfToDocx(PdfToDocxOptions),
 }
 
 #[derive(Clone)]
@@ -159,6 +171,84 @@ impl TaskManager {
                         TaskJob::DownloadMedia(opts) => {
                             DownloadEngine::download(&opts, cancel_check.clone(), progress_cb).await
                         }
+                        TaskJob::PdfMerge(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let res = DocumentEngine::merge_pdfs(&opts)?;
+                                    Ok(res.output_path)
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
+                        TaskJob::PdfSplit(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let files = DocumentEngine::split_pdf(&opts)?;
+                                    Ok(format!("{} arquivo(s) gerado(s)", files.len()))
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
+                        TaskJob::PdfOrganize(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let res = DocumentEngine::organize_pdf(&opts)?;
+                                    Ok(res.output_path)
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
+                        TaskJob::PdfCompress(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let res = DocumentEngine::compress_pdf(&opts)?;
+                                    Ok(res.output_path)
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
+                        TaskJob::WordToPdf(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let res = DocumentEngine::convert_word_to_pdf(&opts)?;
+                                    Ok(res.output_path)
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
+                        TaskJob::PdfToDocx(opts) => {
+                            if cancel_check.load(Ordering::SeqCst) {
+                                Err(AppError::Canceled)
+                            } else {
+                                tauri::async_runtime::spawn_blocking(move || {
+                                    let res = DocumentEngine::convert_pdf_to_docx(&opts)?;
+                                    Ok(res.output_path)
+                                })
+                                .await
+                                .map_err(|e| AppError::Internal(e.to_string()))
+                                .and_then(|r| r)
+                            }
+                        }
                     };
 
                     let now = Local::now().format("%d %b, %H:%M").to_string();
@@ -220,6 +310,9 @@ impl TaskManager {
                         }
                         Err(err) => {
                             let err_msg = err.to_string();
+                            let err_code = err.error_code();
+                            let user_msg = err.user_friendly_message();
+
                             let _ = db.update_task_status(
                                 &task_id,
                                 TaskStatus::Failed,
@@ -241,7 +334,27 @@ impl TaskManager {
                             };
                             let _ = db.insert_history(&history_entry);
 
+                            // Persistent registration in Central de Erros e Diagnósticos
+                            let error_entry = ErrorLogEntry {
+                                id: format!("ERR-{}", Uuid::new_v4().to_string()[..8].to_uppercase()),
+                                created_at: Utc::now().to_rfc3339(),
+                                severity: "ERROR".to_string(),
+                                source: "TASK".to_string(),
+                                module: task.mod_name.clone(),
+                                operation: task.op.clone(),
+                                task_id: Some(task_id.clone()),
+                                error_code: err_code.to_string(),
+                                user_message: user_msg,
+                                technical_details: Some(err_msg.clone()),
+                                sanitized_stack: None,
+                                status: "UNRESOLVED".to_string(),
+                                app_version: env!("CARGO_PKG_VERSION").to_string(),
+                                resolved_at: None,
+                            };
+                            let _ = db.insert_error_log(&error_entry);
+
                             if let Some(ref a) = app {
+                                let _ = a.emit("error-log-created", &error_entry);
                                 let _ = a.emit("task-status-changed", serde_json::json!({
                                     "id": task_id,
                                     "status": "failed",
@@ -265,15 +378,11 @@ impl TaskManager {
         }
     }
 
-    pub fn set_app_handle(&mut self, handle: AppHandle) {
-        self.app_handle = Some(handle);
+    pub fn set_app_handle(&mut self, app_handle: AppHandle) {
+        self.app_handle = Some(app_handle);
     }
 
-    pub fn set_concurrency(&self, limit: usize) {
-        self.concurrency_limit.store(limit.clamp(1, 8), Ordering::SeqCst);
-    }
-
-    pub fn submit_task(&self, task: Task, job: TaskJob) -> AppResult<()> {
+    pub fn enqueue_task(&self, task: Task, job: TaskJob) -> AppResult<()> {
         self.db.insert_task(&task)?;
 
         if let Some(ref a) = self.app_handle {
@@ -285,6 +394,10 @@ impl TaskManager {
             .map_err(|_| AppError::Internal("Fila de processamento encerrada".into()))?;
 
         Ok(())
+    }
+
+    pub fn submit_task(&self, task: Task, job: TaskJob) -> AppResult<()> {
+        self.enqueue_task(task, job)
     }
 
     pub fn cancel_task(&self, id: &str) -> AppResult<()> {
@@ -367,6 +480,37 @@ impl TaskManager {
                     let opts: DownloadOptions = serde_json::from_str(&options_json)
                         .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
                     TaskJob::DownloadMedia(opts)
+                }
+                "documents" => {
+                    if task.op.contains("Unir") {
+                        let opts: PdfMergeOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::PdfMerge(opts)
+                    } else if task.op.contains("Dividir") {
+                        let opts: PdfSplitOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::PdfSplit(opts)
+                    } else if task.op.contains("Organizar") {
+                        let opts: PdfOrganizeOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::PdfOrganize(opts)
+                    } else if task.op.contains("Comprimir") {
+                        let opts: PdfCompressOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::PdfCompress(opts)
+                    } else if task.op.contains("Word para PDF") {
+                        let opts: WordToPdfOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::WordToPdf(opts)
+                    } else if task.op.contains("PDF para Word") {
+                        let opts: PdfToDocxOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::PdfToDocx(opts)
+                    } else {
+                        return Err(AppError::InvalidInput(
+                            "Operação de documento não suportada para repetição".into(),
+                        ));
+                    }
                 }
                 _ => return Err(AppError::InvalidInput("Tipo de tarefa não suportado para repetição".into())),
             };

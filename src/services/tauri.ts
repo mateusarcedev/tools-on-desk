@@ -14,6 +14,22 @@ import {
 } from '../types/video';
 import { DownloadOptions, MediaDownloadInfo, YtDlpStatus } from '../types/download';
 import { ExternalToolsStatus } from '../types/tools';
+import {
+  LibreOfficeStatus,
+  PdfCompressOptions,
+  PdfInfo,
+  PdfMergeOptions,
+  PdfOrganizeOptions,
+  PdfSplitOptions,
+  PdfToDocxOptions,
+  WordToPdfOptions,
+} from '../types/document';
+import {
+  CreateErrorLogPayload,
+  ErrorLogEntry,
+  ErrorLogFilter,
+  ErrorLogStats,
+} from '../types/errorLog';
 
 export interface SystemInfo {
   os: string;
@@ -372,5 +388,136 @@ export const TauriService = {
     } catch {
       return () => {};
     }
+  },
+
+  // --- DOCUMENT COMMANDS ---
+  async inspectPdf(path: string): Promise<PdfInfo> {
+    if (!isTauri()) {
+      return {
+        path,
+        pageCount: 1,
+        fileSizeBytes: 1024,
+        fileSizeFormatted: '1.0 KB',
+        isEncrypted: false,
+        hasSelectableText: true,
+        pages: [{ pageNumber: 1, widthPt: 595, heightPt: 842, rotationDeg: 0 }],
+      };
+    }
+    return await invoke<PdfInfo>('inspect_pdf', { path });
+  },
+
+  async checkLibreOfficeStatus(): Promise<LibreOfficeStatus> {
+    if (!isTauri()) {
+      return {
+        isAvailable: false,
+        path: null,
+        version: null,
+        notes: 'LibreOffice não detectado neste ambiente de teste',
+      };
+    }
+    return await invoke<LibreOfficeStatus>('check_libreoffice_status');
+  },
+
+  async startPdfMerge(options: PdfMergeOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_pdf_merge', { options });
+  },
+
+  async startPdfSplit(options: PdfSplitOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_pdf_split', { options });
+  },
+
+  async startPdfOrganize(options: PdfOrganizeOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_pdf_organize', { options });
+  },
+
+  async startPdfCompress(options: PdfCompressOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_pdf_compress', { options });
+  },
+
+  async startWordToPdf(options: WordToPdfOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_word_to_pdf', { options });
+  },
+
+  async startPdfToDocx(options: PdfToDocxOptions): Promise<string> {
+    if (!isTauri()) return 'mock-task-id';
+    return await invoke<string>('start_pdf_to_docx', { options });
+  },
+
+  // --- ERROR & DIAGNOSTICS COMMANDS ---
+  async getErrorLogs(filter: ErrorLogFilter = {}): Promise<ErrorLogEntry[]> {
+    if (!isTauri()) return [];
+    return await invoke<ErrorLogEntry[]>('get_error_logs', { filter });
+  },
+
+  async getAllErrorLogsForExport(filter?: ErrorLogFilter): Promise<ErrorLogEntry[]> {
+    if (!isTauri()) return [];
+    return await invoke<ErrorLogEntry[]>('get_all_error_logs_for_export', { filter });
+  },
+
+  async getErrorStats(): Promise<ErrorLogStats> {
+    if (!isTauri()) {
+      return { total: 0, critical: 0, unresolved: 0, databaseSizeBytes: 0 };
+    }
+    return await invoke<ErrorLogStats>('get_error_stats');
+  },
+
+  async getErrorLogById(id: string): Promise<ErrorLogEntry | null> {
+    if (!isTauri()) return null;
+    return await invoke<ErrorLogEntry | null>('get_error_log_by_id', { id });
+  },
+
+  async getErrorLogByTaskId(taskId: string): Promise<ErrorLogEntry | null> {
+    if (!isTauri()) return null;
+    return await invoke<ErrorLogEntry | null>('get_error_log_by_task_id', { taskId });
+  },
+
+  async resolveErrorLog(id: string, resolved: boolean = true): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('resolve_error_log', { id, resolved });
+  },
+
+  async clearErrorLogs(retentionDays?: number): Promise<number> {
+    if (!isTauri()) return 0;
+    return await invoke<number>('clear_error_logs', { retentionDays });
+  },
+
+  async logFrontendError(payload: CreateErrorLogPayload): Promise<string> {
+    if (!isTauri()) return 'mock-error-id';
+    return await invoke<string>('log_frontend_error', { payload });
+  },
+
+  async copyToClipboard(text: string): Promise<void> {
+    if (isTauri()) {
+      try {
+        await invoke('copy_to_clipboard', { text });
+        return;
+      } catch (e) {
+        console.warn('Native clipboard failed, falling back to navigator.clipboard', e);
+      }
+    }
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    }
+  },
+
+  onErrorLogCreated(callback: (payload: { id: string; errorCode: string; userMessage: string; severity: string }) => void) {
+    if (!isTauri()) return () => {};
+    let unlistenFn: (() => void) | null = null;
+    listen<{ id: string; errorCode: string; userMessage: string; severity: string }>(
+      'error-log-created',
+      (event) => {
+        callback(event.payload);
+      }
+    ).then((unlisten) => {
+      unlistenFn = unlisten;
+    });
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
   },
 };

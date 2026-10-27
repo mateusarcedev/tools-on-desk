@@ -1,43 +1,36 @@
-# ARCE TOOLS — Planejamento para a Missão 03
+# ARCE TOOLS — Próximos Passos (Pós-Missão 03)
 
-Este documento orienta os objetivos, contratos e requisitos técnicos para a **Missão 03** e subsequentes do **Arce Tools**.
-
----
-
-## 1. Módulos Planejados para a Missão 03
-
-### 1.1 Módulo Documentos (Word $\leftrightarrow$ PDF)
-- **Word para PDF (.docx $\to$ .pdf)**:
-  - Invocar **LibreOffice headless** (`soffice --headless --convert-to pdf`) com detecção automática em:
-    - `C:\Program Files\LibreOffice\program\soffice.exe`
-    - Chaves do Registro do Windows `HKLM\Software\LibreOffice`.
-  - Preservar fontes, tabelas, cabeçalhos, rodapés e paginação idênticos ao documento original.
-- **PDF para Word (.pdf $\to$ .docx)**:
-  - Extração e reconstrução de layouts através de motor nativo de parsing vetorial de PDFs e geração de XML OOXML (`.docx`).
-  - Suporte opcional a **OCR (Reconhecimento Óptico de Caracteres)** via **Tesseract OCR** para PDFs digitalizados (scans ou imagens incorporadas).
-
-### 1.2 Poster Studio — Expansões Futuras
-- **Simulação de Parede em 3D / Realidade de Ambiente**:
-  - Mockup visual mostrando o pôster em uma sala virtual com iluminação e textura de parede personalizável.
-- **Dithering Adicional**:
-  - Algoritmo de difusão de erro **Atkinson** e **Bayer (Matrix Ordered Dithering)**.
-- **Exportação Direta para Impressora Física**:
-  - Diálogo de impressão direto do SO via Tauri plugin de impressão nativo.
-
-### 1.3 Pacote Instalador Windows NSIS
-- Criação de pacote de distribuição `.exe` ou `.msi` via Tauri CLI:
-  - Gerar instalador com suporte a atalhos na Área de Trabalho e Menu Iniciar.
-  - Empacotador com opção de incluir ou excluir binários multimídia sidecar.
-  - Teste do ciclo de vida: Instalação limpa, inicialização e desinstalação sem resíduos órfãos.
+Com a **Missão 03 totalmente concluída** (Document Engine completo + Central de Erros e Diagnósticos persistente), este documento estabelece o roteiro para a **Missão 04** e o ciclo de lançamento oficial da versão 1.0.
 
 ---
 
-## 2. Requisitos de Desempenho e Metas Mantidas
+## 1. Conquistas Consolidadas (Missões 01 a 03)
 
-| Métrica | Missão 01 | Missão 02 (Alcançado) | Missão 02.5 (Alcançado) | Meta Missão 03 |
-|---|:---:|:---:|:---:|:---:|
-| **Tempo de Inicialização (Cold start)** | < 1,0s | ~1,0s | ~1,0s | < 1,2s |
-| **Memória em Repouso (RAM)** | ~36 MB | ~36 MB | ~38 MB | < 45 MB |
-| **Uso de CPU em Repouso** | 0,0% | 0,0% | 0,0% | 0,0% |
-| **Tamanho do Binário Principal** | 7,07 MB | ~7,2 MB | 7,73 MB | < 8,5 MB |
-| **Taxa de Quadros da Interface** | 60 fps | 60 fps | 60 fps | 60 fps |
+1. **Shell Desktop Premium**: 9 telas completas, design system Geist, modo escuro/claro e controle de janela sem decorações duplicadas.
+2. **Poster Studio Avançado**: Paridade matemática com Rasterbator, 6 etapas, silhueta humana de 1,80m, DPI tracking, retícula Halftone mono/color, Floyd-Steinberg e PDF milimétrico.
+3. **Mídia e Áudio/Vídeo**: Conversores reais FFmpeg/ffprobe, compressão com CRF, corte preciso de áudio/vídeo e extração de quadros.
+4. **Downloader Multiplataforma**: yt-dlp integrado para 13+ plataformas, suporte a playlists e proteção ativa contra SSRF.
+5. **Document Engine**: PDF Inspector, união de PDFs com renumeração de identificadores de nós, divisão de PDFs (todos, intervalos, cada N), organizador e rotacionador de páginas sem sobrescrever original, compressão estrutural Deflate com medição real de bytes, conversor Word para PDF via LibreOffice headless com isolamento de perfil e conversor PDF para Word via docx-rs.
+6. **Central de Erros e Diagnósticos**: Tabela SQLite `error_logs` indexada, sanitização regex de senhas e caminhos `C:\Users\[USER]\...`, KPIs, filtros, atalho de erro na gaveta de tarefas e cópia em lote nativa via Win32 clipboard (`arboard`).
+
+---
+
+## 2. Roteiro para a Missão 04
+
+### 2.1 OCR Nativo com Tesseract para Digitalizações
+- Integrar motor OCR óptico local (ex: Tesseract OCR embutido ou sidecar) para permitir converter PDFs 100% digitalizados/rasterizados em texto editável diretamente no módulo PDF → Word.
+
+### 2.2 Rebranding Definitivo e Identidade Visual
+- Aplicação do nome e marca comercial final que será escolhida pelo usuário.
+- Geração de ícones de alta resolução (.ico multi-resolução, .png transparentes) para a barra de tarefas do Windows e explorador de arquivos.
+- Atualização do identificador do pacote Tauri de `com.mateusarcedev.arcetools` para a identidade final.
+
+### 2.3 Empacotamento do Instalador Windows (NSIS & MSI)
+- Configuração do gerador de instaladores Tauri (`tauri build`):
+  - Instalador executável NSIS moderno com assistente de instalação em português.
+  - Criação de atalhos no Menu Iniciar e na Área de Trabalho.
+  - Empacotador com opção de sidecars embutidos (FFmpeg, ffprobe, yt-dlp) para execução 100% standalone sem dependências prévias no sistema do cliente.
+  - Suporte a desinstalação limpa no Painel de Controle do Windows.
+
+### 2.4 Teste de Aceitação em Máquinas Limpas
+- Validação do instalador em máquina Windows 11 recém-formatada para comprovar inicialização limpa com WebView2 runtime padrão e SQLite embutido.

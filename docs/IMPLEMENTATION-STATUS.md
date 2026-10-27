@@ -1,6 +1,6 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02 e 02.5**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5 e 03**.
 
 ---
 
@@ -10,97 +10,77 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 |---|:---:|:---:|---|
 | **Ambiente Windows 11 Nativo** | 01 | Concluído | Rust 1.99.1 (MSVC), VS 2022 Tools, Windows SDK, WebView2 |
 | **Shell e Interface Desktop** | 01 & 02.5 | Concluído | 9 telas fiéis ao design, barra sem decorações nativas duplicadas, temas |
-| **Motor Global de Tarefas** | 01 & 02 | Concluído | Tokio mpsc, SQLite WAL, cancelamento cooperativo, concorrência |
+| **Motor Global de Tarefas** | 01, 02 & 03 | Concluído | Tokio mpsc, SQLite WAL, cancelamento cooperativo, concorrência, captura persistente de erros |
 | **Poster Studio (Avançado)** | 02.5 | Concluído | Paridade com Rasterbator, Modo Rápido + Stepper 6 etapas, A4/A3/Letter/Legal/Custom, silhueta 1.80m, DPI tracking, Halftone, Floyd-Steinberg, preview Rust base64, PDF printpdf |
 | **Conversão de Imagens** | 01 | Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
 | **Módulo Áudio (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP3/WAV/FLAC/AAC/OGG/OPUS, bitrate, loudnorm, trim |
 | **Módulo Vídeo (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP4/MKV/WEBM, presets de compressão CRF, trim rápido e preciso, extração de frame |
 | **Módulo Downloads (Multiplataforma)**| 02.5 | Concluído | yt-dlp, 13+ plataformas, detecção de playlists, download em lote, áudio (MP3/M4A/WAV/FLAC/OPUS), defesa contra SSRF |
-| **Gerenciador de Motores Externos**| 02 | Concluído | `ExternalToolManager`: detecção, validação, encerramento limpo, sanitização |
-| **Testes Automatizados** | 01, 02 & 02.5 | Concluído | 12 testes Vitest (frontend) + 8 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Document Engine (Real)** | 03 | Concluído | PDF Inspector, PDF Merge (renumeração de objetos), PDF Split (todos, intervalos, cada N), PDF Organize (reordenação e rotação sem sobrescrever original), PDF Compress (Deflate e poda estrutural), Word para PDF (LibreOffice headless isolado), PDF para Word (extração e geração de DOCX via docx-rs) |
+| **Central de Erros e Diagnósticos** | 03 | Concluído | Tabela SQLite `error_logs`, índices, sanitização regex de senhas e caminhos `C:\Users\[USER]\...`, KPIs, filtros, cópia individual e em lote via clipboard nativo Win32 `arboard`, atalho em tarefas com falha |
+| **Testes Automatizados** | 01, 02, 02.5 & 03 | Concluído | 20 testes Vitest (frontend) + 12 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 
-## 2. Checklist Detalhado da Missão 02.5
+## 2. Checklist Detalhado da Missão 03
 
-### 2.1 Poster Studio Avançado (Referência Rasterbator.net & Além)
-- [x] **Dois Modos de Trabalho:**
-  - *Modo Rápido:* Drop da imagem $\rightarrow$ seletor de folhas / presets $\rightarrow$ exportação direta de PDF.
-  - *Modo Avançado (6 Etapas):* 1. Imagem $\rightarrow$ 2. Tamanho $\rightarrow$ 3. Estilo $\rightarrow$ 4. Cores $\rightarrow$ 5. Impressão $\rightarrow$ 6. Exportação.
-- [x] **Tipos de Papel e Orientação:**
-  - Suporte nativo a A4, A3, Letter (Carta), Legal (Ofício) e dimensões Personalizadas em mm.
-  - Orientação Retrato (*Portrait*) e Paisagem (*Landscape*).
-- [x] **Geometria de Margens e Sobreposição (*Overlap*):**
-  - Margens configuráveis para impressoras domésticas.
-  - Sobreposição física ($CW = PW - 2M$, $SW = CW - OV$) garantindo montagem sem folgas ou saltos.
-  - Preservação estrita do aspect ratio da imagem de origem.
-- [x] **Silhueta Humana Proporcional (1,80 m):**
-  - Proporção matemática exata calculada a partir da altura final do pôster montado.
-  - Botão de alternância (toggle) no viewport para ocultar ou exibir a silhueta.
-- [x] **Indicador de Qualidade e DPI Efetivo:**
-  - Cálculo contínuo em tempo real baseado nos pixels reais da imagem e dimensões físicas.
-  - Badges informativas: Baixa resolução (< 100 DPI), Boa definição (100–149 DPI) e Alta definição (≥ 150 DPI).
-- [x] **Estilos Artísticos & Efeitos de Retícula:**
-  - Original com fidelidade total de cores.
-  - Preto & Branco monocromático.
-  - Retícula Monocromática (*Halftone Mono*): pontos circulares ou quadrados com antialiasing, pitch e tamanhos min/max ajustáveis.
-  - Retícula Colorida (*Color Halftone*): pontos coloridos por canal sobre fundo customizado.
-  - Dithering Floyd-Steinberg: difusão de erro bidimensional em escala de cinza de alta precisão.
-  - Alto Contraste: binarização com controles de brilho, contraste e inversão.
-- [x] **Paletas e Cores Customizadas:**
-  - Presets (Clássico P&B, Invertido Escuro, Cyberpunk Menta, Retrô Âmbar, Blueprint Azul, Sépia Editorial).
-  - Seletores de cor de ponto e cor de fundo via color picker hexadecimal.
-- [x] **Preview Interativo & Workspace:**
-  - Backend Rust com renderizador de preview em base64 (`render_poster_preview`).
-  - Zoom de 25% a 200%, ajuste à tela (fit) e grade de folhas com coordenadas alfanuméricas (A1, A2, B1...).
-- [x] **Motor de PDF e Abertura no Explorer:**
-  - Geração física exata via `printpdf`.
-  - Marcas de corte e numeração de folhas com coordenadas de montagem (`Folha X de Y (Linha R, Coluna C)`).
-  - Botão para revelar o PDF gerado diretamente no Windows Explorer.
+### 2.1 Módulo de Documentos (Document Engine)
+- [x] **PDF Inspector (`inspect_pdf`):**
+  - Contagem de páginas, tamanho formatado em KB/MB, orientação (Retrato/Paisagem).
+  - Dimensões tipográficas da folha (`MediaBox`) com suporte a inteiros e reais.
+  - Detecção de proteção por senha / criptografia.
+  - Detecção de texto selecionável vs documento digitalizado/rasterizado.
+- [x] **PDF Merge Engine (`merge_pdfs`):**
+  - União de múltiplos arquivos PDF na ordem exata definida pelo usuário.
+  - Algoritmo de renumeração de identificadores de objetos indiretos (`lopdf`) evitando colisões de nós.
+  - Reconstrução da árvore raiz `/Pages` e contagem agregada de páginas.
+- [x] **PDF Split Engine (`split_pdf`):**
+  - Modo `all`: Extração de cada página individual (`documento_pag_001.pdf`).
+  - Modo `ranges`: Parsing robusto de intervalos compostos (ex: `1-3, 5, 8-10`) com validação sintática.
+  - Modo `every_n`: Fatiamento em lotes homogêneos de $N$ páginas.
+  - Opção para consolidar páginas selecionadas em arquivo único ou múltiplos arquivos.
+- [x] **PDF Organize Engine (`organize_pdf`):**
+  - Reordenação de páginas com arrastar/mover para esquerda/direita.
+  - Rotação individual ou em lote em incrementos de 90°.
+  - Exclusão de páginas indesejadas.
+  - **Preservação total do original**: Arquivo original nunca é sobrescrito, salvando a nova versão organizada na pasta de exportações.
+- [x] **PDF Compress Engine (`compress_pdf`):**
+  - Otimização estrutural com poda de dicionários órfãos (`prune_objects`).
+  - Recompressão de fluxos de dados com Deflate/FlateDecode seguro.
+  - Níveis de compressão: Sem perdas (Estrutural), Recomendada e Extrema.
+  - Relatório real de percentual de economia em bytes gravados.
+- [x] **Conversão Word para PDF (`convert_word_to_pdf`):**
+  - Integração com LibreOffice em modo headless com isolamento de perfil (`-env:UserInstallation`).
+  - Detecção inteligente no sistema (arquivos de programas, registro do Windows, PATH).
+  - Alerta amigável e comando `winget` com botão de cópia caso não instalado.
+- [x] **Conversão PDF para Word (`convert_pdf_to_docx`):**
+  - Extração de texto de parágrafos estruturados via `lopdf`.
+  - Construção de documento DOCX nativo compatível com Microsoft Word via `docx-rs`.
+  - Alerta transparente quando o PDF é puramente imagético/escaneado informando a necessidade de OCR óptico.
 
----
-
-### 2.2 Downloader Multiplataforma & Segurança
-- [x] **Reconhecimento Automático de Plataformas:**
-  - YouTube, YouTube Shorts, Instagram Posts & Reels, TikTok, Facebook / FB Watch, X (Twitter), Reddit, Pinterest, Vimeo, Twitch, SoundCloud, Dailymotion e plataformas compatíveis com yt-dlp.
-- [x] **Suporte Completo a Playlists:**
-  - Inspeção via `--flat-playlist` sem baixar os vídeos previamente.
-  - Listagem com títulos, numeração e durações.
-  - Seleção em massa ("Selecionar todos") e individual.
-- [x] **Download em Lote (Multi-URL):**
-  - Textarea com validação em tempo real de links por linha.
-  - Enfileiramento sequencial e concorrente no `TaskManager`.
-- [x] **Formatos de Extração de Áudio Expandidos:**
-  - Suporte completo a MP3, M4A, WAV, FLAC e OPUS.
-- [x] **Defesa Estrita contra SSRF:**
-  - Bloqueio de localhost, loopbacks (`127.0.0.1`, `::1`), IPs privados RFC 1918 (`10.*`, `172.16-31.*`, `192.168.*`) e link-local/cloud metadata (`169.254.*`).
-  - Validação no frontend e no backend Rust.
-- [x] **Auditoria e Status do yt-dlp:**
-  - Comando `get_ytdlp_status` informando versão e status do binário.
-  - Card de status no rodapé com indicador verde de prontidão.
-
----
-
-## 3. Cobertura de Testes Automatizados
-
-### Backend Rust (8 testes nativos MSVC — 100% aprovados)
-- `test_sqlite_tasks_and_history`: Validação de transações SQLite, estados e recuperação de tarefas.
-- `test_poster_engine_calculation_and_pdf`: Validação de cálculo físico de grade, marcas de corte e PDF 1.4.
-- `test_mandatory_rasterbator_example_4x3_12_sheets`: Teste de paridade com o caso de referência 4x3 12 folhas A4, margem 10mm, sobreposição 5mm e silhueta proporcional (~2.19).
-- `test_image_engine_conversion`: Conversão PNG $\leftrightarrow$ JPEG e amostragem Lanczos3.
-- `test_download_url_validation_and_ssrf`: Validação de URLs seguras e rejeição estrita de URLs SSRF / locais.
-- `test_external_tools_discovery`: Detecção e auditoria de versão de FFmpeg, ffprobe e yt-dlp.
-- `test_synthetic_audio_conversion_and_probe`: Geração de áudio sintético com FFmpeg lavfi, inspeção via `ffprobe`, conversão para MP3 192k e corte com verificação de integridade da saída.
-- `test_synthetic_video_operations`: Geração de vídeo sintético de teste, inspeção de streams de vídeo via `ffprobe`, corte temporal e extração de frame JPG em disco.
-
-### Frontend Vitest (12 testes unitários — 100% aprovados)
-- `navigation.test.ts`: Rotas de navegação do app.
-- `poster.test.ts`:
-  - Cálculo de dimensões, margens e overlap A4.
-  - Verificação da configuração obrigatória 4x3 12 folhas do Rasterbator e silhueta humana.
-  - Geometria de papéis Letter, Legal e orientação Paisagem.
-- `App.test.tsx`: Renderização do shell, barra de título, gaveta `Ctrl+J`, paleta `Ctrl+K`.
-- `mediaScreens.test.tsx`:
-  - `AudioScreen`: Renderização de controles de formato, bitrate, switches de loudnorm e trim, estados desabilitados.
-  - `VideoScreen`: Alternância entre as 5 ferramentas (Converter, Comprimir, Extrair áudio, Cortar trecho, Extrair frame) e seus controles específicos.
-  - `DownloadsScreen`: Badges de plataformas suportadas, alternância Vídeo/Áudio com formatos expandidos (MP3, M4A, WAV, FLAC, OPUS), modo em lote e bloqueio imediato contra SSRF.
+### 2.2 Central de Erros e Diagnósticos Persistente
+- [x] **Persistência SQLite Relacional:**
+  - Tabela `error_logs` com 6 índices de alta performance (`created_at`, `severity`, `module`, `status`, `task_id`, `error_code`).
+  - Captura centralizada em todas as tarefas do TaskManager, comandos IPC Tauri e exceções do React.
+- [x] **Sanitização de Dados Confidenciais:**
+  - Máscara regex para senhas, tokens Bearer, chaves de API, credenciais em URLs e caminhos confidenciais de perfil (`C:\Users\[USER]\...`).
+  - Truncamento protetivo em 8.192 caracteres evitando exaustão de memória.
+- [x] **Interface Dedicada na Tela Histórico:**
+  - Duas abas de navegação: "Atividades Concluídas" e "Erros e Diagnósticos".
+  - Cards de métricas KPI: Total de Registros, Falhas Críticas, Não Resolvidos, Uso do Banco Local em KB.
+  - Filtros multifatoriais: Busca textual, Período (24h, 7d, 30d, Todos), Módulo, Severidade e Status.
+  - Cards expansíveis com detalhes técnicos monospaçados, causa raiz e rastreamento de pilha.
+  - Botão de resolução rápida (`unresolved` $\leftrightarrow$ `resolved`).
+- [x] **Atalho Direto em Tarefas com Falha (`TaskDrawer`):**
+  - Botão "Copiar erro" direto no card da tarefa.
+  - Botão "Ver detalhes do erro", que navega para a Central de Diagnósticos com a falha correspondente expandida e iluminada.
+- [x] **Cópia Nativa para a Área de Transferência:**
+  - Integração direta com a API Win32 do Windows via crate `arboard`.
+  - Botões para "Copiar erro" individual e "Copiar filtrados" em formato de relatório texto legível.
+- [x] **Gestão e Retenção nas Configurações:**
+  - Visor de tamanho do banco em disco.
+  - Seletor de política de retenção automática (7, 30, 90 dias ou limpeza total).
+  - Exportação de auditoria completa em arquivo JSON.
+- [x] **Captura Global de Exceções da Interface:**
+  - React `ErrorBoundary` com interface de recuperação amigável e registro automático do erro.
+  - Listeners de janela para `unhandledrejection` e `error`.

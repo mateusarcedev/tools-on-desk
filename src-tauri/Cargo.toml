@@ -30,6 +30,10 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 thiserror = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 base64 = "0.22"
+lopdf = "0.46.0"
+docx-rs = "0.4.22"
+arboard = "3.7.0"
+regex = "1.13.1"
 
 [profile.release]
 codegen-units = 1

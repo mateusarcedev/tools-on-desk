@@ -9,6 +9,7 @@ interface TaskDrawerProps {
   tasks: Task[];
   onTaskUpdated: () => void;
   onShowToast: (msg: string, kind?: 'ok' | 'err' | 'warn') => void;
+  onNavigateToError?: (taskId: string) => void;
 }
 
 export const TaskDrawer: React.FC<TaskDrawerProps> = ({
@@ -17,6 +18,7 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
   tasks,
   onTaskUpdated,
   onShowToast,
+  onNavigateToError,
 }) => {
   const [filter, setFilter] = useState<'Todas' | 'Ativas' | 'Concluídas' | 'Falhas'>('Todas');
 
@@ -422,6 +424,61 @@ export const TaskDrawer: React.FC<TaskDrawerProps> = ({
                         <Icon name="retry" size={12} />
                         Repetir
                       </button>
+                    )}
+
+                    {t.status === 'failed' && (
+                      <>
+                        <button
+                          onClick={async () => {
+                            const errText = t.error || `Erro na tarefa ${t.name} (ID: ${t.id})`;
+                            await TauriService.copyToClipboard(errText);
+                            onShowToast('Mensagem de erro copiada!', 'ok');
+                          }}
+                          title="Copiar mensagem do erro"
+                          style={{
+                            height: 24,
+                            padding: '0 8px',
+                            borderRadius: 5,
+                            border: '1px solid var(--line)',
+                            background: 'transparent',
+                            color: 'var(--fg)',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                          }}
+                        >
+                          <Icon name="copy" size={12} />
+                          Copiar erro
+                        </button>
+
+                        {onNavigateToError && (
+                          <button
+                            onClick={() => {
+                              onNavigateToError(t.id);
+                              onClose();
+                            }}
+                            title="Ver detalhes na Central de Erros e Diagnósticos"
+                            style={{
+                              height: 24,
+                              padding: '0 8px',
+                              borderRadius: 5,
+                              border: '1px solid var(--pink)',
+                              background: 'var(--pink-dim)',
+                              color: 'var(--pink)',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                          >
+                            <Icon name="alert" size={12} />
+                            Ver detalhes do erro
+                          </button>
+                        )}
+                      </>
                     )}
 
                     {t.status !== 'processing' && t.status !== 'waiting' && (
