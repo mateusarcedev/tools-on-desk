@@ -12,11 +12,13 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "Arce Tools",
         "width": 1200,
         "height": 800,
         "minWidth": 1024,
-        "minHeight": 720
+        "minHeight": 720,
+        "decorations": false
       }
     ],
     "security": {

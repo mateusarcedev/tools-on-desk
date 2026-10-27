@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '../common/Icon';
 import { Task } from '../../types/task';
+import { TauriService } from '../../services/tauri';
 
 interface TitleBarProps {
   tasks: Task[];
@@ -19,6 +20,37 @@ export const TitleBar: React.FC<TitleBarProps> = ({
   theme,
   onCycleTheme,
 }) => {
+  const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    TauriService.isWindowMaximized().then(setIsMaximized);
+    TauriService.onWindowResize(() => {
+      TauriService.isWindowMaximized().then(setIsMaximized);
+    }).then((cleanup) => {
+      unlisten = cleanup;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, []);
+
+  const handleMinimize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    TauriService.minimizeWindow();
+  };
+
+  const handleToggleMaximize = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    TauriService.toggleMaximizeWindow();
+    TauriService.isWindowMaximized().then(setIsMaximized);
+  };
+
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    TauriService.closeWindow();
+  };
+
   const activeTasks = tasks.filter(
     (t) => t.status === 'processing' || t.status === 'waiting'
   );
@@ -46,6 +78,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
   return (
     <div
+      data-tauri-drag-region
+      onDoubleClick={() => handleToggleMaximize()}
       style={{
         height: 44,
         flexShrink: 0,
@@ -55,10 +89,13 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         paddingLeft: 14,
         background: 'var(--bg-soft)',
         borderBottom: '1px solid var(--line)',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
       }}
     >
       {/* Brand */}
       <div
+        data-tauri-drag-region
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -80,6 +117,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             fontWeight: 700,
             fontSize: '11px',
             letterSpacing: '-0.04em',
+            pointerEvents: 'none',
           }}
         >
           a/t
@@ -90,6 +128,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             fontWeight: 600,
             fontSize: '13px',
             letterSpacing: '-0.01em',
+            pointerEvents: 'none',
           }}
         >
           Arce Tools
@@ -98,6 +137,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       {/* Global Search / Command Palette trigger */}
       <div
+        data-tauri-drag-region
         style={{
           flex: 1,
           display: 'flex',
@@ -162,6 +202,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
       {/* Right Actions: Tasks Indicator, Theme Toggle, Window Controls */}
       <div
+        data-tauri-drag-region
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -264,6 +305,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         {/* Window controls */}
         <div style={{ display: 'flex', height: 44 }}>
           <button
+            onClick={handleMinimize}
             title="Minimizar"
             style={{
               width: 46,
@@ -273,13 +315,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               border: 'none',
               background: 'transparent',
               color: 'var(--fg-dim)',
-              cursor: 'default',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease, color 0.15s ease',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--fg)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--fg-dim)';
             }}
           >
             <svg
@@ -293,7 +338,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             </svg>
           </button>
           <button
-            title="Maximizar"
+            onClick={handleToggleMaximize}
+            title={isMaximized ? 'Restaurar' : 'Maximizar'}
             style={{
               width: 46,
               height: 44,
@@ -302,26 +348,42 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               border: 'none',
               background: 'transparent',
               color: 'var(--fg-dim)',
-              cursor: 'default',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease, color 0.15s ease',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--surface)';
+              e.currentTarget.style.color = 'var(--fg)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--fg-dim)';
             }}
           >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path d="M1.5 1.5h9v9h-9z" />
-            </svg>
+            {isMaximized ? (
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M3.5 3.5V1.5h7v7H8.5M1.5 3.5h7v7h-7z" />
+              </svg>
+            ) : (
+              <svg
+                width="11"
+                height="11"
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path d="M1.5 1.5h9v9h-9z" />
+              </svg>
+            )}
           </button>
           <button
+            onClick={handleClose}
             title="Fechar"
             style={{
               width: 46,
@@ -331,7 +393,8 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               border: 'none',
               background: 'transparent',
               color: 'var(--fg-dim)',
-              cursor: 'default',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease, color 0.15s ease',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = '#c42b1c';

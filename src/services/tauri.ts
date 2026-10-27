@@ -304,4 +304,54 @@ export const TauriService = {
       if (unlistenFn) unlistenFn();
     };
   },
+
+  async minimizeWindow(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().minimize();
+    } catch (e) {
+      console.warn('Failed to minimize window', e);
+    }
+  },
+
+  async toggleMaximizeWindow(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().toggleMaximize();
+    } catch (e) {
+      console.warn('Failed to toggle maximize window', e);
+    }
+  },
+
+  async closeWindow(): Promise<void> {
+    if (!isTauri()) return;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      await getCurrentWindow().close();
+    } catch (e) {
+      console.warn('Failed to close window', e);
+    }
+  },
+
+  async isWindowMaximized(): Promise<boolean> {
+    if (!isTauri()) return false;
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      return await getCurrentWindow().isMaximized();
+    } catch {
+      return false;
+    }
+  },
+
+  async onWindowResize(callback: () => void): Promise<() => void> {
+    if (!isTauri()) return () => {};
+    try {
+      const { getCurrentWindow } = await import('@tauri-apps/api/window');
+      return await getCurrentWindow().onResized(callback);
+    } catch {
+      return () => {};
+    }
+  },
 };
