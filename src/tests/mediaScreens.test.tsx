@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import { AudioScreen } from '../components/screens/AudioScreen';
 import { VideoScreen } from '../components/screens/VideoScreen';
@@ -45,17 +45,41 @@ describe('Media Screens Tests', () => {
     expect(screen.getByText(/Corte rápido sem recodificação/i)).toBeInTheDocument();
   });
 
-  it('renders DownloadsScreen with mode switch and input', () => {
+  it('renders DownloadsScreen with multi-platform badges, mode switch and SSRF protection', async () => {
     const onShowToast = vi.fn();
-    render(<DownloadsScreen onShowToast={onShowToast} />);
+    await act(async () => {
+      render(<DownloadsScreen onShowToast={onShowToast} />);
+    });
 
-    expect(screen.getByText('Downloads de Mídia')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Cole um link do YouTube/i)).toBeInTheDocument();
+    expect(screen.getByText('Downloads de Mídia & Áudio')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Cole o link \(YouTube, Shorts, Instagram/i)).toBeInTheDocument();
     expect(screen.getByText('Vídeo')).toBeInTheDocument();
     expect(screen.getByText('Somente áudio')).toBeInTheDocument();
+
+    // Platform chips
+    expect(screen.getByText('YouTube')).toBeInTheDocument();
+    expect(screen.getByText('Instagram')).toBeInTheDocument();
+    expect(screen.getByText('TikTok')).toBeInTheDocument();
+    expect(screen.getByText('SoundCloud')).toBeInTheDocument();
 
     // Switch to Somente áudio
     fireEvent.click(screen.getByText('Somente áudio'));
     expect(screen.getByText('Formato de áudio')).toBeInTheDocument();
+    expect(screen.getByText('MP3')).toBeInTheDocument();
+    expect(screen.getByText('M4A')).toBeInTheDocument();
+    expect(screen.getByText('WAV')).toBeInTheDocument();
+    expect(screen.getByText('FLAC')).toBeInTheDocument();
+    expect(screen.getByText('OPUS')).toBeInTheDocument();
+
+    // Switch to Batch mode
+    const batchLabel = screen.getByText(/Download em lote/i);
+    fireEvent.click(batchLabel);
+    expect(screen.getByPlaceholderText(/Cole os links das mídias aqui, um por linha/i)).toBeInTheDocument();
+
+    // Switch back to single mode and test SSRF prevention
+    fireEvent.click(batchLabel);
+    const input = screen.getByPlaceholderText(/Cole o link \(YouTube, Shorts, Instagram/i);
+    fireEvent.change(input, { target: { value: 'http://127.0.0.1:8080/exploit' } });
+    expect(screen.getByText(/Bloqueio de segurança: URLs locais ou privadas não são permitidas/i)).toBeInTheDocument();
   });
 });

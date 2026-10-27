@@ -1,6 +1,6 @@
 # ARCE TOOLS — Registro de Decisões de Arquitetura (ADRs)
 
-Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01 e 02).
+Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01, 02 e 02.5).
 
 ---
 
@@ -30,8 +30,8 @@ Este documento registra as principais decisões de arquitetura de software adota
 
 ## ADR 004: Gerador Próprio de PDF 1.4 em Rust para o Poster Studio
 - **Status**: Aprovado e Implementado
-- **Contexto**: O Poster Studio requer a divisão precisa de imagens em folhas A4/A3, com margens milimétricas exatas, sobreposição (overlap), marcas de corte vetoriais e paginação.
-- **Decisão**: Implementar um escritor nativo de PDF 1.4 em Rust (`poster_engine.rs`) utilizando `CountingWriter` com `BufWriter`.
+- **Contexto**: O Poster Studio requer a divisão precisa de imagens em folhas A4/A3/Letter/Legal, com margens milimétricas exatas, sobreposição (overlap), marcas de corte vetoriais e paginação.
+- **Decisão**: Implementar um escritor nativo de PDF em Rust (`poster_engine.rs`) utilizando `CountingWriter` com `BufWriter` e primitivas vetoriais de página.
 - **Consequências**: Precisão milimétrica ($1\text{ mm} = 2,834645669\text{ pt}$) e geração em fração de segundos sem dependências externas.
 
 ---
@@ -55,10 +55,7 @@ Este documento registra as principais decisões de arquitetura de software adota
 ## ADR 007: Execução Supervisionada de Motores Externos (`ExternalToolManager`)
 - **Status**: Aprovado e Implementado (Missão 02)
 - **Contexto**: Para suportar conversores reais de áudio e vídeo e downloads de mídias autorizadas, o Arce Tools integra ferramentas consagradas da indústria: **FFmpeg**, **ffprobe** e **yt-dlp**. Executar executáveis externos traz riscos de segurança, injeção de comandos, congelamento de UI e processos órfãos.
-- **Alternativas Consideradas**:
-  - *Concatenação de comandos via shell (`cmd.exe /c` ou `powershell`)*: Extremamente vulnerável a injeção de argumentos, dependente de escaping complexo e imprevisível com caminhos contendo espaços e caracteres Unicode.
-  - *Supervisão direta com `tokio::process::Command`*: Criação direta de processo sem intermediários de shell, passando argumentos em vetor estruturado, com `CREATE_NO_WINDOW = 0x08000000`, captura de stdout/stderr via pipes assíncronos e encerramento forçado da árvore de processos ao cancelar (`child.kill()`).
-- **Decisão**: Adotar a execução supervisionada direta via `ExternalToolManager`.
+- **Decisão**: Adotar a execução supervisionada direta via `tokio::process::Command` com argumentos vetoriais estruturados, `CREATE_NO_WINDOW = 0x08000000` e cancelamento imediato via `child.kill()`.
 - **Consequências**:
   - Imunidade a ataques de injeção de comandos de shell.
   - Cancelamento imediato sem deixar processos `ffmpeg` ou `yt-dlp` executando em segundo plano.
@@ -69,19 +66,37 @@ Este documento registra as principais decisões de arquitetura de software adota
 ## ADR 008: Estratégia de Distribuição e Licenciamento das Ferramentas Externas
 - **Status**: Aprovado (Missão 02)
 - **Contexto**: Analisar o impacto da inclusão do FFmpeg, ffprobe e yt-dlp em relação ao tamanho do instalador, suporte offline, manutenção e conformidade de licenças.
-- **Análise Comparativa**:
+- **Decisão**: Modo Híbrido Inteligente: detecção em caminhos locais, WinGet e PATH. Instalador base leve mantido em ~7 MB com sidecars opcionais validados por SHA-256.
 
-| Critério | Opção A: Embutir no Instalador (Sidecar) | Opção B: Instalação Sob Demanda (Verificada) |
-|---|---|---|
-| **Tamanho do Instalador** | Aumenta de ~7 MB para ~85 MB (+78 MB). | Mantém instalador ultraleve em ~7 MB. |
-| **Funcionamento Offline** | 100% offline desde o primeiro segundo após instalação. | Requer conexão com a internet no primeiro uso de áudio/vídeo/downloads. |
-| **Experiência do Usuário** | Imediata, "funciona direto da caixa" (zero atrito). | Exige download adicional e aceite de termos. |
-| **Manutenção e Atualizações**| Atualizações de codecs exigem novo release do Arce Tools. | Motores podem ser atualizados dinamicamente sem rebuild do app. |
-| **Licenciamento (FFmpeg)** | Se compilado com `--enable-gpl` (como x264/x265), a distribuição conjunta submete a entrega às obrigações da GPL v3 (disponibilização de fontes do conjunto). Se LGPL v2.1+, requer apenas permissão de substituição das bibliotecas dinâmicas. | Como o usuário baixa o binário diretamente do mantenedor oficial (ex.: Gyan/yt-dlp releases), o Arce Tools atua como orquestrador, mantendo sua distribuição autônoma. |
+---
 
-- **Decisão Adotada**:
-  - **Modo Híbrido Inteligente**:
-    1. O `ExternalToolManager` detecta prioritariamente se as ferramentas já estão presentes no sistema (via WinGet oficial da Microsoft, PATH do Windows ou pasta `binaries/`).
-    2. O instalador base é mantido leve (~7 MB).
-    3. Para distribuições "Full Offline", disponibiliza-se a opção de pacote com sidecars embutidos.
-    4. O download sob demanda sempre valida o hash criptográfico SHA-256 e provém exclusivamente de fontes oficiais fixadas (releases oficiais do GitHub do yt-dlp e builds oficiais do Gyan.dev recomendados pelo projeto FFmpeg).
+## ADR 009: Paridade e Evolução do Poster Studio
+- **Status**: Aprovado e Implementado (Missão 02.5)
+- **Contexto**: Oferecer fluxo idêntico ou superior ao Rasterbator.net, com velocidade para usuários casuais e profundidade técnica para impressão profissional.
+- **Decisão**:
+  1. Implementar fluxo duplo: Modo Rápido (3 cliques para exportar) e Modo Avançado (Wizard em 6 etapas).
+  2. Implementar motor de retícula nativo em Rust (`apply_artistic_effect`) com antialiasing analítico para círculos e quadrados, dithering Floyd-Steinberg em 2D e amostragem de cor.
+  3. Adicionar renderizador de preview streaming em base64 (`render_poster_preview`), permitindo ao usuário visualizar o efeito artístico real gerado pelo algoritmo do backend com zero latência.
+  4. Adicionar silhueta humana proporcional de 1,80 m calculada com precisão física em relação à altura total do pôster montado.
+  5. Adicionar monitor de DPI efetivo com faixas de recomendação técnica.
+
+---
+
+## ADR 010: Defesa Estrita contra SSRF e Downloader Multiplataforma
+- **Status**: Aprovado e Implementado (Missão 02.5)
+- **Contexto**: Permitir downloads de mais de uma dúzia de redes sociais e plataformas com yt-dlp sem expor o aplicativo a explorações de Server-Side Request Forgery contra serviços locais ou metadados de nuvem.
+- **Decisão**:
+  1. Implementar filtro estrito duplo (frontend TypeScript e backend Rust) bloqueando esquemas não-HTTP/HTTPS, `localhost`, `127.0.0.1`, loopbacks IPv6, faixas privadas RFC 1918 (`10.*`, `172.16-31.*`, `192.168.*`) e RFC 3927 (`169.254.*`).
+  2. Suporte a playlists via parâmetro `--flat-playlist` do yt-dlp para obter lista rápida de vídeos com seleção individual ou em massa.
+  3. Extração expandida de áudio para 5 formatos: MP3, M4A, WAV, FLAC e OPUS.
+
+---
+
+## ADR 011: Frameless Window com TitleBar Customizada Unificada
+- **Status**: Aprovado e Implementado (Missão 02.5)
+- **Contexto**: No Windows 11, a janela estava exibindo duas barras de título sobrepostas: a barra nativa do sistema operacional e a barra customizada do Arce Tools.
+- **Decisão**:
+  1. Configurar `"decorations": false` no `tauri.conf.json`.
+  2. Adicionar atributo `data-tauri-drag-region` na barra superior customizada.
+  3. Vincular botões de minimizar, maximizar/restaurar e fechar diretamente à API `@tauri-apps/api/window` com permissões concedidas em `capabilities/default.json`.
+- **Consequências**: Visual 100% limpo, sem redundância estética, com suporte completo a arrastar janela e duplo clique para maximizar.

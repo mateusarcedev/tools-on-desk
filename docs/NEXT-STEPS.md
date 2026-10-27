@@ -16,12 +16,13 @@ Este documento orienta os objetivos, contratos e requisitos técnicos para a **M
   - Extração e reconstrução de layouts através de motor nativo de parsing vetorial de PDFs e geração de XML OOXML (`.docx`).
   - Suporte opcional a **OCR (Reconhecimento Óptico de Caracteres)** via **Tesseract OCR** para PDFs digitalizados (scans ou imagens incorporadas).
 
-### 1.2 Poster Studio — Modo Retícula / Pontilhismo (Halftone & Dithering)
-- Implementação de algoritmos de difusão de erro:
-  - **Floyd-Steinberg**
-  - **Atkinson**
-  - **Halftone / Meio-tom com grade angular personalizável (pontos de impressão estilo jornal/arte pop)**.
-- Modo de visualização de simulação 3D de pôster impresso em parede.
+### 1.2 Poster Studio — Expansões Futuras
+- **Simulação de Parede em 3D / Realidade de Ambiente**:
+  - Mockup visual mostrando o pôster em uma sala virtual com iluminação e textura de parede personalizável.
+- **Dithering Adicional**:
+  - Algoritmo de difusão de erro **Atkinson** e **Bayer (Matrix Ordered Dithering)**.
+- **Exportação Direta para Impressora Física**:
+  - Diálogo de impressão direto do SO via Tauri plugin de impressão nativo.
 
 ### 1.3 Pacote Instalador Windows NSIS
 - Criação de pacote de distribuição `.exe` ou `.msi` via Tauri CLI:
@@ -33,10 +34,10 @@ Este documento orienta os objetivos, contratos e requisitos técnicos para a **M
 
 ## 2. Requisitos de Desempenho e Metas Mantidas
 
-| Métrica | Missão 01 | Missão 02 (Alcançado) | Meta Missão 03 |
-|---|:---:|:---:|:---:|
-| **Tempo de Inicialização (Cold start)** | < 1,0s | ~1,0s | < 1,2s |
-| **Memória em Repouso (RAM)** | ~36 MB | ~36 MB | < 45 MB |
-| **Uso de CPU em Repouso** | 0,0% | 0,0% | 0,0% |
-| **Tamanho do Binário Principal** | 7,07 MB | ~7,2 MB | < 8,0 MB |
-| **Taxa de Quadros da Interface** | 60 fps constantes | 60 fps constantes | 60 fps constantes |
+| Métrica | Missão 01 | Missão 02 (Alcançado) | Missão 02.5 (Alcançado) | Meta Missão 03 |
+|---|:---:|:---:|:---:|:---:|
+| **Tempo de Inicialização (Cold start)** | < 1,0s | ~1,0s | ~1,0s | < 1,2s |
+| **Memória em Repouso (RAM)** | ~36 MB | ~36 MB | ~38 MB | < 45 MB |
+| **Uso de CPU em Repouso** | 0,0% | 0,0% | 0,0% | 0,0% |
+| **Tamanho do Binário Principal** | 7,07 MB | ~7,2 MB | 7,73 MB | < 8,5 MB |
+| **Taxa de Quadros da Interface** | 60 fps | 60 fps | 60 fps | 60 fps |

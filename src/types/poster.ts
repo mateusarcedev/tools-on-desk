@@ -1,7 +1,14 @@
-export type PaperType = 'A4' | 'A3' | 'Personalizado';
+export type PaperType = 'A4' | 'A3' | 'Letter' | 'Legal' | 'Personalizado';
 export type Orientation = 'Retrato' | 'Paisagem';
 export type PosterMode = 'Por páginas' | 'Por largura';
-export type ColorEffect = 'Original' | 'P&B' | 'Pontilhismo' | 'Retícula';
+export type ColorEffect =
+  | 'Original'
+  | 'P&B'
+  | 'HalftoneMono'
+  | 'HalftoneColor'
+  | 'FloydSteinberg'
+  | 'HighContrast';
+export type DotShape = 'circle' | 'square';
 
 export interface PosterConfig {
   paper: PaperType;
@@ -17,7 +24,17 @@ export interface PosterConfig {
   pageNumbers: boolean;
   grid: boolean;
   effect: ColorEffect;
-  dotSize: number;
+  dotShape: DotShape;
+  dotPitchMm: number;
+  minDotSize: number;
+  maxDotSize: number;
+  brightness: number;
+  contrast: number;
+  invert: boolean;
+  intensity: number;
+  dotColor: string; // hex
+  bgColor: string; // hex
+  rotateDeg: number; // 0, 90, 180, 270
 }
 
 export interface SheetCell {
@@ -26,6 +43,8 @@ export interface SheetCell {
   width: string;
   height: string;
   label: string;
+  col: number;
+  row: number;
 }
 
 export interface PosterCalculation {
@@ -42,4 +61,5 @@ export interface PosterCalculation {
   pages: number;
   dpi: number;
   lowDpi: boolean;
+  humanScaleRatio: number;
 }

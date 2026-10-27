@@ -12,7 +12,7 @@ import {
   VideoExtractFrameOptions,
   VideoTrimOptions,
 } from '../types/video';
-import { DownloadOptions, MediaDownloadInfo } from '../types/download';
+import { DownloadOptions, MediaDownloadInfo, YtDlpStatus } from '../types/download';
 import { ExternalToolsStatus } from '../types/tools';
 
 export interface SystemInfo {
@@ -64,6 +64,11 @@ export const TauriService = {
   async calculatePosterSpec(options: any): Promise<any> {
     if (!isTauri()) return null;
     return await invoke('calculate_poster_spec', { options });
+  },
+
+  async renderPosterPreview(options: any): Promise<string | null> {
+    if (!isTauri()) return null;
+    return await invoke<string>('render_poster_preview', { options });
   },
 
   async startPosterTask(options: any): Promise<string> {
@@ -153,9 +158,23 @@ export const TauriService = {
           { formatId: '720p', extension: 'mp4', resolution: '1280x720', hasVideo: true, hasAudio: true },
         ],
         isPlaylist: false,
+        platform: 'youtube',
+        platformName: 'YouTube',
       };
     }
     return await invoke<MediaDownloadInfo>('fetch_download_info', { url });
+  },
+
+  async getYtDlpStatus(): Promise<YtDlpStatus> {
+    if (!isTauri()) {
+      return {
+        version: '2026.02.04',
+        path: 'yt-dlp',
+        origin: 'Ambiente Web Mock',
+        isAvailable: true,
+      };
+    }
+    return await invoke<YtDlpStatus>('get_ytdlp_status');
   },
 
   async startDownload(options: DownloadOptions): Promise<string> {

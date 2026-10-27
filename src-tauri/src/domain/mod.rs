@@ -8,7 +8,7 @@ pub mod task;
 pub mod video;
 
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
-pub use download::{DownloadFormatOption, DownloadOptions, MediaDownloadInfo};
+pub use download::{DownloadFormatOption, DownloadOptions, MediaDownloadInfo, PlaylistItemInfo, YtDlpStatus};
 pub use history::HistoryEntry;
 pub use image::{ImageConvertOptions, ImagesToPdfOptions};
 pub use media::{AudioStreamInfo, MediaInfo, VideoStreamInfo};

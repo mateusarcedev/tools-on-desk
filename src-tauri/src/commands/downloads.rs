@@ -1,9 +1,16 @@
-use crate::domain::{DownloadOptions, MediaDownloadInfo, Task, TaskStatus};
+use crate::domain::{DownloadOptions, MediaDownloadInfo, Task, TaskStatus, YtDlpStatus};
 use crate::engines::DownloadEngine;
 use crate::tasks::{TaskJob, TaskManager};
 use chrono::Local;
 use tauri::State;
 use uuid::Uuid;
+
+#[tauri::command]
+pub async fn get_ytdlp_status() -> Result<YtDlpStatus, String> {
+    DownloadEngine::get_ytdlp_status()
+        .await
+        .map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 pub async fn fetch_download_info(url: String) -> Result<MediaDownloadInfo, String> {

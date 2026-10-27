@@ -11,6 +11,11 @@ pub async fn calculate_poster_spec(options: PosterOptions) -> Result<PosterSpec,
 }
 
 #[tauri::command]
+pub async fn render_poster_preview(options: PosterOptions) -> Result<String, String> {
+    PosterEngine::generate_preview(&options).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn start_poster_task(
     options: PosterOptions,
     task_mgr: State<'_, TaskManager>,

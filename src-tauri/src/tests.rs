@@ -83,6 +83,17 @@ mod tests {
             crop_marks: true,
             page_numbers: true,
             effect: "Original".into(),
+            dot_shape: Some("circle".into()),
+            dot_pitch_mm: Some(4.0),
+            min_dot_size: Some(0.05),
+            max_dot_size: Some(0.95),
+            brightness: Some(0.0),
+            contrast: Some(0.0),
+            invert: Some(false),
+            intensity: Some(1.0),
+            dot_color: Some("#000000".into()),
+            bg_color: Some("#ffffff".into()),
+            rotate_deg: Some(0),
             source_path: img_path.to_str().unwrap().into(),
             target_pdf: pdf_path.to_str().unwrap().into(),
         };
@@ -92,6 +103,12 @@ mod tests {
         assert!(spec.rows >= 1);
         assert_eq!(spec.pages, spec.cols * spec.rows);
         assert!(spec.dpi > 0);
+        assert!(spec.human_scale_ratio > 0.0);
+
+        let preview_res = PosterEngine::generate_preview(&options);
+        assert!(preview_res.is_ok());
+        let preview_b64 = preview_res.unwrap();
+        assert!(preview_b64.starts_with("data:image/jpeg;base64,"));
 
         let res = PosterEngine::generate_pdf(&options, |_| {});
         assert!(res.is_ok());
@@ -103,6 +120,66 @@ mod tests {
         // Clean up
         let _ = std::fs::remove_file(img_path);
         let _ = std::fs::remove_file(pdf_path);
+    }
+
+    #[test]
+    fn test_mandatory_rasterbator_example_4x3_12_sheets() {
+        let temp_dir = std::env::temp_dir().join("arce_test_poster_4x3");
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let img_path = temp_dir.join("input_4x3.png");
+
+        // A4 Portrait: 210 x 297 mm
+        // Margin 10mm -> useful content 190 x 277 mm
+        // Overlap 5mm -> step 185 x 272 mm
+        // 4 columns -> total_w = 4 * 185 + 5 = 745 mm
+        // 3 rows -> total_h = 3 * 272 + 5 = 821 mm
+        // Image aspect ratio: 745 / 821 = ~0.9074
+        // Let's create an image with exactly this aspect ratio (745 x 821 pixels)
+        let mut img = RgbImage::new(745, 821);
+        for pixel in img.pixels_mut() {
+            *pixel = Rgb([120, 150, 200]);
+        }
+        img.save(&img_path).unwrap();
+
+        let options = PosterOptions {
+            paper: "A4".into(),
+            custom_w_mm: None,
+            custom_h_mm: None,
+            orientation: "Retrato".into(),
+            mode: "Por páginas".into(),
+            cols: 4,
+            width_cm: 74.5,
+            margin_mm: 10.0,
+            overlap_mm: 5.0,
+            crop_marks: true,
+            page_numbers: true,
+            effect: "HalftoneMono".into(),
+            dot_shape: Some("circle".into()),
+            dot_pitch_mm: Some(4.0),
+            min_dot_size: Some(0.1),
+            max_dot_size: Some(0.9),
+            brightness: Some(0.0),
+            contrast: Some(10.0),
+            invert: Some(false),
+            intensity: Some(1.0),
+            dot_color: Some("#000000".into()),
+            bg_color: Some("#ffffff".into()),
+            rotate_deg: Some(0),
+            source_path: img_path.to_str().unwrap().into(),
+            target_pdf: temp_dir.join("output_4x3.pdf").to_str().unwrap().into(),
+        };
+
+        let spec = PosterEngine::calculate_spec(&options).expect("Falha no cálculo do exemplo 4x3");
+        assert_eq!(spec.cols, 4, "Deve ter exatamente 4 colunas");
+        assert_eq!(spec.rows, 3, "Deve ter exatamente 3 linhas");
+        assert_eq!(spec.pages, 12, "Deve totalizar 12 folhas");
+
+        // Validate human scale (1.80m = 180cm)
+        // Poster height is ~82.1cm, so human is taller than poster (ratio ~2.19)
+        assert!(spec.human_scale_ratio > 1.5 && spec.human_scale_ratio < 3.0);
+
+        let _ = std::fs::remove_dir_all(temp_dir);
     }
 
     #[test]
@@ -140,15 +217,31 @@ mod tests {
     }
 
     #[test]
-    fn test_download_url_validation() {
-        assert!(DownloadEngine::validate_url("https://example.com/video.mp4").is_ok());
-        assert!(DownloadEngine::validate_url("http://example.com/audio.mp3").is_ok());
+    fn test_download_url_validation_and_ssrf() {
+        assert!(DownloadEngine::validate_url("https://www.youtube.com/watch?v=dQw4w9WgXcQ").is_ok());
+        assert!(DownloadEngine::validate_url("https://instagram.com/reels/C_test123/").is_ok());
+        assert!(DownloadEngine::validate_url("https://soundcloud.com/artist/track").is_ok());
 
-        // Rejections
+        // Rejections (Malicious or invalid scheme)
         assert!(DownloadEngine::validate_url("ftp://example.com/file").is_err());
+        assert!(DownloadEngine::validate_url("file:///etc/passwd").is_err());
         assert!(DownloadEngine::validate_url("https://example.com/test; rm -rf /").is_err());
         assert!(DownloadEngine::validate_url("https://example.com/test && echo hack").is_err());
         assert!(DownloadEngine::validate_url("not a url").is_err());
+
+        // SSRF Protection: Localhost, Loopback, Private Ranges, Cloud Metadata
+        assert!(DownloadEngine::validate_url("http://localhost/video.mp4").is_err());
+        assert!(DownloadEngine::validate_url("http://127.0.0.1:8080/v").is_err());
+        assert!(DownloadEngine::validate_url("http://192.168.1.100/video").is_err());
+        assert!(DownloadEngine::validate_url("http://10.0.0.1/stream").is_err());
+        assert!(DownloadEngine::validate_url("http://169.254.169.254/latest/meta-data").is_err());
+
+        // Platform Detection
+        assert_eq!(DownloadEngine::detect_platform("https://www.youtube.com/shorts/abc1234").0, "youtube_shorts");
+        assert_eq!(DownloadEngine::detect_platform("https://www.instagram.com/reel/C_abc").0, "instagram_reels");
+        assert_eq!(DownloadEngine::detect_platform("https://www.tiktok.com/@user/video/123").0, "tiktok");
+        assert_eq!(DownloadEngine::detect_platform("https://x.com/user/status/12345").0, "twitter");
+        assert_eq!(DownloadEngine::detect_platform("https://soundcloud.com/artist/track").0, "soundcloud");
     }
 
     #[tokio::test]

@@ -1,6 +1,6 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01 e 02**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02 e 02.5**.
 
 ---
 
@@ -9,88 +9,98 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | Área | Missão | Status | Detalhes |
 |---|:---:|:---:|---|
 | **Ambiente Windows 11 Nativo** | 01 | Concluído | Rust 1.99.1 (MSVC), VS 2022 Tools, Windows SDK, WebView2 |
-| **Shell e Interface Desktop** | 01 | Concluído | 9 telas fiéis ao Claude Design, navegação, atalhos, temas |
+| **Shell e Interface Desktop** | 01 & 02.5 | Concluído | 9 telas fiéis ao design, barra sem decorações nativas duplicadas, temas |
 | **Motor Global de Tarefas** | 01 & 02 | Concluído | Tokio mpsc, SQLite WAL, cancelamento cooperativo, concorrência |
-| **Poster Studio (Real)** | 01 | Concluído | Slicing de folhas, cálculo físico mm/pt, marcas de corte, PDF 1.4 |
-| **Conversão de Imagens (Real)**| 01 | Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
+| **Poster Studio (Avançado)** | 02.5 | Concluído | Paridade com Rasterbator, Modo Rápido + Stepper 6 etapas, A4/A3/Letter/Legal/Custom, silhueta 1.80m, DPI tracking, Halftone, Floyd-Steinberg, preview Rust base64, PDF printpdf |
+| **Conversão de Imagens** | 01 | Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
 | **Módulo Áudio (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP3/WAV/FLAC/AAC/OGG/OPUS, bitrate, loudnorm, trim |
 | **Módulo Vídeo (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP4/MKV/WEBM, presets de compressão CRF, trim rápido e preciso, extração de frame |
-| **Módulo Downloads (Real)** | 02 | Concluído | yt-dlp, validação estrita de URLs, consulta de metadados prévios, extração de áudio, downloads seguros |
+| **Módulo Downloads (Multiplataforma)**| 02.5 | Concluído | yt-dlp, 13+ plataformas, detecção de playlists, download em lote, áudio (MP3/M4A/WAV/FLAC/OPUS), defesa contra SSRF |
 | **Gerenciador de Motores Externos**| 02 | Concluído | `ExternalToolManager`: detecção, validação, encerramento limpo, sanitização |
-| **Testes Automatizados** | 01 & 02 | Concluído | 10 testes Vitest (frontend) + 7 testes nativos Rust (backend com synthetic FFmpeg) |
+| **Testes Automatizados** | 01, 02 & 02.5 | Concluído | 12 testes Vitest (frontend) + 8 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 
-## 2. Checklist Detalhado da Missão 02
+## 2. Checklist Detalhado da Missão 02.5
 
-### 2.1 Módulo Áudio (Implementação Real)
-- [x] Detecção e inspeção de metadados reais via `MediaEngine::probe` (`ffprobe`).
-- [x] Importação individual e múltipla via diálogo nativo (`selectFiles`) e drag-and-drop.
-- [x] Exibição de metadados reais: duração formatada, sample rate (ex.: 44.1 kHz), número de canais (Mono/Estéreo) e bitrate.
-- [x] Visualizador de onda (waveform) dinâmico sem reter arquivos binários pesados na memória do React.
-- [x] Conversão entre formatos de áudio: MP3, WAV, FLAC, M4A, OGG e OPUS.
-- [x] Configuração de taxa de bits (bitrate): 128 kbps, 192 kbps, 256 kbps, 320 kbps.
-- [x] Configuração de canais: Estéreo (2) e Mono (1).
-- [x] Normalização de volume inteligente via filtro broadcast `-filter:a loudnorm=I=-14:LRA=11:TP=-1.5`.
-- [x] Corte de trecho (`audio.trim`) por intervalo com precisão de milissegundos.
-- [x] Enfileiramento real no `TaskManager` com persistência no SQLite e atualização de histórico.
+### 2.1 Poster Studio Avançado (Referência Rasterbator.net & Além)
+- [x] **Dois Modos de Trabalho:**
+  - *Modo Rápido:* Drop da imagem $\rightarrow$ seletor de folhas / presets $\rightarrow$ exportação direta de PDF.
+  - *Modo Avançado (6 Etapas):* 1. Imagem $\rightarrow$ 2. Tamanho $\rightarrow$ 3. Estilo $\rightarrow$ 4. Cores $\rightarrow$ 5. Impressão $\rightarrow$ 6. Exportação.
+- [x] **Tipos de Papel e Orientação:**
+  - Suporte nativo a A4, A3, Letter (Carta), Legal (Ofício) e dimensões Personalizadas em mm.
+  - Orientação Retrato (*Portrait*) e Paisagem (*Landscape*).
+- [x] **Geometria de Margens e Sobreposição (*Overlap*):**
+  - Margens configuráveis para impressoras domésticas.
+  - Sobreposição física ($CW = PW - 2M$, $SW = CW - OV$) garantindo montagem sem folgas ou saltos.
+  - Preservação estrita do aspect ratio da imagem de origem.
+- [x] **Silhueta Humana Proporcional (1,80 m):**
+  - Proporção matemática exata calculada a partir da altura final do pôster montado.
+  - Botão de alternância (toggle) no viewport para ocultar ou exibir a silhueta.
+- [x] **Indicador de Qualidade e DPI Efetivo:**
+  - Cálculo contínuo em tempo real baseado nos pixels reais da imagem e dimensões físicas.
+  - Badges informativas: Baixa resolução (< 100 DPI), Boa definição (100–149 DPI) e Alta definição (≥ 150 DPI).
+- [x] **Estilos Artísticos & Efeitos de Retícula:**
+  - Original com fidelidade total de cores.
+  - Preto & Branco monocromático.
+  - Retícula Monocromática (*Halftone Mono*): pontos circulares ou quadrados com antialiasing, pitch e tamanhos min/max ajustáveis.
+  - Retícula Colorida (*Color Halftone*): pontos coloridos por canal sobre fundo customizado.
+  - Dithering Floyd-Steinberg: difusão de erro bidimensional em escala de cinza de alta precisão.
+  - Alto Contraste: binarização com controles de brilho, contraste e inversão.
+- [x] **Paletas e Cores Customizadas:**
+  - Presets (Clássico P&B, Invertido Escuro, Cyberpunk Menta, Retrô Âmbar, Blueprint Azul, Sépia Editorial).
+  - Seletores de cor de ponto e cor de fundo via color picker hexadecimal.
+- [x] **Preview Interativo & Workspace:**
+  - Backend Rust com renderizador de preview em base64 (`render_poster_preview`).
+  - Zoom de 25% a 200%, ajuste à tela (fit) e grade de folhas com coordenadas alfanuméricas (A1, A2, B1...).
+- [x] **Motor de PDF e Abertura no Explorer:**
+  - Geração física exata via `printpdf`.
+  - Marcas de corte e numeração de folhas com coordenadas de montagem (`Folha X de Y (Linha R, Coluna C)`).
+  - Botão para revelar o PDF gerado diretamente no Windows Explorer.
 
-### 2.2 Módulo Vídeo (Implementação Real)
-- [x] Leitura de resolução real (largura $\times$ altura), taxa de quadros (FPS), codec de vídeo e duração via `ffprobe`.
-- [x] Conversão de formatos: MP4, MKV e WEBM com seleção de codecs (`libx264`, `libx265`, `libvpx-vp9`).
-- [x] Compressão de vídeo com presets intuitivos:
-  - Qualidade alta: CRF 18
-  - Equilibrado: CRF 23
-  - Arquivo menor: CRF 28
-  - Redimensionamento opcional com preservação de aspect ratio (`scale=-2:1080`, `scale=-2:720`, `scale=-2:480`).
-- [x] Dois modos tecnicamente distintos de corte:
-  - Corte rápido (`fast_copy: true`): `-c copy` instantâneo baseado no keyframe mais próximo com aviso explicativo.
-  - Corte preciso (`fast_copy: false`): recodificação quadro a quadro com precisão exata.
-- [x] Extração de áudio de vídeos (`video.extract_audio`) para MP3, WAV, AAC e FLAC.
-- [x] Extração de frame estático (`video.extract_frame`) em timestamp selecionado nos formatos JPG e PNG.
-- [x] Opção de mudo (`mute_audio: true` via `-an`).
+---
 
-### 2.3 Módulo Downloads (Implementação Real)
-- [x] Validação rigorosa de URLs (rejeição de caracteres de injeção de shell: `;`, `&`, `|`, `$`, `<`, `>`, `"`, quebras de linha).
-- [x] Consulta prévia assíncrona de metadados via `yt-dlp --dump-single-json`:
-  - Título, canal/autor, miniatura e duração real.
-- [x] Seletor de qualidade de vídeo (1080p, 720p, 480p) e contêiner (MP4, MKV).
-- [x] Modo "Somente áudio" com extração direta em MP3, M4A ou FLAC.
-- [x] Seletor de pasta de destino personalizada via diálogo nativo (`selectFolder`).
-- [x] Suporte a download em lote (múltiplos links, um por linha).
-- [x] Progresso real capturado via `--progress-template` do yt-dlp (porcentagem, velocidade, ETA).
-- [x] Política estrita de conformidade: proibição absoluta de bypass de DRM ou violação de criptografia.
-
-### 2.4 Gerenciamento de Motores Externos (`ExternalToolManager`)
-- [x] Descoberta automática de executáveis:
-  - Diretório de binários da aplicação (`./binaries/`).
-  - Diretórios do WinGet (`%LOCALAPPDATA%\Microsoft\WinGet\Packages\...`).
-  - Variável de ambiente `PATH`.
-- [x] Execução estruturada via `tokio::process::Command` sem passagem por interpretadores de shell (`cmd.exe /c` ou `powershell -Command` expressamente proibidos).
-- [x] Flag de criação de processo no Windows `CREATE_NO_WINDOW = 0x08000000` (impede abertura de janelas pretas do prompt).
-- [x] Cancelamento cooperativo seguro: encerramento imediato do processo filho (`child.kill()`) ao cancelar a tarefa no `TaskManager`.
-- [x] Limpeza automática de arquivos parciais corrompidos em caso de falha ou cancelamento.
-- [x] Prevenção de colisões com arquivos existentes (`nome (1).ext`).
-- [x] Suporte completo a nomes de arquivos Unicode e caminhos com espaços.
+### 2.2 Downloader Multiplataforma & Segurança
+- [x] **Reconhecimento Automático de Plataformas:**
+  - YouTube, YouTube Shorts, Instagram Posts & Reels, TikTok, Facebook / FB Watch, X (Twitter), Reddit, Pinterest, Vimeo, Twitch, SoundCloud, Dailymotion e plataformas compatíveis com yt-dlp.
+- [x] **Suporte Completo a Playlists:**
+  - Inspeção via `--flat-playlist` sem baixar os vídeos previamente.
+  - Listagem com títulos, numeração e durações.
+  - Seleção em massa ("Selecionar todos") e individual.
+- [x] **Download em Lote (Multi-URL):**
+  - Textarea com validação em tempo real de links por linha.
+  - Enfileiramento sequencial e concorrente no `TaskManager`.
+- [x] **Formatos de Extração de Áudio Expandidos:**
+  - Suporte completo a MP3, M4A, WAV, FLAC e OPUS.
+- [x] **Defesa Estrita contra SSRF:**
+  - Bloqueio de localhost, loopbacks (`127.0.0.1`, `::1`), IPs privados RFC 1918 (`10.*`, `172.16-31.*`, `192.168.*`) e link-local/cloud metadata (`169.254.*`).
+  - Validação no frontend e no backend Rust.
+- [x] **Auditoria e Status do yt-dlp:**
+  - Comando `get_ytdlp_status` informando versão e status do binário.
+  - Card de status no rodapé com indicador verde de prontidão.
 
 ---
 
 ## 3. Cobertura de Testes Automatizados
 
-### Backend Rust (7 testes nativos MSVC — 100% aprovados)
+### Backend Rust (8 testes nativos MSVC — 100% aprovados)
 - `test_sqlite_tasks_and_history`: Validação de transações SQLite, estados e recuperação de tarefas.
 - `test_poster_engine_calculation_and_pdf`: Validação de cálculo físico de grade, marcas de corte e PDF 1.4.
+- `test_mandatory_rasterbator_example_4x3_12_sheets`: Teste de paridade com o caso de referência 4x3 12 folhas A4, margem 10mm, sobreposição 5mm e silhueta proporcional (~2.19).
 - `test_image_engine_conversion`: Conversão PNG $\leftrightarrow$ JPEG e amostragem Lanczos3.
-- `test_download_url_validation`: Validação de URLs seguras e rejeição de payloads maliciosos.
+- `test_download_url_validation_and_ssrf`: Validação de URLs seguras e rejeição estrita de URLs SSRF / locais.
 - `test_external_tools_discovery`: Detecção e auditoria de versão de FFmpeg, ffprobe e yt-dlp.
 - `test_synthetic_audio_conversion_and_probe`: Geração de áudio sintético com FFmpeg lavfi, inspeção via `ffprobe`, conversão para MP3 192k e corte com verificação de integridade da saída.
 - `test_synthetic_video_operations`: Geração de vídeo sintético de teste, inspeção de streams de vídeo via `ffprobe`, corte temporal e extração de frame JPG em disco.
 
-### Frontend Vitest (10 testes unitários — 100% aprovados)
+### Frontend Vitest (12 testes unitários — 100% aprovados)
 - `navigation.test.ts`: Rotas de navegação do app.
-- `poster.test.ts`: Matemática de páginas e DPI do Poster Studio.
+- `poster.test.ts`:
+  - Cálculo de dimensões, margens e overlap A4.
+  - Verificação da configuração obrigatória 4x3 12 folhas do Rasterbator e silhueta humana.
+  - Geometria de papéis Letter, Legal e orientação Paisagem.
 - `App.test.tsx`: Renderização do shell, barra de título, gaveta `Ctrl+J`, paleta `Ctrl+K`.
 - `mediaScreens.test.tsx`:
   - `AudioScreen`: Renderização de controles de formato, bitrate, switches de loudnorm e trim, estados desabilitados.
   - `VideoScreen`: Alternância entre as 5 ferramentas (Converter, Comprimir, Extrair áudio, Cortar trecho, Extrair frame) e seus controles específicos.
-  - `DownloadsScreen`: Input de link, alternância entre Vídeo e Somente áudio, validação e envio.
+  - `DownloadsScreen`: Badges de plataformas suportadas, alternância Vídeo/Áudio com formatos expandidos (MP3, M4A, WAV, FLAC, OPUS), modo em lote e bloqueio imediato contra SSRF.
