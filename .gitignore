@@ -11,6 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
+*.Zone.Identifier
+*.html
+!index.html
 target
 src-tauri/target
 

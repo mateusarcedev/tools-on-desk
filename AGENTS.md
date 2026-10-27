@@ -1,6 +1,6 @@
 # Instruções para Agentes de IA e Desenvolvedores — ARCE TOOLS
 
-Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **Arce Tools**.
+Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **Arce Tools** (Missões 01 e 02).
 
 ---
 
@@ -28,29 +28,28 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
 1. **Tratamento de Erros**:
    - Utilize a enum tipada `AppError` em `src-tauri/src/error.rs` que implementa `thiserror::Error` e `serde::Serialize`.
    - **NUNCA use `.unwrap()` ou `.expect()` em código de produção ou manipuladores de comandos IPC**. Propague erros com o operador `?`.
-2. **Desacoplamento e I/O Não-Bloqueante**:
-   - O thread de comandos do Tauri (`tauri::command`) nunca deve realizar operações de processamento intensivo de imagem, cálculo de grade de pôsteres ou gravação massiva de arquivos de forma síncrona.
-   - Enfileire todo processamento pesado através do `TaskManager` (`tokio::sync::mpsc`).
-   - Respeite tokens de cancelamento (`tokio_util::sync::CancellationToken`) em loops de processamento.
-3. **Persistência SQLite**:
-   - Utilize transações para operações em lote.
-   - Sempre utilize o modo WAL (`PRAGMA journal_mode=WAL`).
-   - Trate encerramentos abruptos: qualquer tarefa pendente/em execução ao iniciar o app deve ser recuperada consistentemente.
-4. **Chamadas Externas Estruturadas**:
-   - Ao executar executáveis externos ou sidecars (ex.: FFmpeg, yt-dlp nas próximas fases), sempre utilize chamadas estruturadas (`std::process::Command::new` com vetor de argumentos `.args(&[...])`). **NUNCA concatene comandos em strings para execução em shell (`cmd.exe /c ...` ou `sh -c ...`)**.
-5. **Prevenção de Colisão de Arquivos**:
-   - Nunca sobrescreva arquivos existentes do usuário silenciosamente. Use a função `resolve_unique_filename` para gerar variantes numeradas (`arquivo (1).png`).
+2. **Supervisão de Motores Externos (FFmpeg, ffprobe, yt-dlp)**:
+   - Toda execução de binários externos deve passar por `ExternalToolManager::run_with_cancellation` ou `tokio::process::Command::new(binary_path).args(arg_vec)`.
+   - **NUNCA execute comandos por interpolação ou concatenação de strings em shells (`cmd.exe /c` ou `powershell -Command` são expressamente proibidos)**.
+   - Sempre utilize a flag de processo `CREATE_NO_WINDOW = 0x08000000` no Windows.
+   - Encerre o processo filho (`child.kill()`) imediatamente quando o `CancellationToken` for acionado.
+   - Limpe arquivos temporários ou corrompidos gerados por cancelamentos.
+3. **Persistência SQLite e Integridade**:
+   - Utilize transações para operações em lote e modo WAL (`PRAGMA journal_mode=WAL`).
+   - Mantenha o `TaskManager` como fila única centralizada para todas as operações do sistema.
+   - Previna colisões de arquivos no disco gerando sufixos numéricos (`arquivo (1).ext`).
+4. **Respeito a Direitos Autorais e DRM**:
+   - É expressamente proibida qualquer implementação de bypass de DRM ou violação de criptografia de fluxos de mídia.
 
 ### 2.2 Frontend React (`src/`)
 1. **TypeScript Estrito**:
    - `strict: true` ativado no `tsconfig.json`.
    - Todas as chamadas Tauri devem ter interfaces de solicitação e resposta tipadas em `src/types/`.
 2. **Gerenciamento de Memória e Desempenho**:
-   - **NÃO armazene buffers binários ou imagens em Base64 grandes no estado React**. O backend deve processar diretamente os caminhos de arquivos (`filepath`).
-   - Apenas metadados, dimensões e caminhos de arquivo devem trafegar pelo IPC.
-   - Para pré-visualizações, utilize paths locais convertidos pelo Tauri ou representações vetoriais leves.
+   - **NÃO armazene buffers binários ou vídeos/áudios grandes no estado React**. O backend deve processar diretamente os caminhos de arquivos (`filepath`).
+   - Metadados de mídia (duração, dimensões, codecs) devem ser obtidos pelo backend via `probeMedia` (`ffprobe`).
 3. **Sem Mocks Fictícios de Sucesso**:
-   - A interface nunca deve simular operações fictícias ou fingir que um download ou conversão ocorreu sem o motor real ter processado. Telas de ferramentas em preparação devem exibir banners explicativos honestos sobre o roadmap.
+   - A interface nunca deve simular operações fictícias ou fingir que um download ou conversão ocorreu sem o motor real ter processado.
 
 ---
 
@@ -63,8 +62,8 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
   - Microsoft C++ Build Tools (Visual Studio 2022).
   - Windows 11 SDK.
   - WebView2 Runtime.
-- **Compilação a partir de WSL2 / Ambiente Compartilhado**:
-  - Para compilar no Windows host a partir do repositório compartilhado, redirecione o target dir para um disco local NTFS para evitar locks de arquivo de rede:
+- **Compilação**:
+  - Para compilar no Windows host a partir do repositório compartilhado WSL2:
     ```powershell
     $env:CARGO_TARGET_DIR = "C:\Users\marce\AppData\Local\Temp\arce-target"
     $env:CARGO_INCREMENTAL = "0"
@@ -75,11 +74,3 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
   - Antes de submeter alterações, sempre execute:
     - Frontend: `pnpm test`
     - Backend: `cargo test`
-
----
-
-## 4. Diretrizes Éticas e Legais
-
-- O Arce Tools é um utilitário offline e respeitoso.
-- Não implemente nenhum método para quebra de DRM ou download clandestino de fontes restritas.
-- Mantenha conformidade com licenças de código aberto: crates Rust MIT/Apache-2.0 e FFmpeg sob LGPL v2.1+.

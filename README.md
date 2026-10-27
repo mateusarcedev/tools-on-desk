@@ -2,75 +2,69 @@
 
 **Arce Tools** é um aplicativo desktop multiferramentas, gratuito, offline-first, de alta performance e visualmente premium, construído com **Tauri 2**, **Rust**, **React 19** e **TypeScript**.
 
-O design foi rigorosamente reproduzido a partir do protótipo oficial do **Claude Design**, mantendo fidelidade estrita às famílias tipográficas **Geist** e **Geist Mono**, tema escuro nativo com destaque em **verde-menta** (`#15F5BA`), tema claro correspondente, atalhos de teclado ágeis e microinterações fluidas.
+O design foi rigorosamente reproduzido a partir do protótipo oficial do **Claude Design**, mantendo fidelidade estrita às famílias tipográficas **Geist** e **Geist Mono**, tema escuro nativo com destaque em **verde-menta** (`#15F5BA`), tema claro correspondente, atalhos de teclado ágeis (`Ctrl+K`, `Ctrl+J`) e microinterações fluidas.
 
 ---
 
-## 🚀 Funcionalidades Implementadas (Missão 01)
+## 🚀 Funcionalidades Implementadas
 
-### 1. Shell Desktop & Navegação
-- Janela desktop nativa Tauri com identificação Arce Tools, dimensões mínimas (1024x720) e controles de janela.
-- 9 telas integradas:
-  - **Início**: Acesso rápido às ferramentas, arrastar e soltar global, lista de tarefas ativas e histórico recente.
-  - **Pôsteres (Poster Studio)**: Ferramenta completa e offline para fatiamento de imagens em pôsteres multipágina para impressão.
-  - **Imagens**: Conversão de formato (PNG/JPEG), redimensionamento Lanczos3, ajuste de qualidade e compilação de imagens em PDF.
-  - **Histórico**: Registro persistido em SQLite de todas as operações realizadas, com botões para abrir arquivos ou pastas no Windows Explorer.
-  - **Configurações**: Gerenciamento de tema (Escuro, Claro, Sistema), limite de concorrência de tarefas simultâneas e visualização de dependências.
-  - **Downloads**, **Documentos**, **Áudio**, **Vídeo**: Telas estruturadas com seus respectivos contratos de integração prontos para a Missão 02.
-- Menu lateral recolhível (toggle via botão ou `Ctrl+B`).
-- Paleta de comandos universal acionada por `Ctrl+K`.
-- Gaveta lateral de tarefas ativas acionada por `Ctrl+J`.
-- Atalhos rápidos de navegação `Ctrl+1` até `Ctrl+9`.
-- Notificações Toast nativas para status e erros.
+### 1. Módulo de Áudio (Novo na Missão 02)
+- **Inspeção de Metadados Reais:** Análise instantânea via `ffprobe` com duração precisa, taxa de amostragem (Hz), número de canais e bitrate original.
+- **Conversão de Formatos:** MP3, WAV, FLAC, M4A, OGG e OPUS com ajuste de bitrate (128k a 320k) e canais (Mono/Estéreo).
+- **Normalização de Volume:** Algoritmo broadcast padrão EBU R128 (`loudnorm=I=-14:LRA=11:TP=-1.5`) para streaming e podcasts.
+- **Corte por Intervalo:** Recorte temporal milimétrico com início e fim configuráveis em segundos.
+- **Waveform Dinâmico:** Visualizador de forma de onda reativo e leve sem sobrecarregar a memória do React.
+- **Extração de Áudio de Vídeos:** Conversão direta de trilhas sonoras de vídeos para qualquer formato de áudio.
 
-### 2. Motor Global de Tarefas (Rust + SQLite)
-- Fila assíncrona baseada no runtime Tokio (`tokio::sync::mpsc`).
-- Limite configurável de tarefas simultâneas controlado por semáforo assíncrono.
-- Cancelamento verdadeiro e cooperativo de tarefas via `CancellationToken`.
-- Persistência contínua em SQLite em modo WAL (`journal_mode=WAL`).
-- Transmissão de progresso em tempo real (0 a 100%) e status via barramento de eventos do Tauri.
-- Tratamento automático de interrupções: tarefas que estavam em execução em caso de encerramento do processo são recuperadas com status seguro no próximo início.
-- Prevenção automática de sobrescrita de arquivos existentes no disco.
+### 2. Módulo de Vídeo (Novo na Missão 02)
+- **Inspeção e Metadados de Vídeo:** Detecção de resolução original (largura $\times$ altura), taxa de quadros (FPS), codec de vídeo e duração real.
+- **Conversão de Contêineres:** MP4, MKV e WEBM com suporte a codecs modernos (`libx264`, `libx265`, `libvpx-vp9`).
+- **Compressão com Presets de CRF:**
+  - Qualidade alta (CRF 18)
+  - Equilibrado (CRF 23)
+  - Arquivo menor (CRF 28)
+  - Redimensionamento opcional com aspect ratio preservado (`1080p`, `720p`, `480p`).
+- **Dois Modos de Corte de Vídeo:**
+  - *Corte Rápido:* `-c copy` instantâneo sem perda de qualidade, aproveitando keyframes.
+  - *Corte Preciso:* recodificação quadro a quadro com precisão cirúrgica.
+- **Extração de Frames Estáticos:** Captura de fotos em alta resolução em timestamps selecionados nos formatos JPG e PNG.
+- **Remoção de Áudio:** Opção de exportação com áudio desativado (Mudo).
 
-### 3. Poster Studio (Primeira Ferramenta Real)
-- Entrada de imagens via diálogo nativo ou drag-and-drop (PNG e JPEG).
-- Validação de dimensões e resolução da imagem de entrada.
-- Formatos de papel físicos suportados: **A4** ($210 \times 297\text{ mm}$), **A3** ($297 \times 420\text{ mm}$) e personalizável.
-- Modos de orientação: Retrato e Paisagem.
-- Controle de número de colunas, cálculo automático de linhas e altura total em centímetros.
-- Margens configuráveis em milímetros (padrão 10mm).
-- Sobreposição entre folhas (overlap) configurável (padrão 5mm) para alinhamento e colagem perfeita.
-- **Cálculo dinâmico de DPI efetivo de impressão**:
-  - Alerta visual destacado quando a resolução for inferior a 150 DPI.
-- Grade interativa de pré-visualização das folhas com dimensões finais.
-- Modos de cor: **Original** e **Preto e Branco**.
-- **Gerador de PDF Multipágina Vetorial (PDF 1.4)**:
-  - Fatiamento de imagem por viewport em alta resolução.
-  - Desenho vetorial de marcas de corte nos 4 cantos da área útil de cada folha.
-  - Numeração clara da folha e coordenadas no rodapé (`Folha X de Y (Linha R, Coluna C)`).
-  - Geração direta em disco via `CountingWriter` com xref indexado, gerando arquivos leves e 100% imprimíveis.
+### 3. Módulo de Downloads (Novo na Missão 02)
+- **Motor Integrado yt-dlp:** Extração e download de mídias a partir de fontes e plataformas permitidas.
+- **Validação Estrita de URLs:** Prevenção contra injeção de parâmetros ou metacaracteres de shell.
+- **Consulta Prévia de Metadados:** Exibição do título, canal/autor, miniatura e duração antes de iniciar o download.
+- **Seletores de Qualidade e Formato:** Opções de resolução de vídeo (1080p, 720p, 480p) ou modo "Somente áudio" (MP3, M4A, FLAC).
+- **Downloads em Lote:** Suporte a listas de URLs para enfileiramento sequencial.
+- **Conformidade Ética e Legal:** Sem bypass de DRM ou violação de criptografia de fluxos protegidos.
 
-### 4. Conversão e Otimização de Imagens (Segunda Ferramenta Real)
-- Seleção individual ou em lote de imagens.
-- Conversão entre formatos PNG e JPEG.
+### 4. Poster Studio (Missão 01)
+- Divisão de imagens em folhas **A4**, **A3** ou dimensões personalizadas para montagem de pôsteres gigantes para impressão (estilo Rasterbator).
+- Margens físicas configuráveis (mm), sobreposição entre folhas (overlap) para colagem e marcas de corte vetoriais.
+- Cálculo de DPI efetivo com alerta visual para resoluções abaixo de 150 DPI.
+- Gerador próprio em Rust puro de PDFs multipágina compatíveis com a especificação **PDF 1.4**.
+
+### 5. Conversão e Otimização de Imagens (Missão 01)
+- Conversão individual ou em lote entre PNG e JPEG.
 - Redimensionamento por amostragem **Lanczos3** de alta fidelidade visual.
-- Preservação opcional da proporção original (aspect ratio).
-- Ajuste fino de qualidade JPEG (1 a 100).
 - Compilação de múltiplas imagens em um único arquivo PDF.
-- Destino de salvamento customizável com resolução automática de nomes repetidos.
+
+### 6. Motor Global de Tarefas & Shell Desktop
+- Fila assíncrona baseada em Tokio com controle de concorrência por semáforo e persistência contínua em SQLite (modo WAL).
+- Cancelamento verdadeiro de tarefas que encerra processos externos (`child.kill()`) e remove arquivos parciais corrompidos.
+- Paleta universal de comandos (`Ctrl+K`) e gaveta de tarefas ativas (`Ctrl+J`).
 
 ---
 
-## 🛠️ Stack Tecnológica
+## 🛠️ Motores Externos e Licenciamento
 
-- **Desktop Framework**: [Tauri 2](https://v2.tauri.app/)
-- **Backend**: Rust 2021 (MSVC toolchain no Windows)
-- **Frontend**: React 19 + TypeScript (strict mode) + Vite
-- **Gerenciador de Pacotes**: pnpm
-- **Banco de Dados**: SQLite embutido via `rusqlite` (bundled)
-- **Testes**:
-  - Frontend: [Vitest](https://vitest.dev/) + React Testing Library
-  - Backend: Testes nativos Rust via `cargo test`
+O Arce Tools orquestra ferramentas consagradas da indústria sob chamadas estruturadas e seguras (`ExternalToolManager`):
+
+| Ferramenta | Versão Validada | Origem | Licença | Finalidade |
+|---|---|---|---|---|
+| **FFmpeg** | 8.1.1 full_build | Gyan.dev / WinGet | GPL v3 / LGPL v2.1+ | Processamento de áudio e vídeo |
+| **ffprobe** | 8.1.1 full_build | Gyan.dev / WinGet | GPL v3 / LGPL v2.1+ | Inspeção profunda de streams e codecs |
+| **yt-dlp** | 2026.10.26 | GitHub / WinGet | The Unlicense | Download de mídias de fontes autorizadas |
 
 ---
 
@@ -84,34 +78,31 @@ O design foi rigorosamente reproduzido a partir do protótipo oficial do **Claud
   winget install Rustlang.Rustup
   rustup default stable-x86_64-pc-windows-msvc
   ```
-- **Microsoft C++ Build Tools** (Visual Studio 2022 com a carga de trabalho de C++ para Desktop)
-- **Windows 11 SDK**
-- **Microsoft Edge WebView2 Runtime** (já incluído nativamente no Windows 11)
-
-### Instalação de Dependências
-```bash
-# Na raiz do projeto
-pnpm install
-```
+- **Microsoft C++ Build Tools** (Visual Studio 2022) e **Windows 11 SDK**
+- **Microsoft Edge WebView2 Runtime** (nativo do Windows 11)
+- **FFmpeg e yt-dlp** (detectados automaticamente via WinGet ou no PATH):
+  ```powershell
+  winget install Gyan.FFmpeg
+  winget install yt-dlp.yt-dlp
+  ```
 
 ### Executando em Modo Desenvolvimento
 ```bash
-# Inicia o Vite e a janela nativa Tauri
+# Na raiz do projeto
+pnpm install
 pnpm tauri dev
 ```
 
 ### Executando os Testes Automatizados
-
 ```bash
-# 1. Testes do Frontend (Vitest)
+# 1. Testes do Frontend (Vitest - 10 testes)
 pnpm test
 
-# 2. Testes do Backend (Rust MSVC no Windows)
+# 2. Testes Nativos do Backend (Rust MSVC - 7 testes com synthetic FFmpeg)
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-### Gerando o Build de Produção
-
+### Compilando para Produção
 ```powershell
 # Build do Frontend
 pnpm build
@@ -119,47 +110,4 @@ pnpm build
 # Build do Executável Nativo Windows
 cargo build --release --manifest-path src-tauri/Cargo.toml
 ```
-O executável otimizado será gerado na pasta de saída `target/release/arce-tools.exe`.
-
----
-
-## 📂 Estrutura do Projeto
-
-```
-arce-tools/
-├── docs/                      # Documentação técnica e decisões de arquitetura
-│   ├── ARCHITECTURE.md        # Arquitetura do sistema, IPC e fluxo de dados
-│   ├── IMPLEMENTATION-STATUS.md # Checklist de conformidade das Fases A, B, C, D
-│   ├── DECISIONS.md           # Registros de Decisão de Arquitetura (ADRs)
-│   └── NEXT-STEPS.md          # Planejamento detalhado para a Missão 02
-├── public/
-│   └── fonts/                 # Famílias tipográficas Geist e Geist Mono (offline)
-├── src/                       # Frontend React 19 + TypeScript
-│   ├── components/
-│   │   ├── common/            # Ícones SVG oficiais, botões, switches, dropzones
-│   │   ├── screens/           # Telas do aplicativo (Home, Poster, Images, etc.)
-│   │   └── shell/             # TitleBar, Sidebar, CommandPalette, TaskDrawer, etc.
-│   ├── services/              # Camada tipada de comunicação IPC com Tauri
-│   ├── styles/                # Tokens CSS do Design System (dark & light)
-│   ├── tests/                 # Suíte de testes unitários do frontend (Vitest)
-│   └── types/                 # Interfaces TypeScript estritas
-├── src-tauri/                 # Backend nativo em Rust (Tauri 2)
-│   ├── Cargo.toml             # Dependências Rust (tokio, rusqlite, image, tauri)
-│   ├── tauri.conf.json        # Configuração da janela e permissões do Tauri
-│   └── src/
-│       ├── commands/          # Comandos IPC expostos ao frontend
-│       ├── domain/            # Modelos de domínio (Task, History, Poster, Image)
-│       ├── engines/           # Motores nativos (PosterEngine PDF, ImageEngine)
-│       ├── storage/           # Gerenciamento SQLite, migrações e persistência
-│       ├── tasks/             # Gerenciador assíncrono de tarefas com semáforo
-│       ├── error.rs           # Sistema de erro tipado AppError
-│       └── tests.rs           # Testes unitários nativos Rust
-├── AGENTS.md                  # Diretrizes e regras para agentes e desenvolvedores
-└── README.md                  # Este documento
-```
-
----
-
-## ⚖️ Licença e Conformidade
-
-Este projeto é desenvolvido para fins produtivos e respeita as leis de direitos autorais e termos de uso. O módulo de downloads não contém mecanismos de quebra de proteção anticópia ou DRM.
+O executável otimizado será gerado em `target/release/arce-tools.exe` com apenas **~7 MB** de tamanho.

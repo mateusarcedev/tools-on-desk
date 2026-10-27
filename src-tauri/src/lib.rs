@@ -53,6 +53,17 @@ pub fn run() {
             commands::open_path_in_explorer,
             commands::get_preference,
             commands::set_preference,
+            commands::probe_media,
+            commands::start_audio_convert,
+            commands::start_audio_trim,
+            commands::start_video_convert,
+            commands::start_video_compress,
+            commands::start_video_trim,
+            commands::start_video_extract_audio,
+            commands::start_video_extract_frame,
+            commands::fetch_download_info,
+            commands::start_download,
+            commands::check_external_tools,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

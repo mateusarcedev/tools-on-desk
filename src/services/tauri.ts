@@ -4,6 +4,16 @@ import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { Task } from '../types/task';
 import { HistoryItem } from '../types/history';
 import { ImageConvertOptions, ImagesToPdfOptions } from '../types/images';
+import { AudioConvertOptions, AudioTrimOptions, MediaInfo } from '../types/audio';
+import {
+  VideoCompressOptions,
+  VideoConvertOptions,
+  VideoExtractAudioOptions,
+  VideoExtractFrameOptions,
+  VideoTrimOptions,
+} from '../types/video';
+import { DownloadOptions, MediaDownloadInfo } from '../types/download';
+import { ExternalToolsStatus } from '../types/tools';
 
 export interface SystemInfo {
   os: string;
@@ -71,6 +81,101 @@ export const TauriService = {
     return await invoke<string>('start_images_to_pdf_task', { options });
   },
 
+  // --- AUDIO COMMANDS ---
+  async probeMedia(filePath: string): Promise<MediaInfo> {
+    if (!isTauri()) {
+      return {
+        filePath,
+        formatName: 'mp3',
+        durationSeconds: 120.0,
+        sizeBytes: 2500000,
+        videoStreams: [],
+        audioStreams: [
+          {
+            index: 0,
+            codecName: 'mp3',
+            sampleRate: 44100,
+            channels: 2,
+            bitRate: 192000,
+          },
+        ],
+      };
+    }
+    return await invoke<MediaInfo>('probe_media', { filePath });
+  },
+
+  async startAudioConvert(options: AudioConvertOptions): Promise<string> {
+    if (!isTauri()) return 'mock-audio-task-id';
+    return await invoke<string>('start_audio_convert', { options });
+  },
+
+  async startAudioTrim(options: AudioTrimOptions): Promise<string> {
+    if (!isTauri()) return 'mock-audio-trim-id';
+    return await invoke<string>('start_audio_trim', { options });
+  },
+
+  // --- VIDEO COMMANDS ---
+  async startVideoConvert(options: VideoConvertOptions): Promise<string> {
+    if (!isTauri()) return 'mock-video-convert-id';
+    return await invoke<string>('start_video_convert', { options });
+  },
+
+  async startVideoCompress(options: VideoCompressOptions): Promise<string> {
+    if (!isTauri()) return 'mock-video-compress-id';
+    return await invoke<string>('start_video_compress', { options });
+  },
+
+  async startVideoTrim(options: VideoTrimOptions): Promise<string> {
+    if (!isTauri()) return 'mock-video-trim-id';
+    return await invoke<string>('start_video_trim', { options });
+  },
+
+  async startVideoExtractAudio(options: VideoExtractAudioOptions): Promise<string> {
+    if (!isTauri()) return 'mock-video-extract-audio-id';
+    return await invoke<string>('start_video_extract_audio', { options });
+  },
+
+  async startVideoExtractFrame(options: VideoExtractFrameOptions): Promise<string> {
+    if (!isTauri()) return 'mock-video-extract-frame-id';
+    return await invoke<string>('start_video_extract_frame', { options });
+  },
+
+  // --- DOWNLOAD COMMANDS ---
+  async fetchDownloadInfo(url: string): Promise<MediaDownloadInfo> {
+    if (!isTauri()) {
+      return {
+        url,
+        title: 'Mídia de Exemplo (Ambiente Web)',
+        uploader: 'Canal Oficial',
+        durationSeconds: 215.0,
+        formats: [
+          { formatId: '1080p', extension: 'mp4', resolution: '1920x1080', hasVideo: true, hasAudio: true },
+          { formatId: '720p', extension: 'mp4', resolution: '1280x720', hasVideo: true, hasAudio: true },
+        ],
+        isPlaylist: false,
+      };
+    }
+    return await invoke<MediaDownloadInfo>('fetch_download_info', { url });
+  },
+
+  async startDownload(options: DownloadOptions): Promise<string> {
+    if (!isTauri()) return 'mock-download-id';
+    return await invoke<string>('start_download', { options });
+  },
+
+  // --- EXTERNAL TOOLS ---
+  async checkExternalTools(): Promise<ExternalToolsStatus> {
+    if (!isTauri()) {
+      return {
+        ffmpeg: { name: 'ffmpeg', available: true, version: '8.1.1', path: 'C:\\ffmpeg\\ffmpeg.exe', license: 'GPL v3', details: 'Navegador mock' },
+        ffprobe: { name: 'ffprobe', available: true, version: '8.1.1', path: 'C:\\ffmpeg\\ffprobe.exe', license: 'GPL v3', details: 'Navegador mock' },
+        ytDlp: { name: 'yt-dlp', available: true, version: '2026.10.26', path: 'C:\\yt-dlp\\yt-dlp.exe', license: 'Unlicense', details: 'Navegador mock' },
+      };
+    }
+    return await invoke<ExternalToolsStatus>('check_external_tools');
+  },
+
+  // --- SYSTEM & PREFERENCES ---
   async getSystemInfo(): Promise<SystemInfo> {
     if (!isTauri()) {
       return {

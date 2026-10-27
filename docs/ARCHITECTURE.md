@@ -1,6 +1,6 @@
 # ARCE TOOLS — Arquitetura do Sistema
 
-Documento de especificação técnica e arquitetura da aplicação desktop **Arce Tools**.
+Documento de especificação técnica e arquitetura da aplicação desktop **Arce Tools** (Missões 01 e 02).
 
 ---
 
@@ -8,13 +8,13 @@ Documento de especificação técnica e arquitetura da aplicação desktop **Arc
 
 O **Arce Tools** é um aplicativo desktop multiferramentas offline-first, de alta fidelidade visual e baixo consumo de recursos, projetado nativamente para Windows 11 (x64) com suporte para Linux e macOS.
 
-A arquitetura adota o modelo desacoplado do **Tauri 2**, separando estritamente a interface do usuário (Webview2 / React 19) do motor de execução nativo de alto desempenho (Rust / Tokio / SQLite).
+A arquitetura adota o modelo desacoplado do **Tauri 2**, separando estritamente a interface do usuário (Webview2 / React 19) do motor de execução nativo de alto desempenho (Rust / Tokio / SQLite) e dos motores externos especializados (**FFmpeg**, **ffprobe**, **yt-dlp**).
 
 ```mermaid
 flowchart TD
     subgraph UI ["Frontend (React 19 + TypeScript + Vite)"]
-        Shell["Application Shell\n(TitleBar, Sidebar, Command Palette, Drawer)"]
-        Screens["Telas / Módulos\n(Início, Pôsteres, Imagens, Downloads, Docs, Áudio, Vídeo, Histórico, Configurações)"]
+        Shell["Application Shell\n(TitleBar, Sidebar, Command Palette, Task Drawer)"]
+        Screens["Telas / Módulos\n(Início, Pôsteres, Imagens, Áudio, Vídeo, Downloads, Histórico, Configurações)"]
         State["Estado & Contexto\n(Tasks, History, Theme, Preferences)"]
         TauriClient["Camada de Serviços Tauri\n(@tauri-apps/api/core)"]
     end
@@ -25,11 +25,18 @@ flowchart TD
     end
 
     subgraph Core ["Backend Nativo (Rust 2021)"]
-        CmdLayer["Commands Handler\n(tasks, history, poster, images, system)"]
+        CmdLayer["Commands Handler\n(tasks, history, poster, images, audio, video, downloads, system)"]
         TaskManager["TaskManager\n(Fila assíncrona, Concorrência configurável, Cancelamento)"]
-        Engines["Motores de Processamento\n(PosterEngine, ImageEngine)"]
+        Engines["Motores Nativos Internos\n(PosterEngine, ImageEngine)"]
         DB["SQLite Bundled Database\n(tasks, history, preferences)"]
         FS["File System & Native Dialogs\n(tauri-plugin-dialog, tauri-plugin-opener)"]
+        ToolManager["ExternalToolManager\n(Detecção, Sanitização, Process Supervision, CancellationToken)"]
+    end
+
+    subgraph External ["Motores Especializados Externos"]
+        FFmpeg["FFmpeg 8.1\n(Conversão, Compressão, Recorte, Normalização)"]
+        FFprobe["ffprobe\n(Inspeção profunda de codecs, streams e metadados)"]
+        YtDlp["yt-dlp\n(Extração e download de mídias de fontes autorizadas)"]
     end
 
     Shell --> Screens
@@ -41,111 +48,91 @@ flowchart TD
     Commands --> CmdLayer
     CmdLayer --> TaskManager
     CmdLayer --> Engines
+    CmdLayer --> ToolManager
     CmdLayer --> DB
     CmdLayer --> FS
     TaskManager --> DB
     TaskManager --> Events
-    Engines --> FS
+    TaskManager --> Engines
+    TaskManager --> ToolManager
+    ToolManager --> FFmpeg
+    ToolManager --> FFprobe
+    ToolManager --> YtDlp
 ```
 
 ---
 
-## 2. Camadas do Frontend
+## 2. Camada de Motores Externos (`ExternalToolManager`)
 
-Localizado em `/src`:
+Localizado em [`src-tauri/src/engines/external_tools.rs`](file:///home/mateusarcedev/projetos/arce-tools/src-tauri/src/engines/external_tools.rs):
 
-### 2.1 Design System e Tokens (`/src/styles/tokens.css`)
-- **Tokens de Cor**:
-  - Dark Theme: Fundo `#0B0F10`, Superfície `#141A1C`, Borda `#1F292B`, Acento Menta `#15F5BA`, Texto Primário `#F3F4F6`.
-  - Light Theme: Fundo `#F8FAFC`, Superfície `#FFFFFF`, Borda `#E2E8F0`, Acento Menta `#076B39`, Texto Primário `#0F172A`.
-- **Tipografia**: `Geist` (Interface e títulos), `Geist Mono` (Métricas, atalhos, códigos e especificações técnicas). Fontes embarcadas localmente em `/public/fonts/` sem dependência de internet.
-- **Microinterações e Animações**: Transições de 150ms a 200ms (`ease-out`), scrollbars customizadas de 6px com cantos arredondados, focus-visible acessível em mint.
+### 2.1 Políticas Rígidas de Execução e Segurança
+1. **Sem Injeção de Shell:** A execução de processos ocorre exclusivamente via `tokio::process::Command::new(binary_path).args(arg_vec)`. Nenhuma chamada passa por `cmd.exe /c` ou `powershell -Command`.
+2. **Sanitização de Entradas:** URLs e caminhos de arquivo são validados preventivamente. URLs com caracteres de controle de shell (`;`, `&`, `|`, `$`, `<`, `>`, `"`) são prontamente rejeitadas.
+3. **Sem Janelas Pretas:** No Windows, o processo é criado com a flag `CREATE_NO_WINDOW = 0x08000000`, mantendo a execução 100% invisível ao usuário final.
+4. **Supervisão e Cancelamento Imediato:** Loops de processamento escutam tokens atômicos de cancelamento (`AtomicBool`). Caso o usuário cancele a tarefa, o subprocesso filho recebe um comando `child.kill().await` imediato, evitando processos zumbis ou vazamento de recursos.
+5. **Limpeza de Arquivos Temporários:** Em caso de erro ou cancelamento no meio de uma conversão de áudio ou vídeo, arquivos parciais corrompidos são automaticamente deletados do disco.
 
-### 2.2 Shell da Aplicação (`/src/components/shell/`)
-- `TitleBar.tsx`: Barra de título nativa com controles de janela (minimizar, maximizar, fechar), logotipo Arce Tools com badge do motor nativo e indicador de tarefas ativas.
-- `Sidebar.tsx`: Navegação lateral recolhível (expandido 230px, recolhido 64px) com contadores em tempo real e atalhos de teclado (Ctrl+1 a Ctrl+9).
-- `CommandPalette.tsx`: Painel de navegação rápida acionado globalmente por `Ctrl+K`, permitindo filtrar ferramentas e executar ações imediatas.
-- `TaskDrawer.tsx`: Gaveta lateral de tarefas ativa acionada por `Ctrl+J` ou pelo botão na barra de status, exibindo progresso em tempo real, velocidade e botão de cancelamento individual.
-- `StatusBar.tsx`: Barra inferior com status de conexão com o backend Rust, versão do aplicativo, tarefas ativas e acesso rápido ao tema.
-
-### 2.3 Camada de Serviços Tauri (`/src/services/tauri.ts`)
-Encapsula todas as chamadas `invoke` e `listen` com tipagem estrita TypeScript, garantindo que o frontend nunca realize chamadas ad-hoc sem validação de tipos. Fornece métodos de fallback elegantes para testes unitários em ambiente de navegador.
+### 2.2 Descoberta de Executáveis
+A resolução de binários segue ordem determinística:
+1. Pasta de binários locais da aplicação (`./binaries/` ou ao lado do executável em produção).
+2. Diretórios conhecidos de instalação do WinGet em `%LOCALAPPDATA%\Microsoft\WinGet\Packages\...`.
+3. Variável de ambiente `PATH` do sistema.
 
 ---
 
-## 3. Camadas do Backend Rust
+## 3. Motores Multimídia Implementados
 
-Localizado em `/src-tauri`:
+### 3.1 MediaEngine (`media_engine.rs`)
+Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe -v quiet -print_format json -show_format -show_streams`:
+- Extração de duração física exata, tamanho em bytes e taxa de bits global.
+- Detecção de streams de vídeo: resolução (largura $\times$ altura), taxa de quadros (FPS calculada de frações como 30000/1001 ou 30/1) e codec.
+- Detecção de streams de áudio: taxa de amostragem (ex.: 44100 Hz), número de canais e codec.
 
-### 3.1 Gerenciador Global de Tarefas (`/src-tauri/src/tasks/manager.rs`)
-- Fila mpsc assíncrona gerenciada pelo Tokio runtime.
-- Controle de concorrência por semáforo configurável (padrão: 3 tarefas simultâneas, ajustável nas preferências).
-- Suporte a tokens de cancelamento cooperativo (`tokio_util::sync::CancellationToken`).
-- Persistência contínua de status em SQLite (`pending`, `running`, `completed`, `failed`, `canceled`).
-- Broadcast de eventos em tempo real para a interface via `app.emit("task://...", payload)`.
-- **Recuperação de reinicializações**: No startup, qualquer tarefa que tenha permanecido em estado `running` ou `pending` devido a encerramento repentino do processo é automaticamente marcada como `failed` com mensagem `"Interrompido pela reinicialização do aplicativo"`.
+### 3.2 AudioEngine (`audio_engine.rs`)
+- **Conversão de Formatos:** MP3 (via `libmp3lame`), WAV (`pcm_s16le`), FLAC (`flac`), M4A/AAC (`aac`), OGG (`libvorbis`), OPUS (`libopus`).
+- **Normalização de Volume:** Aplicação do padrão broadcast EBU R128 (`loudnorm=I=-14:LRA=11:TP=-1.5`).
+- **Corte por Intervalo:** Segmentação temporal precisa por início e fim em segundos (`-ss` e `-to`).
+- **Progresso Real:** Parser estruturado do output `-progress pipe:1 -nostats` calculando $\text{progresso} = \text{tempo decorrido} / \text{duração total}$.
 
-### 3.2 Persistência e Banco de Dados (`/src-tauri/src/storage/db.rs`)
-- SQLite embutido via `rusqlite` com recurso `bundled`, dispensando bibliotecas nativas externas DLL/so no sistema operacional.
-- Modo WAL (`PRAGMA journal_mode=WAL`) e `PRAGMA synchronous=NORMAL` para operações concorrentes ultra-rápidas.
-- Tabelas:
-  - `tasks`: Histórico e estado atual da fila de processamento.
-  - `history`: Registro permanente de arquivos gerados/convertidos, tamanho, duração e caminhos no disco.
-  - `preferences`: Chave-valor para preferências do usuário (tema, limite de concorrência, pasta padrão).
+### 3.3 VideoEngine (`video_engine.rs`)
+- **Conversão de Formatos:** MP4, MKV e WEBM (`libx264`, `libx265`, `libvpx-vp9`).
+- **Compressão de Vídeo:** Presets de taxa constante (CRF 18 para alta qualidade, CRF 23 para equilibrado, CRF 28 para arquivo menor).
+- **Redimensionamento:** Escala proporcional adaptada (`scale=-2:1080`, `scale=-2:720`, `scale=-2:480`).
+- **Modos de Corte:**
+  - *Corte Rápido:* `-c copy` instantâneo sem perda de qualidade, alinhado aos keyframes mais próximos.
+  - *Corte Preciso:* recodificação quadro a quadro com precisão exata.
+- **Extração de Áudio e Frames:** Extração de áudio diretamente da trilha do vídeo ou captura de imagem estática (JPG/PNG) em um timestamp selecionado.
 
-### 3.3 Motores de Processamento Nativo (`/src-tauri/src/engines/`)
-
-#### A. Poster Studio Engine (`poster_engine.rs`)
-Gera PDFs multipágina compatíveis com a especificação **PDF 1.4**, com precisão física em milímetros:
-- Cálculo rigoroso de proporção física ($1\text{ mm} = 72 / 25.4\text{ pt} \approx 2.834645669\text{ pt}$).
-- Suporte a folhas A4 ($210 \times 297\text{ mm}$) e A3 ($297 \times 420\text{ mm}$) em orientações Retrato ou Paisagem.
-- Cálculo de margens físicas imprimíveis (padrão 10mm).
-- Cálculo de sobreposição entre folhas (overlap, padrão 5mm) para montagem e colagem sem descontinuidades.
-- Cálculo dinâmico do **DPI efetivo de impressão**:
-  $$\text{DPI} = \frac{\text{Largura em Pixels}}{\text{Largura Total em Polegadas}}$$
-  Alerta visual quando $\text{DPI} < 150$.
-- Desenho vetorial de marcas de corte nos 4 cantos da área útil.
-- Numeração automática no rodapé de cada folha (`Folha X de Y (Linha R, Coluna C)`).
-- Fatiamento de imagem por viewport sem duplicação de buffers de memória (leitura e encoding JPEG direto via `CountingWriter`).
-
-#### B. Image Engine (`image_engine.rs`)
-Processamento de imagens em lote baseado no crate `image`:
-- Conversão segura entre PNG e JPEG.
-- Redimensionamento por amostragem **Lanczos3** de alta fidelidade visual.
-- Preservação estrita de proporção de aspecto (aspect ratio).
-- Ajuste de qualidade JPEG (1 a 100).
-- Compilação de múltiplas imagens em um único arquivo PDF com dimensões adaptadas por página.
-- Prevenção automática de sobrescrita de arquivos (`nome (1).ext`, `nome (2).ext`).
+### 3.4 DownloadEngine (`download_engine.rs`)
+- **Consulta Prévia de Metadados:** Executa `yt-dlp --dump-single-json --no-warnings --no-playlist` para obter título, canal, miniatura e formatos disponíveis antes de iniciar a transferência.
+- **Download Seguro de Vídeo/Áudio:** Mapeamento de qualidade (1080p, 720p, 480p) e extração de áudio dedicada (`-x --audio-format mp3/m4a/flac`).
+- **Progresso e Velocidade:** Captura de saída em tempo real via `--progress-template` com percentual, taxa de transferência e tempo estimado.
+- **Downloads em Lote:** Processamento sequencial de listas de URLs com isolamento de falhas.
 
 ---
 
-## 4. Contratos IPC (Tauri Commands)
+## 4. Contratos IPC Atualizados (Tauri Commands)
 
 | Comando | Parâmetros | Retorno | Descrição |
 |---|---|---|---|
+| `probe_media` | `filePath: String` | `MediaInfo` | Inspeção profunda de codecs, streams e duração via ffprobe |
+| `start_audio_convert` | `options: AudioConvertOptions` | `String (task_id)` | Enfileira conversão de áudio no TaskManager |
+| `start_audio_trim` | `options: AudioTrimOptions` | `String (task_id)` | Enfileira corte de áudio por intervalo |
+| `start_video_convert` | `options: VideoConvertOptions` | `String (task_id)` | Enfileira conversão de vídeo com codec e CRF |
+| `start_video_compress`| `options: VideoCompressOptions`| `String (task_id)` | Enfileira compressão com presets de qualidade |
+| `start_video_trim` | `options: VideoTrimOptions` | `String (task_id)` | Enfileira corte rápido ou preciso de vídeo |
+| `start_video_extract_audio` | `options: VideoExtractAudioOptions` | `String (task_id)` | Extrai trilha sonora do vídeo para áudio |
+| `start_video_extract_frame` | `options: VideoExtractFrameOptions` | `String (task_id)` | Extrai imagem estática de um frame |
+| `fetch_download_info`| `url: String` | `MediaDownloadInfo` | Obtém título, miniatura e formatos antes de baixar |
+| `start_download` | `options: DownloadOptions` | `String (task_id)` | Enfileira download de vídeo ou áudio via yt-dlp |
+| `check_external_tools`| Nenhum | `ExternalToolsStatus`| Retorna versão, caminho e licença de FFmpeg, ffprobe e yt-dlp |
 | `get_tasks` | Nenhum | `Vec<Task>` | Lista todas as tarefas persistidas |
-| `get_active_tasks` | Nenhum | `Vec<Task>` | Lista tarefas em execução ou pendentes |
-| `cancel_task` | `task_id: String` | `()` | Solicita o cancelamento imediato da tarefa |
-| `clear_completed_tasks`| Nenhum | `()` | Remove tarefas finalizadas da visualização |
-| `get_history` | Nenhum | `Vec<HistoryItem>` | Retorna histórico completo ordenado por data |
-| `clear_history` | Nenhum | `()` | Limpa a tabela de histórico |
-| `delete_history_item` | `id: String` | `()` | Remove um registro específico do histórico |
-| `calculate_poster_metrics` | `options: PosterOptions` | `PosterMetrics` | Calcula páginas, linhas, dimensões e DPI |
-| `generate_poster` | `options: PosterOptions` | `String (task_id)` | Enfileira a geração do pôster no TaskManager |
-| `convert_image` | `options: ImageConvertOptions` | `String (task_id)` | Enfileira conversão individual ou em lote |
-| `images_to_pdf` | `options: ImagesToPdfOptions` | `String (task_id)` | Enfileira a criação de PDF de imagens |
-| `get_system_info` | Nenhum | `SystemInfo` | Retorna pastas do sistema, cores e versão |
-| `get_preferences` | Nenhum | `UserPreferences` | Carrega configurações salvas em SQLite |
-| `save_preferences` | `prefs: UserPreferences`| `()` | Persiste configurações do usuário |
-
----
-
-## 5. Eventos Tauri (Backend -> Frontend)
-
-| Evento | Payload | Descrição |
-|---|---|---|
-| `task://created` | `Task` | Nova tarefa adicionada à fila |
-| `task://progress` | `TaskProgressPayload` | Progresso atualizado (0-100%), mensagem e velocidade |
-| `task://completed` | `Task` | Tarefa concluída com sucesso |
-| `task://failed` | `Task` | Tarefa falhou com mensagem de erro detalhada |
-| `task://canceled` | `Task` | Tarefa cancelada pelo usuário |
+| `cancel_task` | `id: String` | `()` | Cancela a tarefa e encerra subprocessos associados |
+| `retry_task` | `id: String` | `()` | Re-enfileira tarefa falha ou cancelada |
+| `calculate_poster_spec`| `options: PosterOptions`| `PosterSpec` | Calcula colunas, linhas, páginas e DPI do pôster |
+| `start_poster_task` | `options: PosterOptions` | `String (task_id)` | Enfileira geração de PDF multipágina do pôster |
+| `start_image_conversion_task` | `options: ImageConvertOptions` | `String (task_id)` | Enfileira conversão/resize de imagens |
+| `start_images_to_pdf_task` | `options: ImagesToPdfOptions` | `String (task_id)` | Enfileira compilação de imagens em PDF |
+| `get_system_info` | Nenhum | `SystemInfo` | Pastas padrão do sistema e SO |
+| `open_path_in_explorer` | `path: String` | `()` | Revela arquivo ou pasta no Windows Explorer |

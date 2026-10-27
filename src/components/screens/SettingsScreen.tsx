@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Icon } from '../common/Icon';
 import { Button } from '../common/Button';
 import { Switch } from '../common/Switch';
 import { AppSettings, ThemePreference } from '../../types/settings';
 import { TauriService } from '../../services/tauri';
+import { ExternalToolsStatus } from '../../types/tools';
 
 interface SettingsScreenProps {
   settings: AppSettings;
@@ -16,6 +17,14 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onUpdateSettings,
   onShowToast,
 }) => {
+  const [toolsStatus, setToolsStatus] = useState<ExternalToolsStatus | null>(null);
+
+  useEffect(() => {
+    TauriService.checkExternalTools()
+      .then((status) => setToolsStatus(status))
+      .catch(() => {});
+  }, []);
+
   const themes: { id: ThemePreference; label: string; icon: string }[] = [
     { id: 'Escuro', label: 'Escuro', icon: 'moon' },
     { id: 'Claro', label: 'Claro', icon: 'sun' },
@@ -34,28 +43,41 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
       id: 'image',
       name: 'Motor de Imagens (Rust)',
       desc: 'Decodificação e codificação PNG/JPEG com Lanczos3',
-      ver: '0.25',
+      ver: '0.25 (Lanczos3)',
       status: 'installed',
     },
     {
       id: 'ffmpeg',
       name: 'FFmpeg Multimídia',
-      desc: 'Conversão e processamento de áudio e vídeo de alta performance',
-      ver: '8.1 (Detectado)',
-      status: 'installed',
+      desc: 'Conversão, compressão e recorte de áudio e vídeo de alta performance',
+      ver: toolsStatus?.ffmpeg.available
+        ? `${toolsStatus.ffmpeg.version?.split(' ')[2] || '8.1.1'} (${toolsStatus.ffmpeg.license || 'Operacional'})`
+        : 'Não detectado',
+      status: toolsStatus?.ffmpeg.available ? 'installed' : 'missing',
+    },
+    {
+      id: 'ffprobe',
+      name: 'ffprobe Inspector',
+      desc: 'Inspeção precisa de streams, codecs, taxas de amostragem e durações',
+      ver: toolsStatus?.ffprobe.available
+        ? `${toolsStatus.ffprobe.version?.split(' ')[2] || '8.1.1'}`
+        : 'Não detectado',
+      status: toolsStatus?.ffprobe.available ? 'installed' : 'missing',
     },
     {
       id: 'ytdlp',
       name: 'yt-dlp',
-      desc: 'Análise de fontes permitidas sem bypass de DRM',
-      ver: 'Missão 02',
-      status: 'missing',
+      desc: 'Downloads de fontes permitidas sem bypass de DRM e com respeito a direitos autorais',
+      ver: toolsStatus?.ytDlp.available
+        ? `${toolsStatus.ytDlp.version || '2026.10.26'} (${toolsStatus.ytDlp.license || 'Unlicense'})`
+        : 'Não detectado',
+      status: toolsStatus?.ytDlp.available ? 'installed' : 'missing',
     },
     {
       id: 'lo',
       name: 'LibreOffice Headless',
       desc: 'Conversões avançadas de Word para PDF com fidelidade de fontes',
-      ver: 'Missão 02',
+      ver: 'Missão 03',
       status: 'missing',
     },
   ];
@@ -109,17 +131,25 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             marginBottom: 6,
           }}
         >
-          configurações
+          08 · preferências
         </div>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '0 0 6px', color: 'var(--fg)' }}>
-          Configurações
+        <h1
+          style={{
+            fontSize: '24px',
+            fontWeight: 700,
+            letterSpacing: '-0.02em',
+            color: 'var(--fg)',
+            margin: '0 0 6px',
+          }}
+        >
+          Configurações do Arce Tools
         </h1>
         <p style={{ color: 'var(--fg-dim)', fontSize: '13.5px', margin: 0 }}>
-          Aparência, desempenho de processamento, pastas padrão e motores.
+          Personalize aparência, pastas de destino, concorrência e verifique o estado dos motores nativos.
         </p>
       </div>
 
-      {/* Appearance Section */}
+      {/* Theme Section */}
       <div
         style={{
           background: 'var(--surface)',
@@ -143,31 +173,27 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
                 key={t.id}
                 onClick={() => handleThemeChange(t.id)}
                 style={{
-                  height: 40,
-                  borderRadius: 8,
+                  padding: '14px 16px',
+                  borderRadius: 10,
                   border: isSelected ? '1.5px solid var(--mint)' : '1px solid var(--line)',
                   background: isSelected ? 'var(--mint-dim)' : 'var(--surface-2)',
-                  color: isSelected ? 'var(--mint)' : 'var(--fg-dim)',
-                  fontWeight: isSelected ? 600 : 500,
-                  fontSize: '13px',
-                  fontFamily: 'var(--sans)',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
+                  gap: 10,
+                  cursor: 'pointer',
+                  color: isSelected ? 'var(--mint)' : 'var(--fg)',
                   transition: 'all 0.15s ease',
                 }}
               >
-                <Icon name={t.icon} size={16} />
-                <span>{t.label}</span>
+                <Icon name={t.icon} size={18} />
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>{t.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Performance & Concurrency */}
+      {/* Task Concurrency */}
       <div
         style={{
           background: 'var(--surface)',
@@ -175,25 +201,30 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           borderRadius: 12,
           padding: 20,
           display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
+          justifyContent: 'space-between',
+          alignItems: 'center',
         }}
       >
-        <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--fg)', margin: 0 }}>
-          Desempenho e Fila de Tarefas
-        </h2>
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--fg)' }}>
-              Limite de tarefas simultâneas
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--fg-faint)', marginTop: 2 }}>
-              Controla o uso de CPU e memória para manter o computador ágil.
-            </div>
+        <div>
+          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--fg)' }}>
+            Tarefas simultâneas (Concorrência)
           </div>
+          <div style={{ fontSize: '12px', color: 'var(--fg-dim)', marginTop: 2 }}>
+            Número máximo de conversões executadas em paralelo pelo TaskManager
+          </div>
+        </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              border: '1px solid var(--line)',
+              borderRadius: 8,
+              background: 'var(--surface-2)',
+              overflow: 'hidden',
+            }}
+          >
             <button
               onClick={() => {
                 const next = Math.max(1, settings.maxConcurrency - 1);
@@ -202,9 +233,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               style={{
                 width: 32,
                 height: 32,
-                borderRadius: 6,
-                border: '1px solid var(--line)',
-                background: 'var(--surface-2)',
+                background: 'transparent',
+                border: 'none',
                 color: 'var(--fg)',
                 cursor: 'pointer',
                 fontSize: '16px',
@@ -214,12 +244,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             </button>
             <span
               style={{
-                fontFamily: 'var(--mono)',
-                fontSize: '14px',
-                fontWeight: 600,
-                width: 24,
+                width: 32,
                 textAlign: 'center',
-                color: 'var(--fg)',
+                fontFamily: 'var(--mono)',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--mint)',
               }}
             >
               {settings.maxConcurrency}
@@ -232,9 +262,8 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               style={{
                 width: 32,
                 height: 32,
-                borderRadius: 6,
-                border: '1px solid var(--line)',
-                background: 'var(--surface-2)',
+                background: 'transparent',
+                border: 'none',
                 color: 'var(--fg)',
                 cursor: 'pointer',
                 fontSize: '16px',

@@ -1,5 +1,9 @@
-use crate::domain::{HistoryEntry, ImageConvertOptions, ImagesToPdfOptions, PosterOptions, Task, TaskStatus};
-use crate::engines::{ImageEngine, PosterEngine};
+use crate::domain::{
+    AudioConvertOptions, AudioTrimOptions, DownloadOptions, HistoryEntry, ImageConvertOptions,
+    ImagesToPdfOptions, PosterOptions, Task, TaskStatus, VideoCompressOptions, VideoConvertOptions,
+    VideoExtractAudioOptions, VideoExtractFrameOptions, VideoTrimOptions,
+};
+use crate::engines::{AudioEngine, DownloadEngine, ImageEngine, PosterEngine, VideoEngine};
 use crate::error::{AppError, AppResult};
 use crate::storage::Db;
 use chrono::Local;
@@ -14,6 +18,14 @@ pub enum TaskJob {
     Poster(PosterOptions),
     ConvertImages(ImageConvertOptions),
     ImagesToPdf(ImagesToPdfOptions),
+    AudioConvert(AudioConvertOptions),
+    AudioTrim(AudioTrimOptions),
+    VideoConvert(VideoConvertOptions),
+    VideoCompress(VideoCompressOptions),
+    VideoTrim(VideoTrimOptions),
+    VideoExtractAudio(VideoExtractAudioOptions),
+    VideoExtractFrame(VideoExtractFrameOptions),
+    DownloadMedia(DownloadOptions),
 }
 
 #[derive(Clone)]
@@ -123,6 +135,30 @@ impl TaskManager {
                                 .and_then(|r| r)
                             }
                         }
+                        TaskJob::AudioConvert(opts) => {
+                            AudioEngine::convert(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::AudioTrim(opts) => {
+                            AudioEngine::trim(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::VideoConvert(opts) => {
+                            VideoEngine::convert(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::VideoCompress(opts) => {
+                            VideoEngine::compress(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::VideoTrim(opts) => {
+                            VideoEngine::trim(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::VideoExtractAudio(opts) => {
+                            AudioEngine::extract_audio_from_video(&opts, cancel_check.clone(), progress_cb).await
+                        }
+                        TaskJob::VideoExtractFrame(opts) => {
+                            VideoEngine::extract_frame(&opts).await
+                        }
+                        TaskJob::DownloadMedia(opts) => {
+                            DownloadEngine::download(&opts, cancel_check.clone(), progress_cb).await
+                        }
                     };
 
                     let now = Local::now().format("%d %b, %H:%M").to_string();
@@ -137,10 +173,13 @@ impl TaskManager {
                                 Some(&now),
                             );
 
-                            let size_str = task
-                                .size_mb
-                                .map(|s| format!("{:.1} MB", s))
-                                .unwrap_or_else(|| "—".into());
+                            let size_str = if let Ok(metadata) = std::fs::metadata(&target_file) {
+                                format!("{:.1} MB", metadata.len() as f64 / (1024.0 * 1024.0))
+                            } else {
+                                task.size_mb
+                                    .map(|s| format!("{:.1} MB", s))
+                                    .unwrap_or_else(|| "—".into())
+                            };
 
                             let history_entry = HistoryEntry {
                                 id: task_id.clone(),
@@ -293,6 +332,41 @@ impl TaskManager {
                             .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
                         TaskJob::ConvertImages(opts)
                     }
+                }
+                "audio" => {
+                    if task.op.contains("Corte") {
+                        let opts: AudioTrimOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::AudioTrim(opts)
+                    } else {
+                        let opts: AudioConvertOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::AudioConvert(opts)
+                    }
+                }
+                "video" => {
+                    if task.op.contains("Comprimir") {
+                        let opts: VideoCompressOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::VideoCompress(opts)
+                    } else if task.op.contains("Corte") {
+                        let opts: VideoTrimOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::VideoTrim(opts)
+                    } else if task.op.contains("Extrair áudio") {
+                        let opts: VideoExtractAudioOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::VideoExtractAudio(opts)
+                    } else {
+                        let opts: VideoConvertOptions = serde_json::from_str(&options_json)
+                            .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                        TaskJob::VideoConvert(opts)
+                    }
+                }
+                "downloads" => {
+                    let opts: DownloadOptions = serde_json::from_str(&options_json)
+                        .map_err(|e| AppError::InvalidInput(format!("Opções inválidas: {}", e)))?;
+                    TaskJob::DownloadMedia(opts)
                 }
                 _ => return Err(AppError::InvalidInput("Tipo de tarefa não suportado para repetição".into())),
             };

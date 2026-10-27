@@ -1,130 +1,96 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade da **Missão 01**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01 e 02**.
 
 ---
 
-## 1. Resumo Executivo da Missão 01
+## 1. Resumo Executivo das Missões
 
-| Área | Status | Detalhes |
-|---|:---:|---|
-| **Ambiente Windows 11 Nativo** | Concluído | Rust 1.99.1 (MSVC), VS 2022 Tools, Windows SDK, WebView2 |
-| **Fase A — Shell e Interface Desktop** | Concluído | 9 telas fiéis ao Claude Design, navegação, atalhos, temas |
-| **Fase B — Motor Global de Tarefas** | Concluído | Tokio mpsc, SQLite WAL, cancelamento real, eventos IPC |
-| **Fase C — Poster Studio (Real)** | Concluído | Slicing de folhas, cálculo físico mm/pt, marcas de corte, PDF 1.4 |
-| **Fase D — Conversão de Imagens (Real)**| Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
-| **Módulos Preparados (Docs/Audio/Video/DL)**| Concluído | Telas estruturadas, contratos documentados, sem mocks |
-| **Testes Automatizados** | Concluído | 7 testes Vitest (frontend) + 3 testes nativos Rust (backend) |
-
----
-
-## 2. Checklist Detalhado por Fase
-
-### Fase A — Aplicativo Desktop e Interface
-- [x] Janela Tauri configurada com identificação Arce Tools e tamanho mínimo (1024x720).
-- [x] Ícone oficial Arce Tools configurado em `src-tauri/icons/`.
-- [x] Tipografia offline completa: `Geist` e `Geist Mono` servidas de `/public/fonts/`.
-- [x] Paleta oficial: Dark mode com fundo escuro (`#0B0F10`), acento verde-menta (`#15F5BA`) e Light mode correspondente.
-- [x] Navegação entre todas as 9 seções do protótipo:
-  - [x] Início (`/`)
-  - [x] Downloads (`/downloads`)
-  - [x] Documentos (`/documents`)
-  - [x] Áudio (`/audio`)
-  - [x] Vídeo (`/video`)
-  - [x] Imagens (`/images`)
-  - [x] Pôsteres (`/poster`)
-  - [x] Histórico (`/history`)
-  - [x] Configurações (`/settings`)
-- [x] Menu lateral recolhível (Ctrl+B ou botão de toggle).
-- [x] Atalhos globais:
-  - `Ctrl+K`: Paleta de comandos interativa.
-  - `Ctrl+J`: Gaveta de tarefas ativas.
-  - `Ctrl+1` a `Ctrl+9`: Troca rápida de telas.
-  - `Ctrl+B`: Recolher/expandir sidebar.
-  - `Escape`: Fechar modais e gavetas.
-- [x] Seletor de temas: Claro, Escuro e Sistema (com persistência em SQLite).
-- [x] Drag-and-drop e seletores nativos de arquivo (`tauri-plugin-dialog`).
-- [x] Abertura de arquivos gerados e pastas de destino no Windows Explorer (`tauri-plugin-opener`).
-- [x] Eliminação de todos os mocks falsos (apenas tarefas e histórico reais).
+| Área | Missão | Status | Detalhes |
+|---|:---:|:---:|---|
+| **Ambiente Windows 11 Nativo** | 01 | Concluído | Rust 1.99.1 (MSVC), VS 2022 Tools, Windows SDK, WebView2 |
+| **Shell e Interface Desktop** | 01 | Concluído | 9 telas fiéis ao Claude Design, navegação, atalhos, temas |
+| **Motor Global de Tarefas** | 01 & 02 | Concluído | Tokio mpsc, SQLite WAL, cancelamento cooperativo, concorrência |
+| **Poster Studio (Real)** | 01 | Concluído | Slicing de folhas, cálculo físico mm/pt, marcas de corte, PDF 1.4 |
+| **Conversão de Imagens (Real)**| 01 | Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
+| **Módulo Áudio (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP3/WAV/FLAC/AAC/OGG/OPUS, bitrate, loudnorm, trim |
+| **Módulo Vídeo (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP4/MKV/WEBM, presets de compressão CRF, trim rápido e preciso, extração de frame |
+| **Módulo Downloads (Real)** | 02 | Concluído | yt-dlp, validação estrita de URLs, consulta de metadados prévios, extração de áudio, downloads seguros |
+| **Gerenciador de Motores Externos**| 02 | Concluído | `ExternalToolManager`: detecção, validação, encerramento limpo, sanitização |
+| **Testes Automatizados** | 01 & 02 | Concluído | 10 testes Vitest (frontend) + 7 testes nativos Rust (backend com synthetic FFmpeg) |
 
 ---
 
-### Fase B — Motor Global de Tarefas (Rust)
-- [x] Struct `Task` com ID único (UUID v4), tipo de operação, arquivo de origem, destino, configurações, status, progresso, erro, datas de criação e conclusão.
-- [x] Ciclo de vida completo: `Pending`, `Running`, `Completed`, `Failed`, `Canceled`.
-- [x] Fila de processamento assíncrona baseada em Tokio com semáforo de concorrência configurável.
-- [x] Cancelamento cooperativo com `CancellationToken` individual por tarefa.
-- [x] Persistência contínua em SQLite (tabela `tasks` e `history`).
-- [x] Recuperação de reinicializações inesperadas (tarefas incompletas marcadas como falhas de interrupção).
-- [x] Prevenção de colisões de arquivos no disco (`nome (1).ext`).
-- [x] Emissão de eventos em tempo real (`task://created`, `task://progress`, `task://completed`, `task://failed`, `task://canceled`).
-- [x] Thread de interface desacoplada do processamento computacional intensivo.
+## 2. Checklist Detalhado da Missão 02
+
+### 2.1 Módulo Áudio (Implementação Real)
+- [x] Detecção e inspeção de metadados reais via `MediaEngine::probe` (`ffprobe`).
+- [x] Importação individual e múltipla via diálogo nativo (`selectFiles`) e drag-and-drop.
+- [x] Exibição de metadados reais: duração formatada, sample rate (ex.: 44.1 kHz), número de canais (Mono/Estéreo) e bitrate.
+- [x] Visualizador de onda (waveform) dinâmico sem reter arquivos binários pesados na memória do React.
+- [x] Conversão entre formatos de áudio: MP3, WAV, FLAC, M4A, OGG e OPUS.
+- [x] Configuração de taxa de bits (bitrate): 128 kbps, 192 kbps, 256 kbps, 320 kbps.
+- [x] Configuração de canais: Estéreo (2) e Mono (1).
+- [x] Normalização de volume inteligente via filtro broadcast `-filter:a loudnorm=I=-14:LRA=11:TP=-1.5`.
+- [x] Corte de trecho (`audio.trim`) por intervalo com precisão de milissegundos.
+- [x] Enfileiramento real no `TaskManager` com persistência no SQLite e atualização de histórico.
+
+### 2.2 Módulo Vídeo (Implementação Real)
+- [x] Leitura de resolução real (largura $\times$ altura), taxa de quadros (FPS), codec de vídeo e duração via `ffprobe`.
+- [x] Conversão de formatos: MP4, MKV e WEBM com seleção de codecs (`libx264`, `libx265`, `libvpx-vp9`).
+- [x] Compressão de vídeo com presets intuitivos:
+  - Qualidade alta: CRF 18
+  - Equilibrado: CRF 23
+  - Arquivo menor: CRF 28
+  - Redimensionamento opcional com preservação de aspect ratio (`scale=-2:1080`, `scale=-2:720`, `scale=-2:480`).
+- [x] Dois modos tecnicamente distintos de corte:
+  - Corte rápido (`fast_copy: true`): `-c copy` instantâneo baseado no keyframe mais próximo com aviso explicativo.
+  - Corte preciso (`fast_copy: false`): recodificação quadro a quadro com precisão exata.
+- [x] Extração de áudio de vídeos (`video.extract_audio`) para MP3, WAV, AAC e FLAC.
+- [x] Extração de frame estático (`video.extract_frame`) em timestamp selecionado nos formatos JPG e PNG.
+- [x] Opção de mudo (`mute_audio: true` via `-an`).
+
+### 2.3 Módulo Downloads (Implementação Real)
+- [x] Validação rigorosa de URLs (rejeição de caracteres de injeção de shell: `;`, `&`, `|`, `$`, `<`, `>`, `"`, quebras de linha).
+- [x] Consulta prévia assíncrona de metadados via `yt-dlp --dump-single-json`:
+  - Título, canal/autor, miniatura e duração real.
+- [x] Seletor de qualidade de vídeo (1080p, 720p, 480p) e contêiner (MP4, MKV).
+- [x] Modo "Somente áudio" com extração direta em MP3, M4A ou FLAC.
+- [x] Seletor de pasta de destino personalizada via diálogo nativo (`selectFolder`).
+- [x] Suporte a download em lote (múltiplos links, um por linha).
+- [x] Progresso real capturado via `--progress-template` do yt-dlp (porcentagem, velocidade, ETA).
+- [x] Política estrita de conformidade: proibição absoluta de bypass de DRM ou violação de criptografia.
+
+### 2.4 Gerenciamento de Motores Externos (`ExternalToolManager`)
+- [x] Descoberta automática de executáveis:
+  - Diretório de binários da aplicação (`./binaries/`).
+  - Diretórios do WinGet (`%LOCALAPPDATA%\Microsoft\WinGet\Packages\...`).
+  - Variável de ambiente `PATH`.
+- [x] Execução estruturada via `tokio::process::Command` sem passagem por interpretadores de shell (`cmd.exe /c` ou `powershell -Command` expressamente proibidos).
+- [x] Flag de criação de processo no Windows `CREATE_NO_WINDOW = 0x08000000` (impede abertura de janelas pretas do prompt).
+- [x] Cancelamento cooperativo seguro: encerramento imediato do processo filho (`child.kill()`) ao cancelar a tarefa no `TaskManager`.
+- [x] Limpeza automática de arquivos parciais corrompidos em caso de falha ou cancelamento.
+- [x] Prevenção de colisões com arquivos existentes (`nome (1).ext`).
+- [x] Suporte completo a nomes de arquivos Unicode e caminhos com espaços.
 
 ---
 
-### Fase C — Primeira Ferramenta Real: Poster Studio
-- [x] Entrada de imagem com drag-and-drop ou diálogo nativo (PNG, JPEG).
-- [x] Validação de formatos e leitura de dimensões e resolução originais.
-- [x] Configuração de papéis: A4 ($210 \times 297\text{ mm}$), A3 ($297 \times 420\text{ mm}$) e personalizável.
-- [x] Orientação: Retrato e Paisagem.
-- [x] Ajuste de colunas e cálculo automático de linhas e altura total em centímetros.
-- [x] Margens configuráveis em milímetros (padrão 10mm).
-- [x] Sobreposição entre folhas (overlap) configurável em milímetros (padrão 5mm).
-- [x] Cálculo dinâmico e aviso visual de DPI insuficiente ($\text{DPI} < 150$).
-- [x] Grade interativa de pré-visualização das folhas com dimensões finais.
-- [x] Modos de cor: Original e Preto e Branco.
-- [x] Aviso visual explícito de indisponibilidade para modos futuros (ex.: Pontilhismo / Halftone).
-- [x] Motor de geração de PDF multipágina real em conformidade com PDF 1.4:
-  - Escrita direta via `CountingWriter` com xref indexado.
-  - Desenho vetorial de marcas de corte nos 4 cantos da área útil de cada folha.
-  - Numeração clara da página e coordenadas (Folha X de Y - Linha R, Coluna C).
-  - Fatiamento JPEG nativo por folha sem carregamento duplicado em memória.
+## 3. Cobertura de Testes Automatizados
 
----
+### Backend Rust (7 testes nativos MSVC — 100% aprovados)
+- `test_sqlite_tasks_and_history`: Validação de transações SQLite, estados e recuperação de tarefas.
+- `test_poster_engine_calculation_and_pdf`: Validação de cálculo físico de grade, marcas de corte e PDF 1.4.
+- `test_image_engine_conversion`: Conversão PNG $\leftrightarrow$ JPEG e amostragem Lanczos3.
+- `test_download_url_validation`: Validação de URLs seguras e rejeição de payloads maliciosos.
+- `test_external_tools_discovery`: Detecção e auditoria de versão de FFmpeg, ffprobe e yt-dlp.
+- `test_synthetic_audio_conversion_and_probe`: Geração de áudio sintético com FFmpeg lavfi, inspeção via `ffprobe`, conversão para MP3 192k e corte com verificação de integridade da saída.
+- `test_synthetic_video_operations`: Geração de vídeo sintético de teste, inspeção de streams de vídeo via `ffprobe`, corte temporal e extração de frame JPG em disco.
 
-### Fase D — Segunda Ferramenta Real: Conversão de Imagens
-- [x] Seleção individual ou em lote de imagens (PNG, JPEG).
-- [x] Conversão bidirecional PNG $\leftrightarrow$ JPEG.
-- [x] Redimensionamento configurável por largura e altura com amostragem Lanczos3.
-- [x] Opção para manter proporção de aspecto (aspect ratio).
-- [x] Slider de qualidade JPEG (1 a 100).
-- [x] Compilação de múltiplas imagens em um único arquivo PDF.
-- [x] Destino de salvamento configurável com proteção contra sobrescrita.
-- [x] Integração completa ao TaskManager e SQLite com registro no Histórico.
-
----
-
-### Fase E — Preparação dos Demais Módulos
-- [x] Telas de UI com design autêntico:
-  - **Downloads**: Entrada de URL, seletor de formato, qualidade e destino.
-  - **Documentos**: Conversão PDF $\leftrightarrow$ DOCX, seletor de OCR e formatação.
-  - **Áudio**: Conversão MP3/WAV/FLAC/AAC, bitrate e normalização.
-  - **Vídeo**: Conversão MP4/MKV/WebM, compressão e recorte temporal.
-- [x] Nenhuma simulação fictícia de conclusão. Telas exibem banners transparentes indicando que o motor está preparado para a Missão 02.
-- [x] Contratos de integração documentados para ferramentas externas (yt-dlp, FFmpeg, LibreOffice).
-
----
-
-## 3. Cobertura de Testes
-
-### Testes Frontend (Vitest)
-Executados com `pnpm test`:
-- `src/tests/navigation.test.ts`:
-  - `should have valid 9 registered navigation routes`: Valida integridade e ordem das 9 rotas da aplicação.
-  - `should calculate poster dimensions correctly`: Valida matemática do grid e DPI no frontend.
-- `src/tests/poster.test.ts`:
-  - `should calculate correct poster metrics`: Valida proporções A4, margens e overlap.
-- `src/tests/App.test.tsx`:
-  - `renders titlebar with brand and title`: Valida renderização da barra nativa e versão.
-  - `navigates between screens when clicking sidebar buttons`: Valida navegação entre Início, Pôsteres, Imagens e Configurações.
-  - `opens and closes command palette with Ctrl+K`: Valida abertura e fechamento da paleta.
-  - `toggles active task drawer`: Valida gaveta de tarefas.
-
-### Testes Backend (Rust Nativo MSVC)
-Executados com `cargo test`:
-- `test_sqlite_tasks_and_history`:
-  - Testa inserção, atualização de status, recuperação de interrupções e integridade de consultas SQLite.
-- `test_poster_engine_calculation_and_pdf`:
-  - Cria imagem de teste $800 \times 600$, executa cálculo de métricas (folhas, linhas, DPI) e gera arquivo PDF multipágina real em disco, validando assinatura de cabeçalho `%PDF-1.4`, tabela `xref` e trailer `%%EOF`.
-- `test_image_engine_conversion`:
-  - Valida conversão de imagem PNG para JPEG com redimensionamento Lanczos3, validação de dimensões e verificação do arquivo de saída gerado.
+### Frontend Vitest (10 testes unitários — 100% aprovados)
+- `navigation.test.ts`: Rotas de navegação do app.
+- `poster.test.ts`: Matemática de páginas e DPI do Poster Studio.
+- `App.test.tsx`: Renderização do shell, barra de título, gaveta `Ctrl+J`, paleta `Ctrl+K`.
+- `mediaScreens.test.tsx`:
+  - `AudioScreen`: Renderização de controles de formato, bitrate, switches de loudnorm e trim, estados desabilitados.
+  - `VideoScreen`: Alternância entre as 5 ferramentas (Converter, Comprimir, Extrair áudio, Cortar trecho, Extrair frame) e seus controles específicos.
+  - `DownloadsScreen`: Input de link, alternância entre Vídeo e Somente áudio, validação e envio.

@@ -1,3 +1,4 @@
+use crate::engines::{ExternalToolManager, ExternalToolsStatus};
 use crate::storage::Db;
 use serde::Serialize;
 use std::path::Path;
@@ -10,6 +11,11 @@ pub struct SystemInfo {
     pub os: String,
     pub default_download_folder: String,
     pub default_export_folder: String,
+}
+
+#[tauri::command]
+pub async fn check_external_tools() -> Result<ExternalToolsStatus, String> {
+    Ok(ExternalToolManager::check_all_tools().await)
 }
 
 #[tauri::command]

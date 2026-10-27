@@ -3,6 +3,8 @@ import { Icon } from '../common/Icon';
 import { Button } from '../common/Button';
 import { SegmentedControl } from '../common/SegmentedControl';
 import { Switch } from '../common/Switch';
+import { TauriService } from '../../services/tauri';
+import { MediaDownloadInfo } from '../../types/download';
 
 interface DownloadsScreenProps {
   onShowToast: (msg: string, kind?: 'ok' | 'err' | 'warn') => void;
@@ -14,33 +16,82 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
   const [resolution, setResolution] = useState('1080p');
   const [format, setFormat] = useState('MP4');
   const [audioFormat, setAudioFormat] = useState('MP3');
-  const [audioBitrate, setAudioBitrate] = useState('320 kbps');
-  const [includeSubs, setIncludeSubs] = useState(false);
   const [batchMode, setBatchMode] = useState(false);
   const [batchUrls, setBatchUrls] = useState('');
+  const [targetFolder, setTargetFolder] = useState<string | null>(null);
+
+  const [loadingInfo, setLoadingInfo] = useState(false);
+  const [mediaInfo, setMediaInfo] = useState<MediaDownloadInfo | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const handlePaste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
-        setUrl(text);
+        setUrl(text.trim());
         onShowToast('Link colado da área de transferência');
+        fetchInfo(text.trim());
       }
     } catch {
       onShowToast('Não foi possível acessar a área de transferência', 'warn');
     }
   };
 
-  const handleStartDownload = () => {
-    if (!url.trim() && !batchUrls.trim()) {
-      onShowToast('Insira ao menos um link para baixar', 'warn');
+  const fetchInfo = async (targetUrl: string) => {
+    if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+      return;
+    }
+    setLoadingInfo(true);
+    try {
+      const info = await TauriService.fetchDownloadInfo(targetUrl);
+      setMediaInfo(info);
+      onShowToast(`Informações obtidas: ${info.title}`);
+    } catch (err: any) {
+      onShowToast(`Não foi possível obter metadados prévios: ${err}`, 'warn');
+      setMediaInfo(null);
+    } finally {
+      setLoadingInfo(false);
+    }
+  };
+
+  const handleSelectFolder = async () => {
+    const folder = await TauriService.selectFolder('Selecionar pasta de destino');
+    if (folder) {
+      setTargetFolder(folder);
+      onShowToast(`Pasta de destino: ${folder}`);
+    }
+  };
+
+  const handleStartDownload = async () => {
+    const urlsToDownload = batchMode
+      ? batchUrls.split('\n').map((u) => u.trim()).filter((u) => u.length > 0)
+      : [url.trim()].filter((u) => u.length > 0);
+
+    if (urlsToDownload.length === 0) {
+      onShowToast('Insira ao menos um link válido para baixar', 'warn');
       return;
     }
 
-    onShowToast(
-      'Módulo preparado! O motor yt-dlp será conectado na Missão 02 com verificação de direitos autorais.',
-      'warn'
-    );
+    setDownloading(true);
+    try {
+      for (const singleUrl of urlsToDownload) {
+        await TauriService.startDownload({
+          url: singleUrl,
+          outputDir: targetFolder || undefined,
+          audioOnly: mode === 'Somente áudio',
+          audioFormat: mode === 'Somente áudio' ? audioFormat.toLowerCase() : undefined,
+          quality: mode === 'Vídeo' ? resolution : undefined,
+        });
+      }
+
+      onShowToast(
+        `${urlsToDownload.length} download(s) iniciado(s)! Acompanhe o progresso no painel de tarefas (Ctrl+J).`
+      );
+    } catch (err: any) {
+      onShowToast(`Erro ao iniciar download: ${err}`, 'err');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -82,7 +133,7 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
           Downloads de Mídia
         </h1>
         <p style={{ color: 'var(--fg-dim)', fontSize: '13.5px', margin: 0 }}>
-          Baixe vídeos e áudios de fontes permitidas, um por vez, em lote ou playlists inteiras.
+          Baixe vídeos e áudios de fontes permitidas com o motor yt-dlp integrado ao TaskManager.
         </p>
       </div>
 
@@ -132,6 +183,9 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
                 type="text"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') fetchInfo(url.trim());
+                }}
                 placeholder="Cole um link do YouTube, Vimeo ou plataforma permitida..."
                 style={{
                   flex: 1,
@@ -146,6 +200,13 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
 
             <Button variant="secondary" onClick={handlePaste}>
               Colar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => fetchInfo(url.trim())}
+              disabled={loadingInfo || !url.trim()}
+            >
+              {loadingInfo ? 'Consultando...' : 'Consultar'}
             </Button>
           </div>
         ) : (
@@ -167,6 +228,63 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
               resize: 'vertical',
             }}
           />
+        )}
+
+        {/* Media Preview Card */}
+        {mediaInfo && (
+          <div
+            style={{
+              display: 'flex',
+              gap: 14,
+              padding: 14,
+              background: 'var(--surface)',
+              border: '1px solid var(--line)',
+              borderRadius: 10,
+              alignItems: 'center',
+            }}
+          >
+            {mediaInfo.thumbnailUrl ? (
+              <img
+                src={mediaInfo.thumbnailUrl}
+                alt={mediaInfo.title}
+                style={{ width: 90, height: 56, objectFit: 'cover', borderRadius: 6 }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: 90,
+                  height: 56,
+                  background: 'var(--bg)',
+                  borderRadius: 6,
+                  display: 'grid',
+                  placeItems: 'center',
+                  color: 'var(--fg-dim)',
+                }}
+              >
+                <Icon name="video" size={24} />
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: '13.5px',
+                  color: 'var(--fg)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {mediaInfo.title}
+              </div>
+              <div style={{ fontSize: '11.5px', color: 'var(--fg-dim)', marginTop: 4 }}>
+                {mediaInfo.uploader || 'Fonte autorizada'}
+                {mediaInfo.durationSeconds
+                  ? ` · ${Math.floor(mediaInfo.durationSeconds / 60)}:${Math.floor(mediaInfo.durationSeconds % 60) < 10 ? '0' : ''}${Math.floor(mediaInfo.durationSeconds % 60)}`
+                  : ''}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Options */}
@@ -210,31 +328,28 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
                   size="sm"
                 />
               </div>
-
-              <div>
-                <label style={{ fontSize: '12px', color: 'var(--fg-dim)', display: 'block', marginBottom: 6 }}>
-                  Taxa de bits
-                </label>
-                <SegmentedControl
-                  options={['320 kbps', '256 kbps', '128 kbps']}
-                  value={audioBitrate}
-                  onChange={setAudioBitrate}
-                  size="sm"
-                />
-              </div>
             </>
           )}
+
+          <div>
+            <label style={{ fontSize: '12px', color: 'var(--fg-dim)', display: 'block', marginBottom: 6 }}>
+              Destino do arquivo
+            </label>
+            <Button size="sm" variant="secondary" onClick={handleSelectFolder}>
+              {targetFolder
+                ? targetFolder.replace(/\\/g, '/').split('/').pop() || 'Pasta padrão'
+                : 'Pasta de Downloads'}
+            </Button>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <Switch
-            label="Baixar legendas disponíveis"
-            checked={includeSubs}
-            onChange={setIncludeSubs}
-          />
-
-          <Button variant="primary" onClick={handleStartDownload}>
-            Adicionar à fila de downloads
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
+          <Button
+            variant="primary"
+            onClick={handleStartDownload}
+            disabled={downloading || (!url.trim() && !batchUrls.trim())}
+          >
+            {downloading ? 'Iniciando...' : 'Adicionar à fila de downloads'}
           </Button>
         </div>
       </div>
@@ -252,9 +367,7 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
       >
         <Icon name="alert" size={18} style={{ color: 'var(--mint)', flexShrink: 0, marginTop: 2 }} />
         <div style={{ fontSize: '12px', color: 'var(--fg-dim)', lineHeight: 1.5 }}>
-          <strong>Política de conformidade e motor:</strong> Este módulo utilizará o binário estruturado{' '}
-          <code>yt-dlp</code> gerenciado localmente sem bypass de DRM e respeitando estritamente os direitos autorais.
-          Os parâmetros estruturados e isolamento de processo já estão definidos na arquitetura backend.
+          <strong>Conformidade e motor nativo yt-dlp:</strong> O Arce Tools opera respeitando integralmente os direitos autorais e termos de serviço das plataformas. Não são implementados mecanismos de quebra de DRM ou remoção de proteções.
         </div>
       </div>
     </div>
