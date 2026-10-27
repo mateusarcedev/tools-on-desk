@@ -1,0 +1,138 @@
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --font-geist-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-geist-mono: 'Geist Mono', ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* Theme tokens (Dark - default) */
+  --bg: #0e0e0e;
+  --bg-soft: #151515;
+  --surface: #1a1a1a;
+  --surface-2: #222222;
+  --line: #232323;
+  --line-soft: #1c1c1c;
+  --fg: #f4f4f4;
+  --fg-dim: #a8a8a8;
+  --fg-faint: #909090;
+  --mint: #15F5BA;
+  --mint-dim: rgba(21, 245, 186, 0.10);
+  --mint-edge: rgba(21, 245, 186, 0.28);
+  --pink: #E96479;
+  --pink-dim: rgba(233, 100, 121, 0.10);
+  --mono: var(--font-geist-mono);
+  --sans: var(--font-geist-sans);
+  --maxw: 1180px;
+  --gut: 28px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+[data-theme="light"] {
+  --bg: #f5f3ee;
+  --bg-soft: #efece5;
+  --surface: #ffffff;
+  --surface-2: #ecebe5;
+  --line: #d8d4ca;
+  --line-soft: #e3dfd4;
+  --fg: #1a1a17;
+  --fg-dim: #5a5a52;
+  --fg-faint: #5a5852;
+  --mint: #076b39;
+  --mint-dim: rgba(7, 107, 57, 0.10);
+  --mint-edge: rgba(7, 107, 57, 0.28);
+  --pink: #a02f69;
+  --pink-dim: rgba(160, 47, 105, 0.10);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--mint);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+select option {
+  background: var(--surface);
+  color: var(--fg);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--surface-2);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--line);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes at-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes at-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
