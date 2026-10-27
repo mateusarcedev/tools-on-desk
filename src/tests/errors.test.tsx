@@ -51,6 +51,7 @@ const mockStats: ErrorLogStats = {
 describe('Error & Diagnostics Center Tests', () => {
   beforeEach(() => {
     vi.spyOn(TauriService, 'getErrorLogs').mockResolvedValue(mockErrorLogs);
+    vi.spyOn(TauriService, 'getAllErrorLogsForExport').mockResolvedValue(mockErrorLogs);
     vi.spyOn(TauriService, 'getErrorStats').mockResolvedValue(mockStats);
     vi.spyOn(TauriService, 'copyToClipboard').mockResolvedValue();
     vi.spyOn(TauriService, 'resolveErrorLog').mockResolvedValue();
@@ -137,7 +138,9 @@ describe('Error & Diagnostics Center Tests', () => {
 
     // Click "Copiar filtrados"
     const copyAllBtn = screen.getByText('Copiar filtrados');
-    fireEvent.click(copyAllBtn);
+    await act(async () => {
+      fireEvent.click(copyAllBtn);
+    });
 
     expect(TauriService.copyToClipboard).toHaveBeenCalled();
   });

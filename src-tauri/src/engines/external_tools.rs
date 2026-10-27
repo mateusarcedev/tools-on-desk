@@ -57,10 +57,25 @@ impl ExternalToolManager {
             return Some(cwd_candidate);
         }
 
-        // 3. Check Windows specific directories (WinGet packages)
+        // 3. Check Windows specific directories (WinGet packages, links, AppData)
         if cfg!(windows) {
             if let Ok(local_app_data) = env::var("LOCALAPPDATA") {
-                let winget_dir = Path::new(&local_app_data).join("Microsoft").join("WinGet").join("Packages");
+                let local_path = Path::new(&local_app_data);
+
+                // Check ArceTools local binaries cache
+                let arce_bin = local_path.join("ArceTools").join("binaries").join(&exe_name);
+                if arce_bin.is_file() {
+                    return Some(arce_bin);
+                }
+
+                // Check WinGet Links
+                let links_bin = local_path.join("Microsoft").join("WinGet").join("Links").join(&exe_name);
+                if links_bin.is_file() {
+                    return Some(links_bin);
+                }
+
+                // Check WinGet Packages
+                let winget_dir = local_path.join("Microsoft").join("WinGet").join("Packages");
                 if winget_dir.is_dir() {
                     if let Ok(entries) = std::fs::read_dir(&winget_dir) {
                         for entry in entries.flatten() {
@@ -93,6 +108,14 @@ impl ExternalToolManager {
                                 let direct = path.join(&exe_name);
                                 if direct.is_file() {
                                     return Some(direct);
+                                }
+                                if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                                    for sub in sub_entries.flatten() {
+                                        let sub_bin = sub.path().join(&exe_name);
+                                        if sub_bin.is_file() {
+                                            return Some(sub_bin);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -240,11 +263,27 @@ impl ExternalToolManager {
         loop {
             // Check cancellation
             if cancel_token.load(Ordering::SeqCst) {
+                #[cfg(windows)]
+                if let Some(pid) = child.id() {
+                    let mut kill_cmd = std::process::Command::new("taskkill");
+                    kill_cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::process::CommandExt;
+                        kill_cmd.creation_flags(0x08000000);
+                    }
+                    let _ = kill_cmd.output();
+                }
                 let _ = child.kill().await;
                 return Err(AppError::Canceled);
             }
 
             tokio::select! {
+                _ = tokio::time::sleep(tokio::time::Duration::from_millis(200)) => {
+                    // Periodic check in case process is blocked without generating stdout/stderr
+                    continue;
+                }
+
                 line_res = async {
                     if let Some(ref mut reader) = stdout_reader {
                         reader.next_line().await

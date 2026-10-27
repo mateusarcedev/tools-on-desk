@@ -113,3 +113,45 @@ Este documento registra as principais decisões de arquitetura de software adota
 - **Contexto**: A API web `navigator.clipboard.writeText()` frequentemente falha ou exige permissões do usuário em ambientes desktop quando acionada fora de eventos diretos de clique ou em contextos WebView2 restritos.
 - **Decisão**: Adotar a crate nativa Rust `arboard 3.7`, expondo o comando Tauri `copy_to_clipboard` que chama diretamente as APIs `OpenClipboard` e `SetClipboardData` da Win32 API.
 - **Consequências**: Cópia instantânea e 100% garantida de relatórios de erros, trechos de código e logs para a área de transferência do Windows.
+
+---
+
+## ADR 014: Estratégia de Empacotamento Windows NSIS com Binários Externos Desacoplados
+- **Status**: Aprovado e Implementado (Missão 04)
+- **Contexto**: O projeto necessita de um instalador Windows oficial para distribuição real (`.exe` NSIS). Os utilitários multimídia externos (FFmpeg, ffprobe e yt-dlp) totalizam ~480 MB descompactados e ~150 MB compactados. Embutir tudo no instalador tornaria o download pesado e dificultaria atualizações independentes de segurança (ex: patches frequentes do `yt-dlp`).
+- **Decisão**: Gerar o instalador oficial NSIS nativo (`Arce Tools_0.1.0_x64-setup.exe`) focado no executável Tauri (3,97 MB compactado) e adotar um mecanismo de descoberta de 4 níveis para ferramentas externas:
+  1. Diretório local `<app_dir>\binaries\`;
+  2. Diretório `%LOCALAPPDATA%\ArceTools\binaries\`;
+  3. Links e pacotes do WinGet (`%LOCALAPPDATA%\Microsoft\WinGet\Links\` e `%LOCALAPPDATA%\Microsoft\WinGet\Packages\`);
+  4. `PATH` do sistema operacional.
+  Na tela de Configurações, são disponibilizados botões de 1 clique para instalação assistida via WinGet (`winget install Gyan.FFmpeg yt-dlp`).
+- **Consequências**:
+  - Instalador ultraleve (< 4 MB), download e instalação instantâneos.
+  - Atualizações do yt-dlp podem ser feitas diretamente pelo WinGet sem reinstalar o aplicativo.
+  - Ambientes corporativos ou isolados podem simplesmente colar os binários na pasta local da aplicação.
+
+---
+
+## ADR 015: Encerramento de Árvore de Processos Win32 via `taskkill /F /T`
+- **Status**: Aprovado e Implementado (Missão 04)
+- **Contexto**: Quando o `DownloadEngine` invoca o `yt-dlp`, o `yt-dlp` por sua vez pode invocar subprocessos netos (como `ffmpeg.exe` para pós-processamento de áudio ou merge de contêiner). A chamada padrão `child.kill().await` do Rust/Tokio no Windows encerra apenas o processo pai direto, deixando subprocessos netos em execução em segundo plano consumindo CPU e mantendo arquivos bloqueados.
+- **Decisão**: Ao cancelar ou abortar um processo supervisionado no Windows, executar explicitamente `taskkill /F /T /PID <pid>` antes de `child.kill().await`, garantindo o encerramento forçado de toda a árvore de subprocessos hierárquicos. Além disso, adicionou-se um branch de periodicidade de 200ms no loop `tokio::select!` para interromper a execução no momento exato do cancelamento, mesmo que o stdout/stderr esteja ocioso.
+- **Consequências**: Zero processos órfãos no Gerenciador de Tarefas do Windows ao cancelar downloads ou conversões e liberação imediata de descritores de arquivos.
+
+---
+
+## ADR 016: Sanitização Multicamadas com Lookahead Guard e Detecção de Chaves Privadas
+- **Status**: Aprovado e Implementado (Missão 04)
+- **Contexto**: A sanitização de erros precisa ser idempotente: aplicar o pipeline de regex múltiplas vezes em uma mesma string ou em logs reprocessados não pode corromper tags de mascaramento prévias (como `[REDACTED]` se transformando em `[[REDACTED]]`). Além disso, blocos PEM de certificados (`PRIVATE KEY`) e cabeçalhos HTTP com tokens devem ser eliminados sem truncar linhas subsequentes.
+- **Decisão**: Adicionar lookahead guard negativo `[^\[...]` nas expressões regulares para impedir re-sanitização de tags já substituídas, estender as regras para cobrir cabeçalhos `Authorization`, `Cookie`, `Set-Cookie`, query params (`session_id`, `access_token`) e blocos inteiros de chaves privadas PEM.
+- **Consequências**: Proteção de dados sem efeito colateral de corrupção textual e sem vazamento de segredos em relatórios exportados.
+
+---
+
+## ADR 017: Normalização de Consultas SQL e Deduplicação Temporal em Logs de Diagnóstico
+- **Status**: Aprovado e Implementado (Missão 04)
+- **Contexto**: Ao filtrar logs na Central de Diagnósticos por severidade, status ou período, inconsistências de caixa (`"critical"` vs `"CRITICAL"`) ou formatos de período (`"today"` vs `"24h"`) causavam retornos vazios. Adicionalmente, quando múltiplos componentes falham em cascata devido a um mesmo evento, centenas de registros idênticos podiam inundar a tabela SQLite.
+- **Decisão**:
+  1. Normalizar as consultas SQL no SQLite usando `UPPER(severity) = UPPER(?)`, `UPPER(status) = UPPER(?)`, `LOWER(module) = LOWER(?)` e timestamps relativos do SQLite (`datetime('now', '-24 hours')`, `datetime('now', '-7 days')`, `datetime('now', '-30 days')`).
+  2. Implementar uma janela de deduplicação temporal de 3 segundos em `Db::insert_error_log`, descartando entradas repetidas de `(error_code, module, technical_details/user_message)`.
+- **Consequências**: Filtros 100% confiáveis e consistentes entre frontend e backend, e prevenção contra tempestades de eventos no banco de dados local.

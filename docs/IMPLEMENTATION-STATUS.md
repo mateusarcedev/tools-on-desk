@@ -1,6 +1,6 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5 e 03**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03 e 04**.
 
 ---
 
@@ -15,10 +15,12 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | **Conversão de Imagens** | 01 | Concluído | PNG/JPEG, resize Lanczos3, qualidade, imagens para PDF |
 | **Módulo Áudio (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP3/WAV/FLAC/AAC/OGG/OPUS, bitrate, loudnorm, trim |
 | **Módulo Vídeo (Real)** | 02 | Concluído | FFmpeg/ffprobe, MP4/MKV/WEBM, presets de compressão CRF, trim rápido e preciso, extração de frame |
-| **Módulo Downloads (Multiplataforma)**| 02.5 | Concluído | yt-dlp, 13+ plataformas, detecção de playlists, download em lote, áudio (MP3/M4A/WAV/FLAC/OPUS), defesa contra SSRF |
+| **Módulo Downloads (Multiplataforma)**| 02.5 & 04 | Concluído | yt-dlp, 13+ plataformas, detecção de playlists, download em lote, áudio (MP3/M4A/WAV/FLAC/OPUS), defesa contra SSRF, limpeza automática de parciais `.part` |
 | **Document Engine (Real)** | 03 | Concluído | PDF Inspector, PDF Merge (renumeração de objetos), PDF Split (todos, intervalos, cada N), PDF Organize (reordenação e rotação sem sobrescrever original), PDF Compress (Deflate e poda estrutural), Word para PDF (LibreOffice headless isolado), PDF para Word (extração e geração de DOCX via docx-rs) |
-| **Central de Erros e Diagnósticos** | 03 | Concluído | Tabela SQLite `error_logs`, índices, sanitização regex de senhas e caminhos `C:\Users\[USER]\...`, KPIs, filtros, cópia individual e em lote via clipboard nativo Win32 `arboard`, atalho em tarefas com falha |
-| **Testes Automatizados** | 01, 02, 02.5 & 03 | Concluído | 20 testes Vitest (frontend) + 12 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Central de Erros e Diagnósticos** | 03 & 04 | Concluído | Tabela SQLite `error_logs`, índices, sanitização avançada em 7 camadas, deduplicação em 3s, filtros normalizados (case/period), cópia individual com feedback visual, "Copiar todos" de todo o banco, exportações TXT e JSON |
+| **Auditoria e Encerramento de Processos** | 04 | Concluído | `taskkill /F /T /PID` no Windows para eliminação total de processos filhos órfãos, verificação periódica de cancelamento |
+| **Instalador Oficial Windows (NSIS)** | 04 | Concluído | `Arce Tools_0.1.0_x64-setup.exe` (3.97 MB) com instalação por usuário e desinstalador limpo |
+| **Testes Automatizados** | Todas | Concluído | 20 testes Vitest (frontend) + 14 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 

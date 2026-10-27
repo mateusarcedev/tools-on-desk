@@ -123,6 +123,22 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
   - Geração de PDF via `printpdf` com marcas de corte e legendas alfanuméricas de montagem.
   - Renderizador de preview Rust em tempo real retornando base64 (`render_poster_preview`).
 
+### 3.6 DocumentEngine (`document_engine.rs` — Missão 03)
+- **PDF Inspector (`inspect_pdf`):** Inspeciona contagem de páginas, versão do formato PDF, dimensões de folha e presença de fluxos de texto vs digitalizações.
+- **União Estrutural de PDFs (`merge_pdfs`):** Fusão sem colisões através do algoritmo seguro de renumeração de identificadores de nós de objetos indiretos (`lopdf 0.46`).
+- **Divisão de PDFs (`split_pdf`):** Divisão por páginas individuais, intervalos customizados (ex: `1-3, 5, 8-10`) e blocos de $N$ páginas, com opção de consolidar a seleção em documento único.
+- **Organizador e Rotacionador de Páginas (`organize_pdf`):** Reordenação, rotação de 90° em 90° e exclusão de páginas, sempre gerando um novo arquivo de saída sem sobrescrever o original.
+- **Compressão Estrutural de PDF (`compress_pdf`):** Remoção de nós órfãos de dicionários (`prune_objects`) e recompressão de fluxos via algoritmo Deflate sem perdas.
+- **Conversor Word para PDF (`convert_word_to_pdf`):** Execução do LibreOffice em modo headless com isolamento estrito de perfil (`-env:UserInstallation=file:///<temp_profile>`) e bloqueio de macros, prevenindo interferência em instâncias do usuário.
+- **Conversor PDF para Word (`convert_pdf_to_docx`):** Extração de texto e estruturação em parágrafos e títulos diretamente em formato OpenXML (.docx) via `docx-rs`.
+
+### 3.7 Central de Erros e Diagnósticos (`db.rs` e `sanitizer.rs` — Missões 03 e 04)
+- **Persistência Indexada em SQLite:** Tabela `error_logs` com índices dedicados em `created_at`, `severity`, `module`, `status`, `task_id` e `error_code`.
+- **Pipeline de Sanitização Multicamadas:** 7 camadas de expressões regulares com lookahead guard negativo `[^\[...]`, eliminando segredos, credenciais, cabeçalhos HTTP (`Authorization`, `Cookie`), blocos de chaves privadas e caminhos confidenciais (`C:\Users\[USER]\...`).
+- **Deduplicação Temporal de Eventos:** Janela de descarte de 3 segundos em `Db::insert_error_log` para impedir inundações do banco em falhas repetitivas em lote.
+- **Acesso Nativo ao Clipboard Win32:** Interação direta com as APIs `OpenClipboard` e `SetClipboardData` via crate `arboard 3.7`.
+- **Exportações Globais:** Consulta não-paginada de todo o histórico no SQLite via `get_all_error_logs_for_export`, permitindo cópia e exportação integral em formatos estruturados TXT e JSON.
+
 ---
 
 ## 4. Contratos IPC Atualizados (Tauri Commands)
@@ -142,12 +158,62 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
 | `start_download` | `options: DownloadOptions` | `String (task_id)` | Enfileira download de vídeo ou áudio via yt-dlp |
 | `check_external_tools`| Nenhum | `ExternalToolsStatus`| Retorna versão, caminho e licença de FFmpeg, ffprobe e yt-dlp |
 | `get_tasks` | Nenhum | `Vec<Task>` | Lista todas as tarefas persistidas |
-| `cancel_task` | `id: String` | `()` | Cancela a tarefa e encerra subprocessos associados |
+| `cancel_task` | `id: String` | `()` | Cancela a tarefa e encerra subprocessos associados via `taskkill /F /T` |
 | `retry_task` | `id: String` | `()` | Re-enfileira tarefa falha ou cancelada |
 | `calculate_poster_spec`| `options: PosterOptions`| `PosterSpec` | Calcula colunas, linhas, páginas, dimensões montadas, DPI e razão de escala humana |
 | `render_poster_preview`| `options: PosterOptions`| `String (data_url)`| Gera preview processado em base64 com efeitos artísticos em tempo real |
 | `start_poster_task` | `options: PosterOptions` | `String (task_id)` | Enfileira geração de PDF multipágina do pôster |
 | `start_image_conversion_task` | `options: ImageConvertOptions` | `String (task_id)` | Enfileira conversão/resize de imagens |
 | `start_images_to_pdf_task` | `options: ImagesToPdfOptions` | `String (task_id)` | Enfileira compilação de imagens em PDF |
+| `inspect_pdf` | `filePath: String` | `PdfInspectionInfo` | Inspeciona páginas, dimensões e texto de PDF |
+| `start_pdf_merge` | `options: PdfMergeOptions` | `String (task_id)` | Enfileira fusão estrutural de PDFs |
+| `start_pdf_split` | `options: PdfSplitOptions` | `String (task_id)` | Enfileira divisão de PDF por páginas/intervalos |
+| `start_pdf_organize` | `options: PdfOrganizeOptions` | `String (task_id)` | Enfileira organização/rotação/exclusão de páginas |
+| `start_pdf_compress` | `options: PdfCompressOptions` | `String (task_id)` | Enfileira compressão estrutural Deflate de PDF |
+| `start_word_to_pdf` | `options: WordToPdfOptions` | `String (task_id)` | Enfileira conversão DOCX para PDF via LibreOffice headless |
+| `start_pdf_to_word` | `options: PdfToWordOptions` | `String (task_id)` | Enfileira extração e conversão PDF para DOCX |
+| `check_libreoffice_status` | Nenhum | `LibreOfficeStatus` | Verifica presença e caminho do LibreOffice no sistema |
+| `get_error_logs` | `filter: ErrorFilterOptions` | `ErrorLogsResponse` | Retorna lista paginada e filtrada de erros do SQLite |
+| `get_all_error_logs_for_export` | `filter: Option<ErrorFilterOptions>` | `Vec<ErrorLogEntry>` | Retorna todo o histórico não-paginado para exportação/cópia |
+| `resolve_error_log` | `id: String` | `()` | Marca o erro como resolvido com timestamp |
+| `reopen_error_log` | `id: String` | `()` | Reabre um erro previamente resolvido |
+| `clear_error_logs` | `olderThanDays: Option<u32>` | `u64` | Limpa erros respeitando a política de retenção |
+| `get_error_stats` | Nenhum | `ErrorStats` | Retorna contagens de erros e tamanho do banco em KB |
+| `copy_to_clipboard` | `text: String` | `()` | Copia texto diretamente para a área de transferência Win32 |
 | `get_system_info` | Nenhum | `SystemInfo` | Pastas padrão do sistema e SO |
 | `open_path_in_explorer` | `path: String` | `()` | Revela arquivo ou pasta no Windows Explorer |
+
+---
+
+## 5. Arquitetura de Empacotamento e Distribuição Windows (Missão 04)
+
+```mermaid
+flowchart TD
+    subgraph BuildPipeline ["Pipeline de Empacotamento (Windows 11 MSVC)"]
+        FrontendBuild["Vite Build\n(pnpm build -> dist/)"]
+        CargoBuild["Cargo Tauri Build\n(cargo tauri build)"]
+        NSISGen["NSIS Compiler\n(makensis.exe)"]
+    end
+
+    subgraph OutputArtifacts ["Artefatos de Saída"]
+        Exe["Executável Principal (11,75 MB)\narce-tools.exe"]
+        Installer["Instalador Oficial NSIS (3,97 MB)\nArce Tools_0.1.0_x64-setup.exe"]
+    end
+
+    subgraph RuntimeModel ["Modelo de Descoberta em Tempo de Execução"]
+        AppDir["./binaries/\n(Local da Aplicação)"]
+        LocalApp["%LOCALAPPDATA%\\ArceTools\\binaries/"]
+        WinGet["%LOCALAPPDATA%\\Microsoft\\WinGet\\..."]
+        SystemPath["PATH do Sistema"]
+    end
+
+    FrontendBuild --> CargoBuild
+    CargoBuild --> Exe
+    CargoBuild --> NSISGen
+    NSISGen --> Installer
+    Exe -.-> RuntimeModel
+```
+
+1. **Instalador Oficial NSIS Nativo**: Empacota o executável Rust e os assets do frontend compilados em um instalador assinado e autocontido de 3,97 MB (`Arce Tools_0.1.0_x64-setup.exe`).
+2. **Desacoplamento de Utilitários Pesados**: Os utilitários FFmpeg e yt-dlp (~480 MB) são mantidos desacoplados, com suporte a detecção em cascata (App Dir $\rightarrow$ LocalAppData $\rightarrow$ WinGet $\rightarrow$ PATH) e instalação assistida com um clique na aba Configurações.
+3. **Desinstalação Limpa**: Registro completo no Painel de Controle do Windows com limpeza de arquivos temporários e atalhos no Menu Iniciar.

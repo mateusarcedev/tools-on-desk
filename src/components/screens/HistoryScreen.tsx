@@ -48,6 +48,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   });
   const [loadingErrors, setLoadingErrors] = useState(false);
   const [expandedErrorIds, setExpandedErrorIds] = useState<Set<string>>(new Set());
+  const [copiedErrorId, setCopiedErrorId] = useState<string | null>(null);
 
   // Error filters
   const [errorSearch, setErrorSearch] = useState('');
@@ -66,16 +67,22 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     }
   }, [initialTab]);
 
+  // Build active filter payload matching backend expectations
+  const getActiveFilterPayload = (): ErrorLogFilter => {
+    const filterPayload: ErrorLogFilter = {};
+    if (errorSearch.trim()) filterPayload.search = errorSearch.trim();
+    if (errorPeriod !== 'all') filterPayload.period = errorPeriod;
+    if (errorModule !== 'all') filterPayload.module = errorModule;
+    if (errorSeverity !== 'all') filterPayload.severity = errorSeverity.toUpperCase();
+    if (errorStatus !== 'all') filterPayload.status = errorStatus.toUpperCase();
+    return filterPayload;
+  };
+
   // Load error logs and stats
   const loadErrorData = async () => {
     setLoadingErrors(true);
     try {
-      const filterPayload: ErrorLogFilter = {};
-      if (errorSearch.trim()) filterPayload.search = errorSearch.trim();
-      if (errorPeriod !== 'all') filterPayload.period = errorPeriod;
-      if (errorModule !== 'all') filterPayload.module = errorModule;
-      if (errorSeverity !== 'all') filterPayload.severity = errorSeverity;
-      if (errorStatus !== 'all') filterPayload.status = errorStatus;
+      const filterPayload = getActiveFilterPayload();
 
       const [logs, stats] = await Promise.all([
         TauriService.getErrorLogs(filterPayload),
@@ -180,72 +187,164 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
     }
   };
 
-  // Format single error for clipboard
+  // Format single error for clipboard or export
   const formatErrorText = (e: ErrorLogEntry): string => {
     return [
       `=== ARCE TOOLS - REGISTRO DE ERRO ===`,
       `ID: ${e.id}`,
+      `Versão do Aplicativo: ${e.appVersion || '0.1.0'}`,
       `Data/Hora: ${e.createdAt}`,
       `Severidade: ${e.severity.toUpperCase()}`,
+      `Origem: ${e.source}`,
       `Módulo: ${e.module} | Operação: ${e.operation}`,
       `Código: ${e.errorCode}`,
       `Mensagem: ${e.userMessage}`,
       e.taskId ? `ID da Tarefa: ${e.taskId}` : null,
-      `Status: ${e.status}`,
-      e.technicalDetails ? `\n[Detalhes Técnicos]\n${e.technicalDetails}` : null,
-      e.sanitizedStack ? `\n[Stack Sanitizado]\n${e.sanitizedStack}` : null,
+      `Status: ${e.status === 'resolved' ? 'RESOLVIDO' : 'NÃO RESOLVIDO'}`,
+      e.resolvedAt ? `Resolvido em: ${e.resolvedAt}` : null,
+      e.technicalDetails ? `\n[Detalhes Técnicos Sanitizados]\n${e.technicalDetails}` : null,
+      e.sanitizedStack ? `\n[Stack Trace Sanitizado]\n${e.sanitizedStack}` : null,
       `=====================================`,
     ]
       .filter(Boolean)
       .join('\n');
   };
 
-  // Copy single error
+  // Copy single error with full fields and visual feedback
   const handleCopySingleError = async (e: ErrorLogEntry) => {
     const text = formatErrorText(e);
     await TauriService.copyToClipboard(text);
+    setCopiedErrorId(e.id);
+    setTimeout(() => {
+      setCopiedErrorId((curr) => (curr === e.id ? null : curr));
+    }, 2000);
     onShowToast(`Registro [${e.errorCode}] copiado para a área de transferência!`, 'ok');
   };
 
-  // Copy all / filtered errors formatted
-  const handleCopyAllErrors = async () => {
-    if (errorLogs.length === 0) {
-      onShowToast('Nenhum erro na lista atual para copiar', 'warn');
-      return;
+  // Copy filtered errors from database history
+  const handleCopyFilteredErrors = async () => {
+    try {
+      const activeFilter = getActiveFilterPayload();
+      let records = await TauriService.getAllErrorLogsForExport(activeFilter);
+      if (!records || records.length === 0) {
+        records = errorLogs;
+      }
+      if (records.length === 0) {
+        onShowToast('Nenhum erro correspondente aos filtros atuais para copiar', 'warn');
+        return;
+      }
+
+      const header = [
+        `=============================================================`,
+        `ARCE TOOLS — RELATÓRIO DE ERROS E DIAGNÓSTICOS FILTRADOS`,
+        `Exportado em: ${new Date().toLocaleString()}`,
+        `Total de registros filtrados: ${records.length}`,
+        `=============================================================\n`,
+      ].join('\n');
+
+      const body = records.map((e, idx) => `[#${idx + 1}] ${formatErrorText(e)}`).join('\n\n');
+      const fullText = `${header}\n${body}\n\n[Fim do Relatório]`;
+
+      await TauriService.copyToClipboard(fullText);
+      onShowToast(`${records.length} erro(s) filtrados copiados para a área de transferência!`, 'ok');
+    } catch (err: any) {
+      onShowToast(`Erro ao copiar erros filtrados: ${err}`, 'err');
     }
+  };
 
-    const header = [
-      `=============================================================`,
-      `ARCE TOOLS — RELATÓRIO DE ERROS E DIAGNÓSTICOS DO SISTEMA`,
-      `Exportado em: ${new Date().toLocaleString()}`,
-      `Total de registros filtrados: ${errorLogs.length}`,
-      `Erros Críticos: ${errorStats.critical} | Não Resolvidos: ${errorStats.unresolved}`,
-      `=============================================================\n`,
-    ].join('\n');
+  // Copy all errors from database history (not only paginated/visible)
+  const handleCopyAllErrors = async () => {
+    try {
+      let allRecords = await TauriService.getAllErrorLogsForExport(undefined);
+      if (!allRecords || allRecords.length === 0) {
+        allRecords = errorLogs;
+      }
+      if (allRecords.length === 0) {
+        onShowToast('Nenhum erro registrado no histórico local', 'warn');
+        return;
+      }
 
-    const body = errorLogs.map((e, idx) => `[#${idx + 1}] ${formatErrorText(e)}`).join('\n\n');
-    const fullText = `${header}\n${body}\n\n[Fim do Relatório]`;
+      const header = [
+        `=============================================================`,
+        `ARCE TOOLS — HISTÓRICO COMPLETO DE ERROS E DIAGNÓSTICOS`,
+        `Exportado em: ${new Date().toLocaleString()}`,
+        `Total de registros no banco: ${allRecords.length}`,
+        `Falhas Críticas: ${errorStats.critical} | Não Resolvidos: ${errorStats.unresolved}`,
+        `=============================================================\n`,
+      ].join('\n');
 
-    await TauriService.copyToClipboard(fullText);
-    onShowToast(`${errorLogs.length} erro(s) copiados em formato de relatório!`, 'ok');
+      const body = allRecords.map((e, idx) => `[#${idx + 1}] ${formatErrorText(e)}`).join('\n\n');
+      const fullText = `${header}\n${body}\n\n[Fim do Relatório]`;
+
+      await TauriService.copyToClipboard(fullText);
+      onShowToast(`Histórico completo (${allRecords.length} erros) copiado para a área de transferência!`, 'ok');
+    } catch (err: any) {
+      onShowToast(`Erro ao copiar histórico: ${err}`, 'err');
+    }
+  };
+
+  // Export report as TXT file
+  const handleExportTxt = async () => {
+    try {
+      const activeFilter = getActiveFilterPayload();
+      let records = await TauriService.getAllErrorLogsForExport(activeFilter);
+      if (!records || records.length === 0) {
+        records = errorLogs;
+      }
+      if (records.length === 0) {
+        onShowToast('Nenhum registro para exportar', 'warn');
+        return;
+      }
+
+      const header = [
+        `=============================================================`,
+        `ARCE TOOLS — RELATÓRIO DE ERROS E DIAGNÓSTICOS DO SISTEMA`,
+        `Gerado em: ${new Date().toLocaleString()}`,
+        `Total de registros exportados: ${records.length}`,
+        `=============================================================\n`,
+      ].join('\n');
+
+      const body = records.map((e, idx) => `[#${idx + 1}] ${formatErrorText(e)}`).join('\n\n');
+      const fullText = `${header}\n${body}\n\n[Fim do Relatório]`;
+
+      const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `arce-tools-diagnostico-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onShowToast(`Relatório TXT (${records.length} registros) exportado com sucesso!`, 'ok');
+    } catch (err: any) {
+      onShowToast(`Erro ao exportar TXT: ${err}`, 'err');
+    }
   };
 
   // Export report as JSON file
-  const handleExportJson = () => {
-    if (errorLogs.length === 0) {
-      onShowToast('Nenhum registro para exportar', 'warn');
-      return;
-    }
+  const handleExportJson = async () => {
+    try {
+      const activeFilter = getActiveFilterPayload();
+      let records = await TauriService.getAllErrorLogsForExport(activeFilter);
+      if (!records || records.length === 0) {
+        records = errorLogs;
+      }
+      if (records.length === 0) {
+        onShowToast('Nenhum registro para exportar', 'warn');
+        return;
+      }
 
-    const jsonStr = JSON.stringify(errorLogs, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `arce-tools-diagnostico-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    onShowToast('Relatório de diagnósticos exportado como JSON!', 'ok');
+      const jsonStr = JSON.stringify(records, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `arce-tools-diagnostico-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onShowToast(`Relatório JSON (${records.length} registros) exportado com sucesso!`, 'ok');
+    } catch (err: any) {
+      onShowToast(`Erro ao exportar JSON: ${err}`, 'err');
+    }
   };
 
   // Clear error logs
@@ -351,16 +450,50 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
             </Button>
           )}
 
-          {activeTab === 'diagnostics' && errorLogs.length > 0 && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <Button variant="secondary" size="sm" onClick={handleCopyAllErrors}>
+          {activeTab === 'diagnostics' && (errorLogs.length > 0 || errorStats.total > 0) && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyFilteredErrors}
+                title="Copiar erros que atendem aos filtros atuais para a área de transferência"
+              >
                 <Icon name="copy" size={13} />
                 Copiar filtrados
               </Button>
-              <Button variant="secondary" size="sm" onClick={handleExportJson}>
-                Exportar JSON
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCopyAllErrors}
+                title="Copiar todo o histórico do banco de dados local para a área de transferência"
+              >
+                <Icon name="copy" size={13} />
+                Copiar todos
               </Button>
-              <Button variant="danger" size="sm" onClick={() => setShowClearConfirm(true)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportTxt}
+                title="Salvar relatório estruturado em arquivo texto (.txt)"
+              >
+                <Icon name="file" size={13} />
+                TXT
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportJson}
+                title="Salvar registros em formato JSON (.json)"
+              >
+                <Icon name="file" size={13} />
+                JSON
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setShowClearConfirm(true)}
+                title="Limpar registros de diagnósticos"
+              >
                 Limpar erros
               </Button>
             </div>
@@ -975,10 +1108,15 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
                             size="sm"
                             variant="ghost"
                             onClick={() => handleCopySingleError(entry)}
-                            title="Copiar texto completo deste erro"
+                            title="Copiar registro completo deste erro com todos os detalhes técnicos"
+                            style={{ minWidth: 78 }}
                           >
-                            <Icon name="copy" size={13} />
-                            Copiar
+                            <Icon
+                              name={copiedErrorId === entry.id ? 'check' : 'copy'}
+                              size={13}
+                              style={{ color: copiedErrorId === entry.id ? 'var(--mint)' : undefined }}
+                            />
+                            {copiedErrorId === entry.id ? 'Copiado!' : 'Copiar'}
                           </Button>
 
                           <Button

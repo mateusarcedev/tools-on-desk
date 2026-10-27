@@ -311,12 +311,13 @@ impl Db {
     }
 
     // ==========================================
-    // ERROR LOGS (CENTRAL DE ERROS E DIAGNÓSTICOS)
+    // ERROR LOGS (CENTRAL DE ERROS E DIAGNÓSTICOS - M03 / M04)
     // ==========================================
 
     pub fn insert_error_log(&self, entry: &ErrorLogEntry) -> AppResult<()> {
         let conn = self.conn.lock();
 
+        let sanitized_user_msg = sanitize_error_text(&entry.user_message);
         let sanitized_technical = entry
             .technical_details
             .as_deref()
@@ -325,6 +326,29 @@ impl Db {
             .sanitized_stack
             .as_deref()
             .map(sanitize_error_text);
+
+        // Deduplication guard: ignore redundant duplicate within 3 seconds
+        let duplicate_count: i64 = conn.query_row(
+            r#"
+            SELECT COUNT(*) FROM error_logs
+            WHERE error_code = ?1
+              AND module = ?2
+              AND (technical_details = ?3 OR user_message = ?4)
+              AND created_at >= datetime('now', '-3 seconds')
+            "#,
+            params![
+                entry.error_code,
+                entry.module,
+                sanitized_technical,
+                sanitized_user_msg
+            ],
+            |row| row.get(0),
+        ).unwrap_or(0);
+
+        if duplicate_count > 0 {
+            // Already logged by another layer (e.g. backend task + unhandled promise)
+            return Ok(());
+        }
 
         conn.execute(
             r#"
@@ -347,7 +371,7 @@ impl Db {
                 entry.operation,
                 entry.task_id,
                 entry.error_code,
-                entry.user_message,
+                sanitized_user_msg,
                 sanitized_technical,
                 sanitized_stack,
                 entry.status,
@@ -368,36 +392,40 @@ impl Db {
         let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
         if let Some(sev) = &filter.severity {
-            if !sev.is_empty() && sev != "ALL" {
-                query.push_str(" AND severity = ?");
-                params_vec.push(Box::new(sev.clone()));
+            let s = sev.trim();
+            if !s.is_empty() && !s.eq_ignore_ascii_case("all") {
+                query.push_str(" AND UPPER(severity) = UPPER(?)");
+                params_vec.push(Box::new(s.to_string()));
             }
         }
 
         if let Some(m) = &filter.module {
-            if !m.is_empty() && m != "ALL" {
-                query.push_str(" AND module = ?");
-                params_vec.push(Box::new(m.clone()));
+            let m_str = m.trim();
+            if !m_str.is_empty() && !m_str.eq_ignore_ascii_case("all") {
+                query.push_str(" AND LOWER(module) = LOWER(?)");
+                params_vec.push(Box::new(m_str.to_string()));
             }
         }
 
         if let Some(st) = &filter.status {
-            if !st.is_empty() && st != "ALL" {
-                query.push_str(" AND status = ?");
-                params_vec.push(Box::new(st.clone()));
+            let st_str = st.trim();
+            if !st_str.is_empty() && !st_str.eq_ignore_ascii_case("all") {
+                query.push_str(" AND UPPER(status) = UPPER(?)");
+                params_vec.push(Box::new(st_str.to_string()));
             }
         }
 
         if let Some(period) = &filter.period {
-            match period.as_str() {
-                "TODAY" => {
-                    query.push_str(" AND created_at >= date('now', 'start of day')");
+            let p = period.trim().to_lowercase();
+            match p.as_str() {
+                "today" | "24h" => {
+                    query.push_str(" AND created_at >= datetime('now', '-24 hours')");
                 }
-                "WEEK" => {
-                    query.push_str(" AND created_at >= date('now', '-7 days')");
+                "week" | "7d" => {
+                    query.push_str(" AND created_at >= datetime('now', '-7 days')");
                 }
-                "MONTH" => {
-                    query.push_str(" AND created_at >= date('now', '-30 days')");
+                "month" | "30d" => {
+                    query.push_str(" AND created_at >= datetime('now', '-30 days')");
                 }
                 _ => {}
             }
@@ -418,7 +446,9 @@ impl Db {
         query.push_str(" ORDER BY created_at DESC");
 
         let limit = filter.limit.unwrap_or(200);
-        query.push_str(&format!(" LIMIT {}", limit));
+        if limit > 0 {
+            query.push_str(&format!(" LIMIT {}", limit));
+        }
 
         if let Some(offset) = filter.offset {
             query.push_str(&format!(" OFFSET {}", offset));
@@ -455,7 +485,7 @@ impl Db {
 
     pub fn get_all_error_logs_for_export(&self, filter: Option<&ErrorLogFilter>) -> AppResult<Vec<ErrorLogEntry>> {
         let mut filter_copy = filter.cloned().unwrap_or_default();
-        filter_copy.limit = Some(10000);
+        filter_copy.limit = Some(100_000);
         filter_copy.offset = Some(0);
         self.get_error_logs(&filter_copy)
     }

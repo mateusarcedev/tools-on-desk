@@ -46,12 +46,16 @@ CREATE INDEX IF NOT EXISTS idx_error_logs_error_code ON error_logs(error_code);
 
 ## 3. Pipeline de Sanitização (`sanitizer.rs`)
 
-O módulo `src-tauri/src/utils/sanitizer.rs` aplica expressões regulares compiladas via `lazy_static`/`Regex`:
-- **Chaves e Tokens de Autenticação**: `token`, `bearer`, `api[_-]?key`, `auth`, `password`, `secret` → substituídos por `[REDACTED]`.
+O módulo `src-tauri/src/utils/sanitizer.rs` aplica um pipeline robusto com 7 camadas de expressões regulares compiladas via `lazy_static`/`Regex`:
+- **Chaves e Tokens de Autenticação**: `token`, `bearer`, `api[_-]?key`, `auth`, `password`, `secret` (com lookahead guard `[^\[...]` para impedir re-sanitização corrompendo tags `[REDACTED]` já existentes) → substituídos por `[REDACTED]`.
 - **Credenciais em URLs**: `https://user:password@host` → `https://[REDACTED]@host`.
+- **Cabeçalhos de Autorização e Cookies**: `Authorization: Bearer <token>`, `Cookie: <cookies>`, `Set-Cookie: <cookies>` → tokens mascarados como `[REDACTED]`.
+- **Identificadores de Sessão e Tokens em Query**: `session_id=...`, `access_token=...` → `[REDACTED]`.
+- **Blocos de Chaves Privadas**: `-----BEGIN [A-Z ]*PRIVATE KEY----- ... -----END [A-Z ]*PRIVATE KEY-----` → `[REDACTED PRIVATE KEY]`.
 - **Caminhos de Usuário Windows**: `C:\Users\nomedousuario\...` → `C:\Users\[USER]\...`.
 - **Caminhos Unix**: `/home/nomedousuario/...` → `/home/[USER]/...`.
 - **Limite de Bytes**: Truncamento seguro em 8.192 caracteres com sufixo `\n... [TRUNCADO]` para impedir saturação da memória.
+- **Deduplicação de Eventos**: Janela de guarda de 3 segundos em `Db::insert_error_log` que descarta entradas idênticas de `(error_code, module, technical_details/user_message)` em sucessão imediata, prevenindo explosão de logs em operações simultâneas.
 
 ---
 
@@ -59,21 +63,26 @@ O módulo `src-tauri/src/utils/sanitizer.rs` aplica expressões regulares compil
 
 ### 4.1 Aba "Erros e Diagnósticos" na Tela Histórico
 - **Cards de Métricas**: Total de Registros, Falhas Críticas, Não Resolvidos, Uso do Banco Local em KB.
-- **Filtros Parametrizados**:
+- **Filtros Parametrizados (Normalizados no SQLite)**:
   - Busca textual (em código, mensagem, detalhes técnicos e ID da tarefa).
-  - Filtro por período (Todo histórico, últimas 24h, 7 dias, 30 dias).
-  - Filtro por módulo (Documentos, Downloads, Áudio, Vídeo, Imagens, Pôsteres, Sistema).
-  - Filtro por severidade e status.
+  - Filtro por período normalizado (`today`/`24h`, `week`/`7d`, `month`/`30d` calculados via `datetime('now', '-24 hours')`, etc.).
+  - Filtro por módulo (`LOWER(module) = LOWER(?)`).
+  - Filtro por severidade (`UPPER(severity) = UPPER(?)`) e status (`UPPER(status) = UPPER(?)`).
+- **Ações Globais de Cópia e Exportação (Missão 04)**:
+  - **"Copiar todos"**: Busca **todo o histórico não-paginado** diretamente no SQLite através do comando `get_all_error_logs_for_export(None)` e formata como relatório legível no clipboard.
+  - **"Copiar filtrados"**: Copia todo o histórico que satisfaz os filtros atualmente aplicados via `get_all_error_logs_for_export(activeFilter)`.
+  - **"Exportar TXT"**: Gera e aciona o download local de um arquivo `.txt` contendo o relatório completo estruturado com metadados do sistema, sumário e logs detalhados.
+  - **"Exportar JSON"**: Exporta todos os registros (ou filtrados) em formato JSON estruturado com identação para auditoria automatizada.
 - **Card Expansível de Erro**:
   - Selo visual de severidade (Vermelho para Crítico, Rosa para Erro, Âmbar para Aviso, Verde para Info).
   - Código estruturado (`DOC_NOT_FOUND`, `DOWNLOAD_SSRF_BLOCKED`).
-  - Botão individual "Copiar erro" com formatação completa.
+  - Botão individual "Copiar erro" com **feedback visual imediato** ("Copiado!" com checkmark verde por 2 segundos).
   - Botão de alternância "Marcar como resolvido / Reabrir".
   - Bloco colapsável com detalhes técnicos e stack trace monospaçado.
 
 ### 4.2 Atalho Direto na Gaveta de Tarefas (`TaskDrawer`)
 - Quando uma tarefa falha (`status: 'failed'`), o card da tarefa exibe:
-  - Botão **"Copiar erro"**: Copia a mensagem de erro para a área de transferência.
+  - Botão **"Copiar erro"**: Copia a mensagem de erro para a área de transferência com feedback visual.
   - Botão **"Ver detalhes do erro"**: Fecha a gaveta e navega o usuário diretamente para a Central de Diagnósticos com o erro correspondente expandido e destacado em verde menta.
 
 ### 4.3 Seção de Diagnósticos nas Configurações

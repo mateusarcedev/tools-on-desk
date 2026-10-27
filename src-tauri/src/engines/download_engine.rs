@@ -366,7 +366,23 @@ impl DownloadEngine {
                 progress_arc(1.0);
                 Ok(output_dir.to_string_lossy().to_string())
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                if let AppError::Canceled = e {
+                    // Clean up incomplete .part / .ytdl / .temp files left in output_dir
+                    if let Ok(entries) = std::fs::read_dir(&output_dir) {
+                        for entry in entries.flatten() {
+                            let p = entry.path();
+                            if p.is_file() {
+                                let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
+                                if ext == "part" || ext == "ytdl" || ext == "temp" {
+                                    let _ = std::fs::remove_file(p);
+                                }
+                            }
+                        }
+                    }
+                }
+                Err(e)
+            }
         }
     }
 }
