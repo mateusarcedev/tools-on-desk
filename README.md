@@ -149,6 +149,15 @@ Para que qualquer pessoa possa testar o **ToolsOnDesk** imediatamente sem precis
 
 As versões nativas para Linux e macOS estão em fase de planejamento arquitetural. Os pacotes oficiais serão publicados após a adaptação de dependências de sistema (como WebKitGTK e keychain do macOS) e validação em pipelines de CI dedicadas.
 
+### Hospedagem da Landing Page (Vercel)
+
+A landing page em `landing/` está pré-configurada com `vercel.json` para publicação instantânea na Vercel:
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmateusarcedev%2Ftools-on-desk&project-name=tools-on-desk-landing&root-directory=landing)
+
+- **Configuração Automática:** O arquivo `vercel.json` na raiz direciona as rotas diretamente para a pasta estática `landing/`, dispensando builds pesados.
+- **Deploy em 1 Clique:** Basta importar o repositório no dashboard da Vercel para obter uma URL global rápida (ex: `tools-on-desk.vercel.app`).
+
 ---
 
 ## IA sem complicação
