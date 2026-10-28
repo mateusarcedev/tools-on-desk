@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod creative;
 pub mod dependencies;
 pub mod documents;
 pub mod downloads;
@@ -11,6 +12,7 @@ pub mod tasks;
 pub mod video;
 
 pub use audio::*;
+pub use creative::*;
 pub use dependencies::*;
 pub use documents::*;
 pub use downloads::*;

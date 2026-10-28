@@ -1,4 +1,5 @@
 pub mod audio;
+pub mod creative;
 pub mod dependency;
 pub mod document;
 pub mod download;
@@ -11,6 +12,13 @@ pub mod task;
 pub mod video;
 
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
+pub use creative::{
+    CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
+    CreativeSkill, CreativeTemplate, MotionAnimation, MotionAudioTrack, MotionComposition,
+    MotionLayer, MotionScene, NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus,
+    NvidiaModelInfo, NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus,
+    RenderCompositeVideoOptions, RenderMotionOptions, TemplateParameter,
+};
 pub use dependency::{
     DependencyInfo, DependencyInstallProgress, DependencyOrigin, DependencyStatus, FirstRunStatus,
     SystemDiagnostics,

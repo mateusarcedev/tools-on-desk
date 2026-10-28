@@ -36,6 +36,22 @@ import {
   FirstRunStatus,
   SystemDiagnostics,
 } from '../types/dependencies';
+import {
+  CreateProjectPayload,
+  CreativeAsset,
+  CreativeProject,
+  CreativeSkill,
+  CreativeTemplate,
+  NvidiaImageGenOptions,
+  NvidiaImageGenResult,
+  NvidiaKeyStatus,
+  NvidiaModelInfo,
+  NvidiaValidationResult,
+  NvidiaVideoGenOptions,
+  NvidiaVideoGenResult,
+  OpenCodeStatus,
+  RenderMotionOptions,
+} from '../types/creative';
 
 export interface SystemInfo {
   os: string;
@@ -690,5 +706,216 @@ export const TauriService = {
     return () => {
       if (unlistenFn) unlistenFn();
     };
+  },
+
+  // ==========================================
+  // ARCE CREATIVE STUDIO
+  // ==========================================
+
+  async saveNvidiaKey(key: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('save_nvidia_key', { key });
+  },
+
+  async getNvidiaKeyStatus(): Promise<NvidiaKeyStatus> {
+    if (!isTauri()) {
+      return {
+        has_key: false,
+        masked_key: null,
+        validated: false,
+        last_validated_at: null,
+      };
+    }
+    return await invoke<NvidiaKeyStatus>('get_nvidia_key_status');
+  },
+
+  async validateNvidiaKey(key?: string): Promise<NvidiaValidationResult> {
+    if (!isTauri()) {
+      return {
+        valid: true,
+        message: 'Ambiente de desenvolvimento web',
+        available_models: ['meta/llama-3.3-70b-instruct', 'black-forest-labs/flux.1-schnell'],
+      };
+    }
+    return await invoke<NvidiaValidationResult>('validate_nvidia_key', { key });
+  },
+
+  async listNvidiaModels(): Promise<NvidiaModelInfo[]> {
+    if (!isTauri()) {
+      return [
+        {
+          id: 'meta/llama-3.3-70b-instruct',
+          name: 'Llama 3.3 70B Instruct',
+          category: 'llm',
+          provider: 'Meta / NVIDIA',
+          description: 'Modelo de raciocínio e redação criativa',
+          context_length: 128000,
+          supports_streaming: true,
+          cost_tier: 'free_tier',
+        },
+        {
+          id: 'black-forest-labs/flux.1-schnell',
+          name: 'FLUX.1 [schnell]',
+          category: 'image',
+          provider: 'Black Forest Labs / NVIDIA',
+          description: 'Geração ultra-rápida de imagens',
+          context_length: null,
+          supports_streaming: false,
+          cost_tier: 'free_tier',
+        },
+      ];
+    }
+    return await invoke<NvidiaModelInfo[]>('list_nvidia_models');
+  },
+
+  async generateAiImage(options: NvidiaImageGenOptions): Promise<NvidiaImageGenResult> {
+    if (!isTauri()) {
+      return {
+        image_paths: ['/mock/path/generated_image.png'],
+        prompt: options.prompt,
+        seed: 42,
+        model_id: options.model_id || 'flux.1-schnell',
+        duration_ms: 1200,
+      };
+    }
+    return await invoke<NvidiaImageGenResult>('generate_ai_image', { options });
+  },
+
+  async generateAiVideo(options: NvidiaVideoGenOptions): Promise<NvidiaVideoGenResult> {
+    if (!isTauri()) {
+      return {
+        video_path: '/mock/path/generated_video.mp4',
+        duration_sec: options.duration_sec,
+        model_id: options.model_id || 'svd',
+      };
+    }
+    return await invoke<NvidiaVideoGenResult>('generate_ai_video', { options });
+  },
+
+  async generateCreativePlan(
+    prompt: string,
+    projectType: string,
+    style: string,
+    skillIds: string[]
+  ): Promise<string> {
+    if (!isTauri()) {
+      return `### Conceito Visual\nPlano criativo para: ${prompt}\n- Estilo: ${style}\n- Cenas: 3 blocos dinâmicos`;
+    }
+    return await invoke<string>('generate_creative_plan', {
+      prompt,
+      projectType,
+      style,
+      skillIds,
+    });
+  },
+
+  async getCreativeSkills(category?: string, query?: string): Promise<CreativeSkill[]> {
+    if (!isTauri()) return [];
+    return await invoke<CreativeSkill[]>('get_creative_skills', { category, query });
+  },
+
+  async getCreativeSkillById(id: string): Promise<CreativeSkill | null> {
+    if (!isTauri()) return null;
+    return await invoke<CreativeSkill | null>('get_creative_skill_by_id', { id });
+  },
+
+  async toggleCreativeSkill(id: string, enabled: boolean): Promise<boolean> {
+    if (!isTauri()) return true;
+    return await invoke<boolean>('toggle_creative_skill', { id, enabled });
+  },
+
+  async getOpenCodeStatus(): Promise<OpenCodeStatus> {
+    if (!isTauri()) {
+      return {
+        installed: false,
+        version: null,
+        binary_path: null,
+        running: false,
+        workspace_path: '/mock/workspace',
+      };
+    }
+    return await invoke<OpenCodeStatus>('get_opencode_status');
+  },
+
+  async createCreativeProject(payload: CreateProjectPayload): Promise<CreativeProject> {
+    if (!isTauri()) {
+      return {
+        ...payload,
+        id: 'mock-' + Date.now(),
+        prompt: payload.prompt || null,
+        style: payload.style || null,
+        model: payload.model || null,
+        output_path: null,
+        thumbnail_path: null,
+        status: 'draft',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+    return await invoke<CreativeProject>('create_creative_project', { payload });
+  },
+
+  async getCreativeProject(id: string): Promise<CreativeProject | null> {
+    if (!isTauri()) return null;
+    return await invoke<CreativeProject | null>('get_creative_project', { id });
+  },
+
+  async listCreativeProjects(projectType?: string): Promise<CreativeProject[]> {
+    if (!isTauri()) return [];
+    return await invoke<CreativeProject[]>('list_creative_projects', { projectType });
+  },
+
+  async updateCreativeProject(project: CreativeProject): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('update_creative_project', { project });
+  },
+
+  async deleteCreativeProject(id: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('delete_creative_project', { id });
+  },
+
+  async listCreativeAssets(projectId?: string): Promise<CreativeAsset[]> {
+    if (!isTauri()) return [];
+    return await invoke<CreativeAsset[]>('list_creative_assets', { projectId });
+  },
+
+  async importCreativeAsset(filePath: string, projectId?: string): Promise<CreativeAsset> {
+    if (!isTauri()) {
+      return {
+        id: 'asset-' + Date.now(),
+        project_id: projectId || null,
+        name: 'asset.png',
+        asset_type: 'image',
+        file_path: filePath,
+        file_size_bytes: 1024,
+        width: 1080,
+        height: 1080,
+        duration_sec: null,
+        mime_type: 'image/png',
+        created_at: new Date().toISOString(),
+      };
+    }
+    return await invoke<CreativeAsset>('import_creative_asset', { filePath, projectId });
+  },
+
+  async deleteCreativeAsset(id: string): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('delete_creative_asset', { id });
+  },
+
+  async renderMotionProject(options: RenderMotionOptions): Promise<string> {
+    if (!isTauri()) return '/mock/export.mp4';
+    return await invoke<string>('render_motion_project', { options });
+  },
+
+  async exportRemotionProject(compositionJson: string): Promise<string> {
+    if (!isTauri()) return '// Mock Remotion Export';
+    return await invoke<string>('export_remotion_project', { compositionJson });
+  },
+
+  async listCreativeTemplates(): Promise<CreativeTemplate[]> {
+    if (!isTauri()) return [];
+    return await invoke<CreativeTemplate[]>('list_creative_templates');
   },
 };

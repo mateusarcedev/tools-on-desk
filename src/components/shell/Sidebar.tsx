@@ -21,8 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     top: number;
   } | null>(null);
 
-  const primaryNav = NAV_ITEMS.slice(0, 7);
-  const secondaryNav = NAV_ITEMS.slice(7);
+  const primaryNav = NAV_ITEMS.slice(0, 8);
+  const secondaryNav = NAV_ITEMS.slice(8);
 
   const renderNavButton = (item: (typeof NAV_ITEMS)[0]) => {
     const isSelected = currentScreen === item.id;

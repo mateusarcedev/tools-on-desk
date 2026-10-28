@@ -6,6 +6,10 @@ static SENSITIVE_KEY_REGEX: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
+static NVIDIA_KEY_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"nvapi-[A-Za-z0-9_-]{20,}"#).unwrap()
+});
+
 static AUTH_HEADER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r#"(?i)(authorization\s*:\s*)([^\[\r\n,;]+)"#).unwrap()
 });
@@ -35,6 +39,9 @@ pub fn sanitize_error_text(text: &str) -> String {
 
     // 1. Mask Private Key blocks
     sanitized = PRIVATE_KEY_BLOCK_REGEX.replace_all(&sanitized, "[REDACTED_PRIVATE_KEY]").to_string();
+
+    // 1b. Mask NVIDIA API keys
+    sanitized = NVIDIA_KEY_REGEX.replace_all(&sanitized, "[PROTECTED_NVIDIA_KEY]").to_string();
 
     // 2. Mask URL credentials (e.g. https://user:pass@example.com -> https://[REDACTED]@example.com)
     sanitized = URL_CREDENTIAL_REGEX.replace_all(&sanitized, "https://[REDACTED]@").to_string();
@@ -95,5 +102,14 @@ mod tests {
         let out = sanitize_error_text(input);
         assert!(!out.contains("MIIEowIBAAKCAQEA0"));
         assert!(out.contains("[REDACTED_PRIVATE_KEY]"));
+    }
+
+    #[test]
+    fn test_sanitizes_nvidia_keys() {
+        let input = "Error calling NVIDIA API with key nvapi-abc123XYZ9876543210_token_test and bearer nvapi-supersecretlongkey123456789";
+        let out = sanitize_error_text(input);
+        assert!(!out.contains("nvapi-abc123XYZ9876543210_token_test"));
+        assert!(!out.contains("nvapi-supersecretlongkey123456789"));
+        assert!(out.contains("[PROTECTED_NVIDIA_KEY]"));
     }
 }

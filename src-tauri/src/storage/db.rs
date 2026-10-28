@@ -1,4 +1,7 @@
-use crate::domain::{ErrorLogEntry, ErrorLogFilter, ErrorLogStats, HistoryEntry, Task, TaskStatus};
+use crate::domain::{
+    CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject, ErrorLogEntry, ErrorLogFilter,
+    ErrorLogStats, HistoryEntry, Task, TaskStatus,
+};
 use crate::error::AppResult;
 use crate::utils::sanitizer::sanitize_error_text;
 use chrono::Utc;
@@ -95,6 +98,66 @@ impl Db {
             CREATE INDEX IF NOT EXISTS idx_error_logs_status ON error_logs (status);
             CREATE INDEX IF NOT EXISTS idx_error_logs_task_id ON error_logs (task_id);
             CREATE INDEX IF NOT EXISTS idx_error_logs_error_code ON error_logs (error_code);
+
+            CREATE TABLE IF NOT EXISTS creative_projects (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                project_type TEXT NOT NULL,
+                aspect_ratio TEXT NOT NULL,
+                width INTEGER NOT NULL,
+                height INTEGER NOT NULL,
+                fps INTEGER NOT NULL,
+                duration_sec REAL NOT NULL,
+                prompt TEXT,
+                style TEXT,
+                model TEXT,
+                skills_used TEXT NOT NULL,
+                data_json TEXT NOT NULL,
+                output_path TEXT,
+                thumbnail_path TEXT,
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_creative_projects_updated_at ON creative_projects (updated_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_creative_projects_type ON creative_projects (project_type);
+
+            CREATE TABLE IF NOT EXISTS creative_assets (
+                id TEXT PRIMARY KEY,
+                project_id TEXT,
+                name TEXT NOT NULL,
+                asset_type TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                file_size_bytes INTEGER NOT NULL,
+                width INTEGER,
+                height INTEGER,
+                duration_sec REAL,
+                mime_type TEXT,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_creative_assets_project_id ON creative_assets (project_id);
+            CREATE INDEX IF NOT EXISTS idx_creative_assets_created_at ON creative_assets (created_at DESC);
+
+            CREATE TABLE IF NOT EXISTS creative_generation_history (
+                id TEXT PRIMARY KEY,
+                project_id TEXT,
+                provider TEXT NOT NULL,
+                model TEXT NOT NULL,
+                modality TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                negative_prompt TEXT,
+                parameters_json TEXT,
+                output_path TEXT,
+                duration_ms INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                error TEXT,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_creative_gen_history_created_at ON creative_generation_history (created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_creative_gen_history_modality ON creative_generation_history (modality);
             "#,
         )?;
         Ok(())
@@ -626,5 +689,413 @@ impl Db {
             params![key, value],
         )?;
         Ok(())
+    }
+
+    // ==========================================
+    // CREATIVE STUDIO
+    // ==========================================
+
+    pub fn insert_creative_project(&self, project: &CreativeProject) -> AppResult<()> {
+        let conn = self.conn.lock();
+        let skills_json = serde_json::to_string(&project.skills_used).unwrap_or_else(|_| "[]".into());
+        conn.execute(
+            r#"
+            INSERT INTO creative_projects (
+                id, title, project_type, aspect_ratio, width, height, fps, duration_sec,
+                prompt, style, model, skills_used, data_json, output_path, thumbnail_path,
+                status, created_at, updated_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+            "#,
+            params![
+                project.id,
+                project.title,
+                project.project_type,
+                project.aspect_ratio,
+                project.width,
+                project.height,
+                project.fps,
+                project.duration_sec,
+                project.prompt,
+                project.style,
+                project.model,
+                skills_json,
+                project.data_json,
+                project.output_path,
+                project.thumbnail_path,
+                project.status,
+                project.created_at,
+                project.updated_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn get_creative_project(&self, id: &str) -> AppResult<Option<CreativeProject>> {
+        let conn = self.conn.lock();
+        let mut stmt = conn.prepare(
+            r#"
+            SELECT id, title, project_type, aspect_ratio, width, height, fps, duration_sec,
+                   prompt, style, model, skills_used, data_json, output_path, thumbnail_path,
+                   status, created_at, updated_at
+            FROM creative_projects WHERE id = ?1
+            "#,
+        )?;
+        let mut rows = stmt.query(params![id])?;
+        if let Some(row) = rows.next()? {
+            let skills_str: String = row.get(11)?;
+            let skills_used: Vec<String> = serde_json::from_str(&skills_str).unwrap_or_default();
+            Ok(Some(CreativeProject {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                project_type: row.get(2)?,
+                aspect_ratio: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                fps: row.get(6)?,
+                duration_sec: row.get(7)?,
+                prompt: row.get(8)?,
+                style: row.get(9)?,
+                model: row.get(10)?,
+                skills_used,
+                data_json: row.get(12)?,
+                output_path: row.get(13)?,
+                thumbnail_path: row.get(14)?,
+                status: row.get(15)?,
+                created_at: row.get(16)?,
+                updated_at: row.get(17)?,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn list_creative_projects(&self, project_type: Option<&str>) -> AppResult<Vec<CreativeProject>> {
+        let conn = self.conn.lock();
+        let query = if let Some(pt) = project_type {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, title, project_type, aspect_ratio, width, height, fps, duration_sec,
+                       prompt, style, model, skills_used, data_json, output_path, thumbnail_path,
+                       status, created_at, updated_at
+                FROM creative_projects WHERE project_type = ?1
+                ORDER BY updated_at DESC
+                "#,
+            )?;
+            let rows = stmt.query_map(params![pt], |row| {
+                let skills_str: String = row.get(11)?;
+                let skills_used: Vec<String> = serde_json::from_str(&skills_str).unwrap_or_default();
+                Ok(CreativeProject {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    project_type: row.get(2)?,
+                    aspect_ratio: row.get(3)?,
+                    width: row.get(4)?,
+                    height: row.get(5)?,
+                    fps: row.get(6)?,
+                    duration_sec: row.get(7)?,
+                    prompt: row.get(8)?,
+                    style: row.get(9)?,
+                    model: row.get(10)?,
+                    skills_used,
+                    data_json: row.get(12)?,
+                    output_path: row.get(13)?,
+                    thumbnail_path: row.get(14)?,
+                    status: row.get(15)?,
+                    created_at: row.get(16)?,
+                    updated_at: row.get(17)?,
+                })
+            })?;
+            let mut list = Vec::new();
+            for r in rows {
+                list.push(r?);
+            }
+            list
+        } else {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, title, project_type, aspect_ratio, width, height, fps, duration_sec,
+                       prompt, style, model, skills_used, data_json, output_path, thumbnail_path,
+                       status, created_at, updated_at
+                FROM creative_projects
+                ORDER BY updated_at DESC
+                "#,
+            )?;
+            let rows = stmt.query_map([], |row| {
+                let skills_str: String = row.get(11)?;
+                let skills_used: Vec<String> = serde_json::from_str(&skills_str).unwrap_or_default();
+                Ok(CreativeProject {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    project_type: row.get(2)?,
+                    aspect_ratio: row.get(3)?,
+                    width: row.get(4)?,
+                    height: row.get(5)?,
+                    fps: row.get(6)?,
+                    duration_sec: row.get(7)?,
+                    prompt: row.get(8)?,
+                    style: row.get(9)?,
+                    model: row.get(10)?,
+                    skills_used,
+                    data_json: row.get(12)?,
+                    output_path: row.get(13)?,
+                    thumbnail_path: row.get(14)?,
+                    status: row.get(15)?,
+                    created_at: row.get(16)?,
+                    updated_at: row.get(17)?,
+                })
+            })?;
+            let mut list = Vec::new();
+            for r in rows {
+                list.push(r?);
+            }
+            list
+        };
+        Ok(query)
+    }
+
+    pub fn update_creative_project(&self, project: &CreativeProject) -> AppResult<()> {
+        let conn = self.conn.lock();
+        let skills_json = serde_json::to_string(&project.skills_used).unwrap_or_else(|_| "[]".into());
+        let now = Utc::now().to_rfc3339();
+        conn.execute(
+            r#"
+            UPDATE creative_projects SET
+                title = ?1,
+                project_type = ?2,
+                aspect_ratio = ?3,
+                width = ?4,
+                height = ?5,
+                fps = ?6,
+                duration_sec = ?7,
+                prompt = ?8,
+                style = ?9,
+                model = ?10,
+                skills_used = ?11,
+                data_json = ?12,
+                output_path = ?13,
+                thumbnail_path = ?14,
+                status = ?15,
+                updated_at = ?16
+            WHERE id = ?17
+            "#,
+            params![
+                project.title,
+                project.project_type,
+                project.aspect_ratio,
+                project.width,
+                project.height,
+                project.fps,
+                project.duration_sec,
+                project.prompt,
+                project.style,
+                project.model,
+                skills_json,
+                project.data_json,
+                project.output_path,
+                project.thumbnail_path,
+                project.status,
+                now,
+                project.id
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn delete_creative_project(&self, id: &str) -> AppResult<()> {
+        let conn = self.conn.lock();
+        conn.execute("DELETE FROM creative_projects WHERE id = ?1", params![id])?;
+        conn.execute("DELETE FROM creative_assets WHERE project_id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn insert_creative_asset(&self, asset: &CreativeAsset) -> AppResult<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            r#"
+            INSERT INTO creative_assets (
+                id, project_id, name, asset_type, file_path, file_size_bytes,
+                width, height, duration_sec, mime_type, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+            "#,
+            params![
+                asset.id,
+                asset.project_id,
+                asset.name,
+                asset.asset_type,
+                asset.file_path,
+                asset.file_size_bytes as i64,
+                asset.width,
+                asset.height,
+                asset.duration_sec,
+                asset.mime_type,
+                asset.created_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_creative_assets(&self, project_id: Option<&str>) -> AppResult<Vec<CreativeAsset>> {
+        let conn = self.conn.lock();
+        let mut list = Vec::new();
+        if let Some(pid) = project_id {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, project_id, name, asset_type, file_path, file_size_bytes,
+                       width, height, duration_sec, mime_type, created_at
+                FROM creative_assets WHERE project_id = ?1
+                ORDER BY created_at DESC
+                "#,
+            )?;
+            let rows = stmt.query_map(params![pid], |row| {
+                let size_i64: i64 = row.get(5)?;
+                Ok(CreativeAsset {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    name: row.get(2)?,
+                    asset_type: row.get(3)?,
+                    file_path: row.get(4)?,
+                    file_size_bytes: size_i64.max(0) as u64,
+                    width: row.get(6)?,
+                    height: row.get(7)?,
+                    duration_sec: row.get(8)?,
+                    mime_type: row.get(9)?,
+                    created_at: row.get(10)?,
+                })
+            })?;
+            for r in rows {
+                list.push(r?);
+            }
+        } else {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, project_id, name, asset_type, file_path, file_size_bytes,
+                       width, height, duration_sec, mime_type, created_at
+                FROM creative_assets
+                ORDER BY created_at DESC
+                "#,
+            )?;
+            let rows = stmt.query_map([], |row| {
+                let size_i64: i64 = row.get(5)?;
+                Ok(CreativeAsset {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    name: row.get(2)?,
+                    asset_type: row.get(3)?,
+                    file_path: row.get(4)?,
+                    file_size_bytes: size_i64.max(0) as u64,
+                    width: row.get(6)?,
+                    height: row.get(7)?,
+                    duration_sec: row.get(8)?,
+                    mime_type: row.get(9)?,
+                    created_at: row.get(10)?,
+                })
+            })?;
+            for r in rows {
+                list.push(r?);
+            }
+        }
+        Ok(list)
+    }
+
+    pub fn delete_creative_asset(&self, id: &str) -> AppResult<()> {
+        let conn = self.conn.lock();
+        conn.execute("DELETE FROM creative_assets WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    pub fn insert_generation_history(&self, entry: &CreativeGenerationHistoryEntry) -> AppResult<()> {
+        let conn = self.conn.lock();
+        conn.execute(
+            r#"
+            INSERT INTO creative_generation_history (
+                id, project_id, provider, model, modality, prompt, negative_prompt,
+                parameters_json, output_path, duration_ms, status, error, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+            "#,
+            params![
+                entry.id,
+                entry.project_id,
+                entry.provider,
+                entry.model,
+                entry.modality,
+                entry.prompt,
+                entry.negative_prompt,
+                entry.parameters_json,
+                entry.output_path,
+                entry.duration_ms as i64,
+                entry.status,
+                entry.error,
+                entry.created_at
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn list_generation_history(&self, modality: Option<&str>, limit: Option<usize>) -> AppResult<Vec<CreativeGenerationHistoryEntry>> {
+        let conn = self.conn.lock();
+        let max = limit.unwrap_or(50);
+        let mut list = Vec::new();
+        if let Some(m) = modality {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, project_id, provider, model, modality, prompt, negative_prompt,
+                       parameters_json, output_path, duration_ms, status, error, created_at
+                FROM creative_generation_history WHERE modality = ?1
+                ORDER BY created_at DESC LIMIT ?2
+                "#,
+            )?;
+            let rows = stmt.query_map(params![m, max as i64], |row| {
+                let dur_i64: i64 = row.get(9)?;
+                Ok(CreativeGenerationHistoryEntry {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    provider: row.get(2)?,
+                    model: row.get(3)?,
+                    modality: row.get(4)?,
+                    prompt: row.get(5)?,
+                    negative_prompt: row.get(6)?,
+                    parameters_json: row.get(7)?,
+                    output_path: row.get(8)?,
+                    duration_ms: dur_i64.max(0) as u64,
+                    status: row.get(10)?,
+                    error: row.get(11)?,
+                    created_at: row.get(12)?,
+                })
+            })?;
+            for r in rows {
+                list.push(r?);
+            }
+        } else {
+            let mut stmt = conn.prepare(
+                r#"
+                SELECT id, project_id, provider, model, modality, prompt, negative_prompt,
+                       parameters_json, output_path, duration_ms, status, error, created_at
+                FROM creative_generation_history
+                ORDER BY created_at DESC LIMIT ?1
+                "#,
+            )?;
+            let rows = stmt.query_map(params![max as i64], |row| {
+                let dur_i64: i64 = row.get(9)?;
+                Ok(CreativeGenerationHistoryEntry {
+                    id: row.get(0)?,
+                    project_id: row.get(1)?,
+                    provider: row.get(2)?,
+                    model: row.get(3)?,
+                    modality: row.get(4)?,
+                    prompt: row.get(5)?,
+                    negative_prompt: row.get(6)?,
+                    parameters_json: row.get(7)?,
+                    output_path: row.get(8)?,
+                    duration_ms: dur_i64.max(0) as u64,
+                    status: row.get(10)?,
+                    error: row.get(11)?,
+                    created_at: row.get(12)?,
+                })
+            })?;
+            for r in rows {
+                list.push(r?);
+            }
+        }
+        Ok(list)
     }
 }

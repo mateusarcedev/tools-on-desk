@@ -23,6 +23,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const [urlInput, setUrlInput] = useState('');
 
   const quickActions = [
+    { label: 'Creative Studio (IA)', icon: 'sparkles', target: 'creative' as ScreenId },
     { label: 'PDF para Word', icon: 'pdf2word', target: 'documents' as ScreenId },
     { label: 'Word para PDF', icon: 'word2pdf', target: 'documents' as ScreenId },
     { label: 'Baixar vídeo', icon: 'downloads', target: 'downloads' as ScreenId },
@@ -31,6 +32,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   ];
 
   const modules = [
+    { id: 'creative' as ScreenId, meta: 'Imagens, Motion & Vídeos com IA', key: 'C' },
     { id: 'downloads' as ScreenId, meta: 'Vídeo, áudio e playlists', key: '2' },
     { id: 'documents' as ScreenId, meta: '7 ferramentas', key: '3' },
     { id: 'audio' as ScreenId, meta: 'Converter e cortar', key: '4' },

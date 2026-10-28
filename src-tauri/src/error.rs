@@ -30,6 +30,15 @@ pub enum AppError {
     #[error("Operação cancelada pelo usuário")]
     Canceled,
 
+    #[error("Erro no provedor NVIDIA AI: {0}")]
+    Nvidia(String),
+
+    #[error("Erro no Creative Studio: {0}")]
+    Creative(String),
+
+    #[error("Erro no motor OpenCode: {0}")]
+    OpenCode(String),
+
     #[error("Erro interno: {0}")]
     Internal(String),
 }
@@ -84,6 +93,27 @@ impl AppError {
                 }
             }
             AppError::Canceled => "OPERATION_CANCELED",
+            AppError::Nvidia(msg) => {
+                if msg.contains("401") || msg.contains("unauthorized") || msg.contains("inválid") {
+                    "NVIDIA_INVALID_KEY"
+                } else if msg.contains("429") || msg.contains("rate limit") {
+                    "NVIDIA_RATE_LIMIT"
+                } else if msg.contains("402") || msg.contains("quota") || msg.contains("crédito") {
+                    "NVIDIA_QUOTA_EXCEEDED"
+                } else if msg.contains("404") || msg.contains("não disponível") || msg.contains("indisponível") {
+                    "NVIDIA_MODEL_UNAVAILABLE"
+                } else {
+                    "NVIDIA_API_ERROR"
+                }
+            }
+            AppError::Creative(_) => "CREATIVE_STUDIO_ERROR",
+            AppError::OpenCode(msg) => {
+                if msg.contains("não encontrado") || msg.contains("not found") {
+                    "OPENCODE_NOT_FOUND"
+                } else {
+                    "OPENCODE_EXEC_FAILED"
+                }
+            }
             AppError::Internal(_) => "INTERNAL_ERROR",
         }
     }
@@ -99,6 +129,9 @@ impl AppError {
             AppError::Database(e) => format!("Falha de acesso ao banco de dados local: {}", e),
             AppError::Clipboard(e) => format!("Não foi possível acessar a área de transferência: {}", e),
             AppError::Image(e) => format!("Falha ao processar imagem: {}", e),
+            AppError::Nvidia(e) => format!("Falha na integração com NVIDIA AI: {}", e),
+            AppError::Creative(e) => format!("Creative Studio: {}", e),
+            AppError::OpenCode(e) => format!("Motor OpenCode: {}", e),
             AppError::Internal(e) => format!("Ocorreu um erro interno: {}", e),
         }
     }

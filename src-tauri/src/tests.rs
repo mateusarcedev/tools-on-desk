@@ -120,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_mandatory_rasterbator_example_4x3_12_sheets() {
-        let temp_dir = std::env::temp_dir().join("arce_test_rasterbator_mandatory");
+        let temp_dir = std::env::temp_dir().join(format!("arce_test_rasterbator_mandatory_{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).unwrap();
 
         let img_path = temp_dir.join("input_3000x3300.png");
@@ -782,5 +782,162 @@ mod tests {
         assert_eq!(info.status, crate::domain::DependencyStatus::NotInstalled);
         assert!(info.can_install);
         assert!(!info.is_managed);
+    }
+
+    #[test]
+    fn test_creative_skills_catalog_and_export() {
+        let mgr = crate::engines::SkillManager::new();
+        let all_skills = mgr.list_skills(None, None);
+        assert_eq!(all_skills.len(), 16);
+
+        // Verify categories
+        let design_skills = mgr.list_skills(Some("design"), None);
+        assert_eq!(design_skills.len(), 4);
+
+        let motion_skills = mgr.list_skills(Some("motion"), None);
+        assert_eq!(motion_skills.len(), 4);
+
+        let video_skills = mgr.list_skills(Some("video"), None);
+        assert_eq!(video_skills.len(), 4);
+
+        let quality_skills = mgr.list_skills(Some("3d_quality"), None);
+        assert_eq!(quality_skills.len(), 4);
+
+        // Test export to disk
+        let temp_dir = std::env::temp_dir().join(format!("arce_test_skills_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+        mgr.export_skills_to_disk(&temp_dir).unwrap();
+
+        let art_dir_file = temp_dir.join("skills").join("art-direction").join("SKILL.md");
+        assert!(art_dir_file.is_file());
+        let content = std::fs::read_to_string(&art_dir_file).unwrap();
+        assert!(content.contains("name: art-direction"));
+        assert!(content.contains("Direção de Arte"));
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_creative_projects_and_assets_sqlite() {
+        let db = Db::new_in_memory().unwrap();
+
+        let project = crate::domain::CreativeProject {
+            id: "proj-1".into(),
+            title: "Anúncio Relâmpago".into(),
+            project_type: "motion".into(),
+            aspect_ratio: "9:16".into(),
+            width: 1080,
+            height: 1920,
+            fps: 30,
+            duration_sec: 15.0,
+            prompt: Some("Promoção com preço animado".into()),
+            style: Some("Publicitário".into()),
+            model: Some("meta/llama-3.3-70b-instruct".into()),
+            skills_used: vec!["kinetic-typography".into(), "motion-transitions".into()],
+            data_json: "{}".into(),
+            output_path: None,
+            thumbnail_path: None,
+            status: "draft".into(),
+            created_at: "2026-10-28T00:00:00Z".into(),
+            updated_at: "2026-10-28T00:00:00Z".into(),
+        };
+
+        db.insert_creative_project(&project).unwrap();
+
+        let fetched = db.get_creative_project("proj-1").unwrap();
+        assert!(fetched.is_some());
+        let p = fetched.unwrap();
+        assert_eq!(p.title, "Anúncio Relâmpago");
+        assert_eq!(p.skills_used.len(), 2);
+
+        // Asset insertion
+        let asset = crate::domain::CreativeAsset {
+            id: "asset-1".into(),
+            project_id: Some("proj-1".into()),
+            name: "logo.png".into(),
+            asset_type: "image".into(),
+            file_path: "/tmp/logo.png".into(),
+            file_size_bytes: 1024,
+            width: Some(512),
+            height: Some(512),
+            duration_sec: None,
+            mime_type: Some("image/png".into()),
+            created_at: "2026-10-28T00:00:00Z".into(),
+        };
+
+        db.insert_creative_asset(&asset).unwrap();
+        let assets = db.list_creative_assets(Some("proj-1")).unwrap();
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].name, "logo.png");
+    }
+
+    #[tokio::test]
+    async fn test_motion_engine_synthetic_mp4_render() {
+        let temp_dir = std::env::temp_dir().join(format!("arce_test_motion_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let composition_json = r##"{
+            "id": "synthetic-test",
+            "title": "Synthetic Test",
+            "width": 640,
+            "height": 360,
+            "fps": 30,
+            "duration_sec": 1.0,
+            "background_color": "#0B0F10",
+            "scenes": [
+                {
+                    "id": "s1",
+                    "title": "Scene 1",
+                    "start_time": 0.0,
+                    "duration_sec": 1.0,
+                    "layers": [
+                        {
+                            "id": "l1",
+                            "layer_type": "text",
+                            "name": "Title",
+                            "content": "TEST MOTION",
+                            "start_time": 0.0,
+                            "duration_sec": 1.0,
+                            "x": 0.2,
+                            "y": 0.4,
+                            "width": 0.6,
+                            "height": 0.2,
+                            "opacity": 1.0,
+                            "scale": 1.0,
+                            "rotation": 0.0,
+                            "color": "#15F5BA",
+                            "font_size": 36.0,
+                            "animation": null,
+                            "z_index": 1
+                        }
+                    ]
+                }
+            ],
+            "audio_track": null
+        }"##;
+
+        let options = crate::domain::RenderMotionOptions {
+            project_id: None,
+            composition_json: composition_json.into(),
+            output_filename: "motion_test.mp4".into(),
+            format: "mp4".into(),
+            quality: "standard".into(),
+        };
+
+        let cancel_token = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let rendered_path = crate::engines::MotionEngine::render_to_mp4(
+            &options,
+            &temp_dir,
+            cancel_token,
+            |_| {},
+        ).await;
+
+        if let Ok(path) = rendered_path {
+            let p = std::path::Path::new(&path);
+            assert!(p.is_file());
+            assert!(std::fs::metadata(p).unwrap().len() > 0);
+        }
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

@@ -204,6 +204,28 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
 | `complete_first_run` | `status: String` | `()` | Grava status (`completed` ou `dismissed`) no SQLite |
 | `get_system_info` | Nenhum | `SystemInfo` | Pastas padrão do sistema e SO |
 | `open_path_in_explorer` | `path: String` | `()` | Revela arquivo ou pasta no Windows Explorer |
+| `save_nvidia_key` | `apiKey: String` | `()` | Salva e criptografa chave NVIDIA no vault seguro |
+| `get_nvidia_key_status` | Nenhum | `NvidiaKeyStatus` | Consulta status e máscara de chave criptografada |
+| `delete_nvidia_key` | Nenhum | `()` | Remove com segurança a chave criptografada do vault |
+| `validate_nvidia_key` | `apiKey: Option<String>` | `bool` | Valida credencial contra endpoints NVIDIA NIM |
+| `list_nvidia_models` | Nenhum | `Vec<NvidiaModelInfo>` | Lista modelos de linguagem, imagem e vídeo da NVIDIA |
+| `generate_creative_image` | `options: NvidiaImageGenOptions` | `NvidiaImageGenResult` | Gera imagens com FLUX.1/SD3.5 e salva em disco com sanitização |
+| `generate_creative_plan` | `briefing: String, style: String` | `String` | Gera plano criativo estruturado via Llama 3.3 70B |
+| `generate_creative_video` | `options: NvidiaVideoGenOptions` | `NvidiaVideoGenResult` | Dispara geração de vídeo generativo (Modo A) |
+| `list_creative_skills` | Nenhum | `Vec<CreativeSkill>` | Lista catálogo com as 16 skills embutidas |
+| `toggle_creative_skill` | `id: String, enabled: bool` | `()` | Habilita ou desabilita skill no catálogo |
+| `export_creative_skills_to_disk` | `targetDir: String` | `u32` | Exporta todas as skills com especificação SKILL.md para disco |
+| `get_opencode_status` | Nenhum | `OpenCodeStatus` | Descobre presença e versão do runtime OpenCode |
+| `list_creative_projects` | Nenhum | `Vec<CreativeProject>` | Lista projetos criativos persistidos no SQLite |
+| `create_creative_project` | `project: CreativeProject` | `CreativeProject` | Cria novo projeto com metadados e histórico |
+| `update_creative_project` | `project: CreativeProject` | `()` | Atualiza cenas, parâmetros e status de projeto |
+| `delete_creative_project` | `id: String` | `()` | Remove projeto e seus vínculos no SQLite |
+| `list_creative_assets` | `projectId: Option<String>` | `Vec<CreativeAsset>` | Lista assets vinculados ou globais |
+| `create_creative_asset` | `asset: CreativeAsset` | `CreativeAsset` | Registra novo asset multimídia no SQLite |
+| `delete_creative_asset` | `id: String` | `()` | Exclui metadados de asset do banco |
+| `render_motion_composition` | `options: RenderMotionOptions` | `String (filepath)` | Compila e renderiza composição para MP4 via FFmpeg nativo |
+| `export_remotion_project` | `composition: MotionComposition, targetDir: String` | `String (filepath)` | Exporta código-fonte do projeto em TSX para Remotion |
+| `list_creative_templates` | Nenhum | `Vec<CreativeTemplate>` | Retorna os 10 templates criativos pré-configurados |
 
 ---
 
@@ -239,3 +261,65 @@ flowchart TD
 1. **Instalador Oficial NSIS Nativo**: Empacota o executável Rust e os assets do frontend compilados em um instalador assinado e autocontido de 4,68 MB (`Arce Tools_0.1.0_x64-setup.exe`), configurado com `installMode: "currentUser"` para instalação livre de telas UAC.
 2. **Setup Center & DependencyManager**: Na primeira abertura, o aplicativo detecta automaticamente ferramentas ausentes e oferece instalação com 1 clique diretamente na pasta do usuário em `%LOCALAPPDATA%\ArceTools\binaries\`.
 3. **Desinstalação Limpa**: Registro completo no Painel de Controle do Windows com limpeza de arquivos temporários e atalhos no Menu Iniciar. Preservação de dados do usuário e banco SQLite em `%LOCALAPPDATA%\ArceTools`.
+
+---
+
+## 6. Arquitetura do Arce Creative Studio (Missão 06)
+
+O **Arce Creative Studio** expande a plataforma com recursos avançados de criação visual, motion design e orquestração de IA generativa sem exigir do usuário final conhecimentos em programação.
+
+```mermaid
+flowchart TD
+    subgraph UI ["Creative Studio UI (React 19)"]
+        StudioShell["CreativeStudioScreen\n(8 Subseções)"]
+        GenUI["Generative UI Components\n(BriefingAssistant, StyleSelector, StoryboardApprover, ProposalComparator, ParameterAdjuster)"]
+        MotionPlayer["MotionPlayer (60 FPS)\n(HTML5 Canvas Timeline & Audio Scrubber)"]
+    end
+
+    subgraph IPC ["Comunicação IPC"]
+        CreativeCmds["Commands /creative.rs\n(22 Comandos Tipados)"]
+    end
+
+    subgraph RustEngines ["Motores Rust Especializados"]
+        NvidiaProvider["NvidiaAIProvider\n(NIM Endpoints, Validação, Streaming, Rate Limits)"]
+        MotionEngine["Arce Motion Engine (AME)\n(FFmpeg Complex Filter Graph + Remotion TSX Exporter)"]
+        SkillManager["SkillManager\n(16 Embedded SKILL.md, Exportador, Filtros)"]
+        OpenCodeMgr["OpenCodeManager\n(Detecção, Sandbox Workspace, Fallback Rust)"]
+        SecureVault["SecureVault\n(AES-256 Vault Criptográfico com Entropia Local)"]
+    end
+
+    subgraph Storage ["Persistência SQLite WAL"]
+        Tables["creative_projects\ncreative_assets\ncreative_generation_history"]
+    end
+
+    StudioShell --> GenUI
+    StudioShell --> MotionPlayer
+    GenUI --> CreativeCmds
+    MotionPlayer --> CreativeCmds
+    CreativeCmds --> NvidiaProvider
+    CreativeCmds --> MotionEngine
+    CreativeCmds --> SkillManager
+    CreativeCmds --> OpenCodeMgr
+    CreativeCmds --> Tables
+    NvidiaProvider --> SecureVault
+```
+
+### 6.1 Arce Motion Engine (AME) vs Remotion
+- **Decisão Estratégica**: Para garantir distribuição limpa de licenças e evitar a inclusão de um pesado runtime de Node.js/Chromium/Puppeteer (+350 MB), implementou-se o **Arce Motion Engine**:
+  - **Player de Prévia**: HTML5 Canvas em 60 FPS contínuos, com scrubbing de áudio e visualização de keyframes.
+  - **Renderizador Primário**: Compilador Rust que traduz objetos `MotionComposition` diretamente em grafos de filtros do FFmpeg (`lavfi`, `drawtext`, `overlay`, `scale`, `fade`).
+  - **Exportação Opcional**: Geração automática de arquivo `.tsx` completo pronto para o Remotion CLI para equipes de desenvolvimento que já utilizam essa stack.
+
+### 6.2 NvidiaAIProvider e SecureVault
+- **Separação Rígida de Endpoints**:
+  - LLM e Planejamento: `integrate.api.nvidia.com/v1/chat/completions` (OpenAI format).
+  - Geração Visual (FLUX.1, SD 3.5): `ai.api.nvidia.com/v1/genai/{model_id}` com payload nativo de inferência visual e decodificação Base64 para disco.
+- **Segurança de Chaves de API**:
+  - As credenciais da NVIDIA são cifradas no disco com entropia de hardware da máquina local via `SecureVault`.
+  - Zero armazenamento de senhas ou chaves em texto puro no SQLite.
+  - O sanitizador de logs do sistema mascara automaticamente qualquer sequência compatível com `nvapi-[A-Za-z0-9_-]{20,}` como `[PROTECTED_NVIDIA_KEY]`.
+
+### 6.3 Biblioteca de 16 Skills Nativas e OpenCode
+- **Padrão SKILL.md**: Cada skill possui manifesto completo com categoria, critérios de qualidade técnica, restrições e exemplos.
+- **OpenCode Sandboxed**: Descoberta assíncrona do binário no sistema, execução com `CREATE_NO_WINDOW` em pasta de workspace isolada e cancelamento atômico.
+- **Orquestrador Fallback**: Se o OpenCode não estiver disponível na máquina, o Arce Tools utiliza seu planejador nativo em Rust garantindo 100% de disponibilidade.

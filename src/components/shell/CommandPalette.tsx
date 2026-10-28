@@ -60,6 +60,42 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       },
     })),
     {
+      id: 'act-ai-image',
+      label: 'Gerar Imagem com IA (NVIDIA)',
+      icon: 'sparkles',
+      hint: 'Creative Studio',
+      group: 'Ações',
+      keywords: 'ia image flux schnell geração prompt arte',
+      run: () => {
+        onClose();
+        onNavigate('creative');
+      },
+    },
+    {
+      id: 'act-motion-design',
+      label: 'Criar Motion Graphics (60 FPS)',
+      icon: 'film',
+      hint: 'Creative Studio',
+      group: 'Ações',
+      keywords: 'motion animação vídeo reels stories anúncio',
+      run: () => {
+        onClose();
+        onNavigate('creative');
+      },
+    },
+    {
+      id: 'act-skills-library',
+      label: 'Explorar Biblioteca de Skills (16)',
+      icon: 'palette',
+      hint: 'Creative Studio',
+      group: 'Ações',
+      keywords: 'skills opencode direção arte storyboard',
+      run: () => {
+        onClose();
+        onNavigate('creative');
+      },
+    },
+    {
       id: 'act-pdf2word',
       label: 'PDF para Word',
       icon: 'pdf2word',

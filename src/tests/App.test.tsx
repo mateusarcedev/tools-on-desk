@@ -12,11 +12,12 @@ describe('Arce Tools App Shell', () => {
     expect(screen.getByText('a/t')).toBeInTheDocument();
   });
 
-  it('renders all 9 sidebar navigation items', async () => {
+  it('renders all sidebar navigation items including Creative Studio', async () => {
     await act(async () => {
       render(<App />);
     });
     expect(screen.getAllByText('Início')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Creative Studio')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Downloads')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Documentos')[0]).toBeInTheDocument();
     expect(screen.getAllByText('Áudio')[0]).toBeInTheDocument();

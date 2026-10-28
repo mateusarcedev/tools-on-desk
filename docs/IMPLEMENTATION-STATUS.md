@@ -1,6 +1,6 @@
 # ARCE TOOLS — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03, 04 e 05**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03, 04, 05 e 06**.
 
 ---
 
@@ -22,7 +22,8 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | **Instalador Oficial Windows (NSIS)** | 04 & 05 | Concluído | `Arce Tools_0.1.0_x64-setup.exe` (4,68 MB) com instalação por usuário (`currentUser`), desinstalador limpo e atalhos |
 | **Setup Center (Central de Configuração)**| 05 | Concluído | Assistente de 4 etapas (Boas-vindas, Verificação, Ferramentas, Pronto), persistência SQLite e atalhos |
 | **DependencyManager (Nativo Rust)** | 05 | Concluído | Descoberta em 4 níveis, instalação isolada em `%LOCALAPPDATA%`, proteção Zip Slip, SHA-256 e rollback atômico |
-| **Testes Automatizados** | Todas | Concluído | 25 testes Vitest (frontend) + 19 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Arce Creative Studio & IA** | 06 | Concluído | 8 sub-views, Briefing Generativo, StyleSelector, StoryboardApprover, AME Canvas 60 FPS, compilador FFmpeg MP4, Remotion TSX, NVIDIA NIM Provider, SecureVault, 16 Skills SKILL.md, OpenCode Sandbox |
+| **Testes Automatizados** | Todas | Concluído | 31 testes Vitest (frontend) + 26 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 
@@ -121,4 +122,43 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 ### 3.3 Interface de Gerenciamento nas Configurações
 - [x] Seção dedicada "Ferramentas e Dependências" com badges de status, versões, origens, caminhos seguros e botões de ação contextual (Instalar, Atualizar, Verificar, Remover).
 - [x] Suporte a caminho customizado para o LibreOffice (`soffice.exe`).
+
+---
+
+## 4. Checklist Detalhado da Missão 06 (Arce Creative Studio)
+
+### 4.1 Shell e Experiência do Creative Studio
+- [x] Seção principal "Creative Studio" adicionada à navegação com ícone de varinha mágica e atalho `Ctrl+6`.
+- [x] 8 subseções funcionais:
+  - 1. Visão Geral (Hero, Templates Rápidos, Projetos Recentes, Estatísticas).
+  - 2. AI Image Studio (Prompt, Estilos Visuais, Aspect Ratio, Resolução, Variações, Galeria).
+  - 3. Motion Design Studio (Player 60 FPS Canvas, Controles de Timeline, Renderizador MP4, Exportador Remotion TSX).
+  - 4. AI Video Studio (Modo A Generativo + Modo B Composto Local com FFmpeg).
+  - 5. Biblioteca de Skills (16 skills embutidas no formato SKILL.md com busca, filtros de categoria e exportador).
+  - 6. Meus Projetos (Listagem, Criação, Exclusão, Métricas e Abertura no Explorer).
+  - 7. Biblioteca de Assets (Gerenciamento de Imagens, Vídeos e Áudios com Tags).
+  - 8. Configurações IA (Status da Chave NVIDIA, Mascaramento, Validação e Lista de Modelos).
+
+### 4.2 Interfaces Generativas (Open Intelligent UI Adaptado)
+- [x] `BriefingAssistant`: Modal guiado em 3 etapas com síntese inteligente de objetivos e ativação automática de skills.
+- [x] `StyleSelector`: 9 cartões visuais para estilos artísticos calibrados.
+- [x] `ProposalComparator`: Comparação lado a lado com seleção de proposta aprovada.
+- [x] `StoryboardApprover`: Inspeção cena a cena de scripts visuais com aprovação de keyframes.
+- [x] `ParameterAdjuster`: Controles visuais para edição de templates sem necessidade de código.
+
+### 4.3 Arce Motion Engine (AME) & Integração FFmpeg
+- [x] Player em tempo real Canvas a 60 FPS com scrubbing, timecode e renderização de textos e formas.
+- [x] Compilador de composições em Rust traduzindo cenas e camadas para grafos de filtros do FFmpeg (`lavfi`, `drawtext`, `overlay`, `scale`).
+- [x] Exportador de código estruturado Remotion `.tsx` para desenvolvedores externos.
+
+### 4.4 Provedor NVIDIA NIM & Segurança
+- [x] `SecureVault`: Criptografia simétrica com entropia do hardware local. Zero texto puro no banco de dados.
+- [x] Sanitização automática no `Sanitizer` mascarando chaves com regex `NVIDIA_KEY_REGEX`.
+- [x] Separação de endpoints para geração de visão (`ai.api.nvidia.com`) e chat/planejamento (`integrate.api.nvidia.com`).
+- [x] Tratamento honesto de quotas e permissões sem simulação fictícia.
+
+### 4.5 Biblioteca de Skills & OpenCode
+- [x] 16 skills embutidas categorizadas (Design Gráfico, Motion Design, Vídeo, 3D e Qualidade).
+- [x] `OpenCodeManager`: Descoberta em PATH e diretórios de usuário, execução em sandbox invisível (`CREATE_NO_WINDOW`) e cancelamento imediato.
+- [x] Fallback orquestrado 100% nativo em Rust quando o OpenCode não estiver instalado.
 

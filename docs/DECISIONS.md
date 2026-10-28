@@ -1,6 +1,6 @@
 # ARCE TOOLS — Registro de Decisões de Arquitetura (ADRs)
 
-Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01, 02, 02.5 e 03).
+Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01 a 06).
 
 ---
 
@@ -189,3 +189,43 @@ Este documento registra as principais decisões de arquitetura de software adota
 - **Consequências**:
   - Proteção criptográfica e estrutural completa contra ataques de travessia de caminho.
   - Atualizações seguras sem risco de corrupção ou perda do motor anterior funcional.
+
+---
+
+## ADR 021: Arce Motion Engine (AME) com Player Canvas 60 FPS e Exportador Remotion
+- **Status**: Aprovado e Implementado (Missão 06)
+- **Contexto**: O Remotion é uma excelente ferramenta para motion design em código React. No entanto, sua licença exige pagamentos de licença corporativa para certas faixas de faturamento/equipe, e sua cadeia de renderização baseada em Chromium headless (Puppeteer) aumentaria o instalador em mais de 350 MB e exigiria Node.js na máquina do cliente.
+- **Decisão**: Criar o **Arce Motion Engine (AME)**:
+  1. Player em tempo real no frontend utilizando HTML5 Canvas a 60 FPS com scrubbing de áudio e interpolações com física de amortecimento (*spring physics*).
+  2. Compilador nativo no backend Rust que traduz as cenas e camadas em grafos de filtros do FFmpeg, renderizando MP4 diretamente sem dependências externas adicionais.
+  3. Exportador opcional de código-fonte TSX estruturado para Remotion, permitindo que desenvolvedores exportem projetos para suas próprias pipelines.
+- **Consequências**:
+  - Distribuição 100% livre de restrições de licenciamento.
+  - Aplicativo mantém seu tamanho superleve (< 15 MB) sem precisar embutir Chromium ou Node.js.
+  - Renderização de vídeo ultrarrápida aproveitando a aceleração nativa do FFmpeg já instalado.
+
+---
+
+## ADR 022: Provedor NVIDIA NIM com Vault Criptográfico e Sanitização de Credenciais
+- **Status**: Aprovado e Implementado (Missão 06)
+- **Contexto**: A integração com a nuvem NVIDIA NIM para geração de imagens (FLUX.1, SD 3.5), vídeos (Cosmos) e planejamento de briefings exige gerenciar chaves de API com segurança estrita. Salvar a chave em texto puro no SQLite ou exibi-la em logs viola as diretrizes de segurança da aplicação.
+- **Decisão**:
+  1. Criar `SecureVault` com criptografia simétrica utilizando entropia gerada a partir do identificador de máquina do host.
+  2. Isolar os endpoints da API NVIDIA NIM: `ai.api.nvidia.com` para inferência de visão (JSON com retorno Base64) e `integrate.api.nvidia.com` para chat/planejamento criativo.
+  3. Adicionar regex de detecção de chave NVIDIA (`nvapi-...`) no pipeline do `Sanitizer`, substituindo por `[PROTECTED_NVIDIA_KEY]` em logs de erro e diagnósticos.
+- **Consequências**:
+  - Chaves de API nunca são expostas em texto puro no SQLite nem registradas em arquivos de log.
+  - Conformidade estrita com o princípio de menor privilégio e segurança em repouso.
+
+---
+
+## ADR 023: Biblioteca de 16 Skills Nativas com Formato SKILL.md e Sandbox OpenCode
+- **Status**: Aprovado e Implementado (Missão 06)
+- **Contexto**: Para que usuários sem conhecimentos técnicos produzam artes e vídeos de qualidade profissional, a inteligência artificial precisa de diretrizes estilísticas estruturadas (direção de arte, tipografia cinética, iluminação de produto, copywriting). Além disso, deve ser possível executar agentes via OpenCode caso o usuário possua a ferramenta instalada.
+- **Decisão**:
+  1. Definir 16 skills nativas embutidas diretamente no binário Rust, no formato padronizado `SKILL.md` compatível com a comunidade OpenCode/Agentic.
+  2. Implementar `OpenCodeManager` que supervisiona processos do OpenCode em workspace isolado, com `CREATE_NO_WINDOW` e cancelamento cooperativo.
+  3. Fornecer um orquestrador fallback nativo em Rust que opera transparentemente caso o OpenCode não esteja instalado.
+- **Consequências**:
+  - O estúdio criativo funciona imediatamente "out-of-the-box" sem obrigar instalação de ferramentas de terceiros.
+  - Total transparência das diretrizes de design aplicadas a cada geração.

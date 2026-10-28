@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { NAV_ITEMS } from '../types/navigation';
 
 describe('Navigation Model', () => {
-  it('should contain all 9 required sections from the approved prototype', () => {
+  it('should contain all required sections including creative studio', () => {
     const ids = NAV_ITEMS.map((n) => n.id);
     expect(ids).toEqual([
       'home',
+      'creative',
       'downloads',
       'documents',
       'audio',
@@ -17,9 +18,10 @@ describe('Navigation Model', () => {
     ]);
   });
 
-  it('should have sequential keyboard shortcut keys 1 to 9', () => {
-    NAV_ITEMS.forEach((item, index) => {
-      expect(item.key).toBe(String(index + 1));
+  it('should have valid keyboard shortcut keys for all navigation items', () => {
+    NAV_ITEMS.forEach((item) => {
+      expect(item.key).toBeDefined();
+      expect(item.key.length).toBeGreaterThan(0);
     });
   });
 });

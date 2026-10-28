@@ -1,6 +1,6 @@
 # Instruções para Agentes de IA e Desenvolvedores — ARCE TOOLS
 
-Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **Arce Tools** (Missões 01, 02 e 02.5).
+Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **Arce Tools** (Missões 01 a 06).
 
 ---
 
@@ -52,6 +52,17 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
    - Previna colisões de arquivos no disco gerando sufixos numéricos (`arquivo (1).ext`).
 6. **Respeito a Direitos Autorais e DRM**:
    - É expressamente proibida qualquer implementação de bypass de DRM ou violação de criptografia de fluxos de mídia.
+7. **Armazenamento Seguro de Credenciais (Vault & NVIDIA Provider — Missão 06)**:
+   - **NUNCA armazene chaves de API em texto puro no SQLite ou em arquivos de preferências legíveis**.
+   - Criptografe credenciais via `SecureVault` utilizando algoritmo com derivação de chave e entropia da máquina local.
+   - **NUNCA emita chaves de API em logs ou saídas IPC**. Aplique sanitização automática por regex (`NVIDIA_KEY_REGEX`) substituindo por `[PROTECTED_NVIDIA_KEY]`.
+8. **Arce Motion Engine & Renderização de Vídeo (Missão 06)**:
+   - Mantenha a renderização primária de Motion Design 100% nativa em Rust e FFmpeg (composição via `drawtext`, `overlay`, `scale`, `fade`).
+   - O player de pré-visualização deve operar a 60 FPS contínuos via Canvas HTML5 sem recarregar o DOM.
+   - A exportação para Remotion (`.tsx`) deve ser estruturada e limpa para desenvolvedores externos, sem forçar dependências de Node.js/Chromium/Puppeteer no usuário final.
+9. **Isolamento de Workspace e OpenCode (Missão 06)**:
+   - Toda execução de binários do OpenCode deve ocorrer com `CREATE_NO_WINDOW = 0x08000000` em um diretório de workspace isolado.
+   - Caso o OpenCode não esteja instalado, utilize o orquestrador nativo em Rust (`orchestrate_rust_fallback`) para garantir funcionamento ininterrupto de todas as ferramentas criativas.
 
 ### 2.2 Frontend React (`src/`)
 1. **TypeScript Estrito**:
@@ -84,5 +95,5 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
     cargo build --release
     ```
 - **Testes Automatizados Obrigatórios**:
-  - Frontend: `pnpm test` (12 testes Vitest)
-  - Backend: `cargo test` (8 testes nativos MSVC)
+  - Frontend: `pnpm test` (31 testes Vitest em 8 suítes)
+  - Backend: `cargo test` (26 testes nativos MSVC)

@@ -13,6 +13,7 @@ import { StatusBar } from './components/shell/StatusBar';
 import { ToastContainer, ToastItem } from './components/shell/ToastContainer';
 
 import { HomeScreen } from './components/screens/HomeScreen';
+import { CreativeStudioScreen } from './components/screens/creative/CreativeStudioScreen';
 import { DownloadsScreen } from './components/screens/DownloadsScreen';
 import { DocumentsScreen } from './components/screens/DocumentsScreen';
 import { AudioScreen } from './components/screens/AudioScreen';
@@ -344,6 +345,8 @@ export const App: React.FC = () => {
                 onOpenExplorer={handleOpenExplorer}
               />
             )}
+
+            {screen === 'creative' && <CreativeStudioScreen />}
 
             {screen === 'downloads' && (
               <DownloadsScreen onShowToast={showToast} />

@@ -2,6 +2,7 @@ import { IconName } from '../components/common/icons';
 
 export type ScreenId =
   | 'home'
+  | 'creative'
   | 'downloads'
   | 'documents'
   | 'audio'
@@ -30,6 +31,15 @@ export const NAV_ITEMS: NavItem[] = [
     title: 'O que vamos fazer hoje?',
     desc: 'Solte arquivos, cole um link ou escolha uma ferramenta.',
     icon: 'home',
+  },
+  {
+    id: 'creative',
+    label: 'Creative Studio',
+    key: 'C',
+    eyebrow: '01 · estúdio criativo com ia',
+    title: 'Arce Creative Studio',
+    desc: 'Gere imagens por IA, motion graphics, vídeos promocionais e composições profissionais sem programar.',
+    icon: 'sparkles',
   },
   {
     id: 'downloads',

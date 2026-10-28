@@ -142,6 +142,38 @@ Medições realizadas em ambiente de produção com o binário release nativo:
   - Remoção segura restrita à pasta gerenciada sem afetar utilitários globais do sistema operacional.
 - **Seção Ferramentas e Dependências nas Configurações:** Visão geral de status, origens, versões, caminhos seguros e botões contextuais (Instalar, Atualizar, Verificar, Remover e Configurar caminho para LibreOffice).
 
+### 10. Arce Creative Studio — IA Generativa e Motion Design (Missão 06)
+- **Fluxo Visual para Criadores Não-Programadores:**
+  - Experiência guiada em 6 etapas: *Descrever Ideia $\rightarrow$ Escolher Estilo $\rightarrow$ Gerar $\rightarrow$ Pré-visualizar (60 FPS) $\rightarrow$ Ajustar Parâmetros $\rightarrow$ Exportar*.
+  - Assistente de Briefing interativo em 3 etapas sintetizando estilo, especificações técnicas e seleção automática de skills relevantes.
+- **AI Image Studio:**
+  - Geração visual de alta fidelidade via modelos de ponta (FLUX.1-schnell, FLUX.1-dev, SD 3.5 Large).
+  - 9 estilos artísticos calibrados: *Publicitário, Fotográfico, Cinematográfico, Minimalista, Editorial, Ilustração, 3D, Produto e Social Media*.
+  - Comparador visual de propostas lado a lado com métricas de resolução e proporção (1:1, 16:9, 9:16, 4:5, 21:9).
+- **Motion Design Studio & Arce Motion Engine (AME):**
+  - Player em tempo real HTML5 Canvas renderizando a **60 FPS** com scrub timeline interativo, timecodes e controles de reprodução.
+  - Motor de renderização nativo em Rust compilando composições multi-camadas em grafos de filtros complexos do FFmpeg para MP4 (H.264 / AAC).
+  - Suporte completo a animações vetoriais, keyframes, opacidade, escala, posição e interpolações com física de molas (*spring physics*).
+  - Exportação de código fonte editável do projeto para **Remotion TSX**, permitindo integração direta com pipelines web de desenvolvedores.
+- **AI Video Studio:**
+  - *Modo A (Generativo):* Integração transparente com APIs de vídeo da nuvem NVIDIA quando autorizadas, com rastreamento honesto de cotas.
+  - *Modo B (Composto Local):* Montagem de vídeos promocionais offline unindo imagens geradas/importadas, legendas animadas, trilha sonora e transições via FFmpeg nativo sem custo de nuvem.
+- **Biblioteca de 16 Skills Nativas com Padrão SKILL.md:**
+  - Formato padronizado contendo instruções técnicas de direção de arte, critérios de qualidade, restrições e ferramentas.
+  - Catálogo filtrável por categorias (Design Gráfico, Motion Design, Produção de Vídeo, 3D e Qualidade).
+  - Suporte a ativação contextual sob demanda e exportação direta para o disco local.
+- **Workspace de Projetos e Biblioteca de Assets:**
+  - Persistência estruturada em SQLite (`creative_projects`, `creative_assets`, `creative_generation_history`) com modo WAL.
+  - Gerenciamento de metadados, versões de prompts, tags, dimensões e arquivos gerados em diretórios isolados.
+- **NVIDIA AI Provider com Vault Seguro:**
+  - Armazenamento de chaves criptografadas no disco com entropia derivada do hardware local.
+  - Zero persistência de credenciais em texto puro no SQLite.
+  - Mascaramento automático de chaves nos logs através de regex com lookahead guard (`[PROTECTED_NVIDIA_KEY]`).
+- **Integração com OpenCode:**
+  - Detecção inteligente do executável do OpenCode em PATH e diretórios de usuário.
+  - Execução segura em sandbox com processos em segundo plano (`CREATE_NO_WINDOW`) e cancelamento atômico.
+  - Fallback de orquestração 100% nativo em Rust garantindo funcionamento completo mesmo sem o OpenCode instalado.
+
 ---
 
 ## 🛠️ Stack Tecnológica
@@ -167,7 +199,7 @@ A base de código conta com cobertura completa em frontend e backend:
 ```bash
 # Execução dos testes de interface e componentes (Vitest)
 pnpm test
-# Resultado: 25/25 testes aprovados (100% de sucesso)
+# Resultado: 31/31 testes aprovados (100% de sucesso em 8 suítes)
 
 # Verificação estrita de tipagem TypeScript
 pnpm build
@@ -175,7 +207,7 @@ pnpm build
 
 # Execução dos testes unitários de backend nativo (Cargo MSVC)
 cargo test --lib
-# Resultado: 19/19 testes aprovados (100% de sucesso)
+# Resultado: 26/26 testes aprovados (100% de sucesso)
 
 # Verificação de linter e estilo Rust
 cargo clippy --lib -- -D warnings
