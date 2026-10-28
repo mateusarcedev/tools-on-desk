@@ -837,7 +837,7 @@ export const DownloadsScreen: React.FC<DownloadsScreenProps> = ({ onShowToast })
         >
           <Icon name="alert" size={18} style={{ color: 'var(--mint)', flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: '11.5px', color: 'var(--fg-dim)', lineHeight: 1.5 }}>
-            <strong>Conformidade e Segurança:</strong> O Arce Tools é offline-first e respeita os termos de serviço e direitos autorais. URLs apontando para redes privadas locais (SSRF) são estritamente bloqueadas.
+            <strong>Conformidade e Segurança:</strong> O ToolsOnDesk é offline-first e respeita os termos de serviço e direitos autorais. URLs apontando para redes privadas locais (SSRF) são estritamente bloqueadas.
           </div>
         </div>
       </div>

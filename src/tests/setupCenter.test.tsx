@@ -24,7 +24,7 @@ describe('Setup Center & Dependency Management Tests', () => {
       />
     );
 
-    expect(screen.getByText('Vamos preparar seu Arce Tools')).toBeInTheDocument();
+    expect(screen.getByText('Vamos preparar seu ToolsOnDesk')).toBeInTheDocument();
     expect(screen.getByText('Downloads')).toBeInTheDocument();
     expect(screen.getByText('Documentos')).toBeInTheDocument();
     expect(screen.getByText('Áudio')).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe('Setup Center & Dependency Management Tests', () => {
       expect(screen.getByText('Tudo pronto para começar!')).toBeInTheDocument();
     });
 
-    const startBtn = screen.getByText('Começar a usar o Arce Tools');
+    const startBtn = screen.getByText('Começar a usar o ToolsOnDesk');
     fireEvent.click(startBtn);
 
     await waitFor(() => {

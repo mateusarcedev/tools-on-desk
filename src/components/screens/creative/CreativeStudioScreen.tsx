@@ -119,7 +119,7 @@ export const CreativeStudioScreen: React.FC = () => {
       order: 2,
       title: 'Apresentação do Produto',
       durationSec: 6.0,
-      scriptText: 'O Arce Creative Studio faz todo o trabalho pesado para você.',
+      scriptText: 'O ToolsOnDesk Creative Studio faz todo o trabalho pesado para você.',
       visualCue: 'Demonstração do produto em 3D com destaque dos benefícios',
       cameraMovement: 'Pan Lateral 45º',
       approved: false,
@@ -411,7 +411,7 @@ export const CreativeStudioScreen: React.FC = () => {
             <div style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', gap: 8 }}>
               <span>NVIDIA NIM AI</span>
               <span>·</span>
-              <span>Arce Motion Engine (60 FPS)</span>
+              <span>ToolsOnDesk Motion Engine (60 FPS)</span>
               <span>·</span>
               <span>Biblioteca de Skills</span>
             </div>

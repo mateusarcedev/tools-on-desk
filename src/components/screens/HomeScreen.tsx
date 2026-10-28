@@ -71,7 +71,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             marginBottom: 6,
           }}
         >
-          arce tools
+          toolsondesk
         </div>
         <h1
           style={{

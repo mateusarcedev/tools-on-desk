@@ -3,13 +3,13 @@ import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import App from '../App';
 
-describe('Arce Tools App Shell', () => {
+describe('ToolsOnDesk App Shell', () => {
   it('renders titlebar with brand and title', async () => {
     await act(async () => {
       render(<App />);
     });
-    expect(screen.getByText('Arce Tools')).toBeInTheDocument();
-    expect(screen.getByText('a/t')).toBeInTheDocument();
+    expect(screen.getByText('ToolsOnDesk')).toBeInTheDocument();
+    expect(screen.getByText('t/d')).toBeInTheDocument();
   });
 
   it('renders all sidebar navigation items including Creative Studio', async () => {

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Light background version for documents or white themes -->
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="6" />
+  <path d="M120 160 C120 148, 130 140, 142 140 L370 140 C382 140, 392 148, 392 160 L392 188 C392 200, 382 208, 370 208 L142 208 C130 208, 120 200, 120 188 Z" fill="#076B39" />
+  <path d="M224 208 L288 208 L288 352 C288 364, 278 372, 266 372 L246 372 C234 372, 224 364, 224 352 Z" fill="#0F172A" />
+  <path d="M288 224 C348 224, 388 260, 388 310 C388 360, 348 396, 288 396 L220 396 C206 396, 196 386, 196 372 L196 348 L266 348 C306 348, 332 328, 332 310 C332 292, 306 272, 266 272 L224 272 L224 224 Z" fill="#076B39" opacity="0.95" />
+  <polygon points="156,268 184,240 184,296" fill="#0F172A" opacity="0.8" />
+</svg>

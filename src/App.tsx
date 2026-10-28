@@ -23,6 +23,7 @@ import { PosterStudioScreen } from './components/screens/PosterStudioScreen';
 import { HistoryScreen } from './components/screens/HistoryScreen';
 import { SettingsScreen } from './components/screens/SettingsScreen';
 import { SetupCenterModal } from './components/setup/SetupCenterModal';
+import { MigrationModal } from './components/migration/MigrationModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
@@ -31,6 +32,7 @@ export const App: React.FC = () => {
   const [tasksOpen, setTasksOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [setupCenterOpen, setSetupCenterOpen] = useState(false);
+  const [migrationModalOpen, setMigrationModalOpen] = useState(false);
 
   const [historyTab, setHistoryTab] = useState<'activities' | 'diagnostics'>('activities');
   const [highlightTaskId, setHighlightTaskId] = useState<string | null>(null);
@@ -45,8 +47,8 @@ export const App: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings>({
     themePref: 'Escuro',
     maxConcurrency: 2,
-    downloadFolder: 'C:\\Users\\Mateus\\Downloads\\Arce Tools',
-    exportFolder: 'C:\\Users\\Mateus\\Documents\\Arce Tools\\Exportados',
+    downloadFolder: 'C:\\Users\\User\\Downloads\\ToolsOnDesk',
+    exportFolder: 'C:\\Users\\User\\Documents\\ToolsOnDesk\\Exportados',
     notifications: true,
     autoUpdate: true,
     saveInSameFolder: false,
@@ -72,12 +74,13 @@ export const App: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [loadedTasks, loadedHistory, sysInfo, savedTheme, firstRun] = await Promise.all([
+      const [loadedTasks, loadedHistory, sysInfo, savedTheme, firstRun, migrationStatus] = await Promise.all([
         TauriService.getTasks(),
         TauriService.getHistory(),
         TauriService.getSystemInfo(),
         TauriService.getPreference('theme'),
         TauriService.getFirstRunStatus(),
+        TauriService.getMigrationStatus(),
       ]);
 
       setTasks(loadedTasks);
@@ -87,7 +90,10 @@ export const App: React.FC = () => {
         setThemePref(savedTheme as ThemePreference);
       }
 
-      if (firstRun.isFirstRun || (!firstRun.completed && !firstRun.dismissed && !firstRun.allEssentialReady)) {
+      // Check migration status first
+      if (migrationStatus.hasLegacyData && !migrationStatus.isMigrated) {
+        setMigrationModalOpen(true);
+      } else if (firstRun.isFirstRun || (!firstRun.completed && !firstRun.dismissed && !firstRun.allEssentialReady)) {
         setSetupCenterOpen(true);
       }
 
@@ -433,6 +439,15 @@ export const App: React.FC = () => {
           loadData();
         }}
         onShowToast={showToast}
+      />
+
+      <MigrationModal
+        isOpen={migrationModalOpen}
+        onClose={() => setMigrationModalOpen(false)}
+        onCompleted={(_status) => {
+          showToast('Dados migrados para o ToolsOnDesk com sucesso!', 'ok');
+          loadData();
+        }}
       />
 
       <ToastContainer toasts={toasts} />

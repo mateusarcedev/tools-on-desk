@@ -52,6 +52,7 @@ import {
   OpenCodeStatus,
   RenderMotionOptions,
 } from '../types/creative';
+import { MigrationProgressEvent, MigrationStatus } from '../types/migration';
 
 export interface SystemInfo {
   os: string;
@@ -237,8 +238,8 @@ export const TauriService = {
     if (!isTauri()) {
       return {
         os: 'windows',
-        defaultDownloadFolder: 'C:\\Users\\Mateus\\Downloads\\Arce Tools',
-        defaultExportFolder: 'C:\\Users\\Mateus\\Documents\\Arce Tools\\Exportados',
+        defaultDownloadFolder: 'C:\\Users\\User\\Downloads\\ToolsOnDesk',
+        defaultExportFolder: 'C:\\Users\\User\\Documents\\ToolsOnDesk\\Exportados',
       };
     }
     return await invoke<SystemInfo>('get_system_info');
@@ -254,14 +255,14 @@ export const TauriService = {
 
   async getPreference(key: string): Promise<string | null> {
     if (!isTauri()) {
-      return localStorage.getItem(`arce_pref_${key}`);
+      return localStorage.getItem(`tod_pref_${key}`) ?? localStorage.getItem(`arce_pref_${key}`);
     }
     return await invoke<string | null>('get_preference', { key });
   },
 
   async setPreference(key: string, value: string): Promise<void> {
     if (!isTauri()) {
-      localStorage.setItem(`arce_pref_${key}`, value);
+      localStorage.setItem(`tod_pref_${key}`, value);
       return;
     }
     await invoke('set_preference', { key, value });
@@ -569,8 +570,8 @@ export const TauriService = {
         arch: 'x86_64',
         webview2Available: true,
         webview2Version: '120.0',
-        appDataPath: 'C:\\Users\\Mock\\AppData\\Local\\ArceTools',
-        binariesPath: 'C:\\Users\\Mock\\AppData\\Local\\ArceTools\\binaries',
+        appDataPath: 'C:\\Users\\Mock\\AppData\\Local\\ToolsOnDesk',
+        binariesPath: 'C:\\Users\\Mock\\AppData\\Local\\ToolsOnDesk\\binaries',
         hasWritePermission: true,
         availableDiskSpaceMb: 45000,
         internetConnected: true,
@@ -917,5 +918,67 @@ export const TauriService = {
   async listCreativeTemplates(): Promise<CreativeTemplate[]> {
     if (!isTauri()) return [];
     return await invoke<CreativeTemplate[]>('list_creative_templates');
+  },
+
+  // ==========================================
+  // TOOLSONDESK MIGRATION COMMANDS
+  // ==========================================
+
+  async getMigrationStatus(): Promise<MigrationStatus> {
+    if (!isTauri()) {
+      return {
+        hasLegacyData: false,
+        isMigrated: true,
+        currentStep: 'COMPLETED',
+        message: 'Ambiente ToolsOnDesk validado.',
+        progressPercent: 100,
+        preservedProjectsCount: 0,
+        preservedAssetsCount: 0,
+        preservedTasksCount: 0,
+        preservedHistoryCount: 0,
+        preservedErrorLogsCount: 0,
+        credentialsMigrated: false,
+        binariesReused: false,
+      };
+    }
+    return await invoke<MigrationStatus>('get_migration_status');
+  },
+
+  async runMigration(): Promise<MigrationStatus> {
+    if (!isTauri()) {
+      return {
+        hasLegacyData: false,
+        isMigrated: true,
+        currentStep: 'COMPLETED',
+        message: 'Migração concluída com sucesso (mock).',
+        progressPercent: 100,
+        preservedProjectsCount: 1,
+        preservedAssetsCount: 1,
+        preservedTasksCount: 3,
+        preservedHistoryCount: 3,
+        preservedErrorLogsCount: 1,
+        credentialsMigrated: true,
+        binariesReused: true,
+      };
+    }
+    return await invoke<MigrationStatus>('run_migration');
+  },
+
+  async dismissMigrationPrompt(): Promise<void> {
+    if (!isTauri()) return;
+    await invoke('dismiss_migration_prompt');
+  },
+
+  onMigrationProgress(callback: (progress: MigrationProgressEvent) => void) {
+    if (!isTauri()) return () => {};
+    let unlistenFn: (() => void) | null = null;
+    listen<MigrationProgressEvent>('migration:progress', (event) => {
+      callback(event.payload);
+    }).then((unlisten) => {
+      unlistenFn = unlisten;
+    });
+    return () => {
+      if (unlistenFn) unlistenFn();
+    };
   },
 };

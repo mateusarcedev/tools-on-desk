@@ -188,7 +188,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             margin: '0 0 6px',
           }}
         >
-          Configurações do Arce Tools
+          Configurações do ToolsOnDesk
         </h1>
         <p style={{ color: 'var(--fg-dim)', fontSize: '13.5px', margin: 0 }}>
           Personalize aparência, pastas de destino, concorrência e verifique o estado dos motores nativos.
@@ -491,7 +491,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
             const formatOrigin = (orig: string) => {
               switch (orig) {
                 case 'managed':
-                  return 'Gerenciado pelo Arce Tools (%LOCALAPPDATA%)';
+                  return 'Gerenciado pelo ToolsOnDesk (%LOCALAPPDATA%)';
                 case 'win_get':
                   return 'Instalação WinGet';
                 case 'system_path':
@@ -826,7 +826,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `arce-tools-diagnostico-completo-${new Date().toISOString().slice(0, 10)}.json`;
+              a.download = `toolsondesk-diagnostico-completo-${new Date().toISOString().slice(0, 10)}.json`;
               a.click();
               URL.revokeObjectURL(url);
               onShowToast('Relatório completo exportado com sucesso!');

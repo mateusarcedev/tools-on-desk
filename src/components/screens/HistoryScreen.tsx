@@ -190,7 +190,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
   // Format single error for clipboard or export
   const formatErrorText = (e: ErrorLogEntry): string => {
     return [
-      `=== ARCE TOOLS - REGISTRO DE ERRO ===`,
+      `=== TOOLSONDESK - REGISTRO DE ERRO ===`,
       `ID: ${e.id}`,
       `Versão do Aplicativo: ${e.appVersion || '0.1.0'}`,
       `Data/Hora: ${e.createdAt}`,
@@ -236,7 +236,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
       const header = [
         `=============================================================`,
-        `ARCE TOOLS — RELATÓRIO DE ERROS E DIAGNÓSTICOS FILTRADOS`,
+        `TOOLSONDESK — RELATÓRIO DE ERROS E DIAGNÓSTICOS FILTRADOS`,
         `Exportado em: ${new Date().toLocaleString()}`,
         `Total de registros filtrados: ${records.length}`,
         `=============================================================\n`,
@@ -266,7 +266,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
       const header = [
         `=============================================================`,
-        `ARCE TOOLS — HISTÓRICO COMPLETO DE ERROS E DIAGNÓSTICOS`,
+        `TOOLSONDESK — HISTÓRICO COMPLETO DE ERROS E DIAGNÓSTICOS`,
         `Exportado em: ${new Date().toLocaleString()}`,
         `Total de registros no banco: ${allRecords.length}`,
         `Falhas Críticas: ${errorStats.critical} | Não Resolvidos: ${errorStats.unresolved}`,
@@ -298,7 +298,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
 
       const header = [
         `=============================================================`,
-        `ARCE TOOLS — RELATÓRIO DE ERROS E DIAGNÓSTICOS DO SISTEMA`,
+        `TOOLSONDESK — RELATÓRIO DE ERROS E DIAGNÓSTICOS DO SISTEMA`,
         `Gerado em: ${new Date().toLocaleString()}`,
         `Total de registros exportados: ${records.length}`,
         `=============================================================\n`,
@@ -311,7 +311,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `arce-tools-diagnostico-${new Date().toISOString().slice(0, 10)}.txt`;
+      a.download = `toolsondesk-diagnostico-${new Date().toISOString().slice(0, 10)}.txt`;
       a.click();
       URL.revokeObjectURL(url);
       onShowToast(`Relatório TXT (${records.length} registros) exportado com sucesso!`, 'ok');
@@ -338,7 +338,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `arce-tools-diagnostico-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `toolsondesk-diagnostico-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
       onShowToast(`Relatório JSON (${records.length} registros) exportado com sucesso!`, 'ok');

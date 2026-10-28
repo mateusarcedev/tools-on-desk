@@ -88,7 +88,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
   const handleFinishSetup = async () => {
     try {
       await TauriService.completeFirstRun('completed');
-      onShowToast('Arce Tools configurado com sucesso! Bem-vindo.');
+      onShowToast('ToolsOnDesk configurado com sucesso! Bem-vindo.');
     } catch {
       // fallback
     }
@@ -128,7 +128,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
   const handleCopyInstallError = async () => {
     if (!installError) return;
     const report = [
-      `=== ARCE TOOLS — RELATÓRIO DE ERRO DE DEPENDÊNCIA ===`,
+      `=== TOOLSONDESK — RELATÓRIO DE ERRO DE DEPENDÊNCIA ===`,
       `Data: ${new Date().toISOString()}`,
       `Componente: ${installError.id}`,
       `Mensagem: ${installError.message}`,
@@ -310,7 +310,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
             </div>
             <div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--fg)' }}>
-                Arce Tools — Assistente de Inicialização
+                ToolsOnDesk — Assistente de Inicialização
               </div>
               <div style={{ fontSize: '11px', color: 'var(--fg-dim)', fontFamily: 'var(--mono)' }}>
                 Configuração inteligente de dependências
@@ -342,7 +342,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
                 <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--fg)', margin: '0 0 6px' }}>
-                  Vamos preparar seu Arce Tools
+                  Vamos preparar seu ToolsOnDesk
                 </h1>
                 <p style={{ fontSize: '13.5px', color: 'var(--fg-dim)', margin: 0, lineHeight: 1.5 }}>
                   Estamos verificando os componentes necessários para que suas ferramentas multimídia, de conversão e de download funcionem perfeitamente no seu computador.
@@ -509,7 +509,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
                   Configuração das Ferramentas
                 </h2>
                 <div style={{ fontSize: '12.5px', color: 'var(--fg-dim)' }}>
-                  Instale os utilitários com apenas um clique para habilitar todo o potencial do Arce Tools.
+                  Instale os utilitários com apenas um clique para habilitar todo o potencial do ToolsOnDesk.
                 </div>
               </div>
 
@@ -744,7 +744,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
                   Tudo pronto para começar!
                 </h1>
                 <p style={{ fontSize: '13.5px', color: 'var(--fg-dim)', margin: 0 }}>
-                  Seu ambiente foi configurado e validado. Você já pode desfrutar de todas as ferramentas do Arce Tools.
+                  Seu ambiente foi configurado e validado. Você já pode desfrutar de todas as ferramentas do ToolsOnDesk.
                 </p>
               </div>
 
@@ -827,7 +827,7 @@ export const SetupCenterModal: React.FC<SetupCenterModalProps> = ({
             <>
               <div />
               <Button variant="primary" onClick={handleFinishSetup}>
-                Começar a usar o Arce Tools
+                Começar a usar o ToolsOnDesk
               </Button>
             </>
           )}

@@ -380,7 +380,7 @@ export const MotionPlayer: React.FC<MotionPlayerProps> = ({
               fontFamily: 'var(--font-mono, monospace)',
             }}
           >
-            Motor: Arce Motion Engine (60 FPS Native)
+            Motor: ToolsOnDesk Motion Engine (60 FPS Native)
           </div>
         </div>
       </div>

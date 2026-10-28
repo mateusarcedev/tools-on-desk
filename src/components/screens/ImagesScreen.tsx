@@ -545,7 +545,7 @@ export const ImagesScreen: React.FC<ImagesScreenProps> = ({
                 <input
                   type="text"
                   readOnly
-                  placeholder="Pasta padrão (Documentos/Arce Tools)"
+                  placeholder="Pasta padrão (Documentos/ToolsOnDesk)"
                   value={outputFolder}
                   style={{
                     flex: 1,

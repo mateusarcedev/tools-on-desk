@@ -120,7 +120,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             pointerEvents: 'none',
           }}
         >
-          a/t
+          t/d
         </div>
         <span
           style={{
@@ -131,7 +131,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             pointerEvents: 'none',
           }}
         >
-          Arce Tools
+          ToolsOnDesk
         </span>
       </div>
 
