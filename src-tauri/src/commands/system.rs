@@ -2,7 +2,7 @@ use crate::engines::{ExternalToolManager, ExternalToolsStatus};
 use crate::storage::Db;
 use serde::Serialize;
 use std::path::Path;
-use tauri::{Manager, State};
+use tauri::State;
 use tauri_plugin_opener::OpenerExt;
 
 #[derive(Serialize)]
@@ -20,18 +20,8 @@ pub async fn check_external_tools() -> Result<ExternalToolsStatus, String> {
 
 #[tauri::command]
 pub async fn get_system_info(app: tauri::AppHandle) -> Result<SystemInfo, String> {
-    let download_dir = app
-        .path()
-        .download_dir()
-        .unwrap_or_else(|_| Path::new("C:\\Users\\Mateus\\Downloads").to_path_buf())
-        .join("Arce Tools");
-
-    let doc_dir = app
-        .path()
-        .document_dir()
-        .unwrap_or_else(|_| Path::new("C:\\Users\\Mateus\\Documents").to_path_buf())
-        .join("Arce Tools")
-        .join("Exportados");
+    let download_dir = crate::utils::PathManager::default_download_folder(&app);
+    let doc_dir = crate::utils::PathManager::default_export_folder(&app);
 
     let _ = std::fs::create_dir_all(&download_dir);
     let _ = std::fs::create_dir_all(&doc_dir);

@@ -62,10 +62,16 @@ impl ExternalToolManager {
             if let Ok(local_app_data) = env::var("LOCALAPPDATA") {
                 let local_path = Path::new(&local_app_data);
 
-                // Check ArceTools local binaries cache
-                let arce_bin = local_path.join("ArceTools").join("binaries").join(&exe_name);
-                if arce_bin.is_file() {
-                    return Some(arce_bin);
+                // Check ToolsOnDesk managed binaries
+                let tod_bin = crate::utils::PathManager::binaries_dir().join(&exe_name);
+                if tod_bin.is_file() {
+                    return Some(tod_bin);
+                }
+
+                // Check legacy ArceTools binaries cache for seamless transition
+                let legacy_bin = crate::utils::PathManager::legacy_binaries_dir().join(&exe_name);
+                if legacy_bin.is_file() {
+                    return Some(legacy_bin);
                 }
 
                 // Check WinGet Links

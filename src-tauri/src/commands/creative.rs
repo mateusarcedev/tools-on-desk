@@ -9,21 +9,16 @@ use crate::engines::{
 };
 use crate::error::AppError;
 use crate::storage::Db;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, State};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-fn get_app_data_path(app: &AppHandle) -> PathBuf {
-    app.path().app_data_dir().unwrap_or_else(|_| {
-        std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("data")
-    })
+fn get_app_data_path(_app: &AppHandle) -> PathBuf {
+    crate::utils::PathManager::app_root_dir()
 }
 
 fn get_export_path(app: &AppHandle) -> PathBuf {
-    let app_data = get_app_data_path(app);
-    let export_dir = app_data.join("creative_exports");
+    let export_dir = crate::utils::PathManager::default_export_folder(app).join("Creative");
     let _ = std::fs::create_dir_all(&export_dir);
     export_dir
 }

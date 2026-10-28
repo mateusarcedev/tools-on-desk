@@ -1,12 +1,12 @@
 [package]
-name = "arce-tools"
+name = "toolsondesk"
 version = "0.1.0"
-description = "Arce Tools - Desktop Multi-tools"
-authors = ["mateusarcedev"]
+description = "ToolsOnDesk - Desktop Creative & Media Studio"
+authors = ["ToolsOnDesk Contributors"]
 edition = "2024"
 
 [lib]
-name = "arce_tools_lib"
+name = "toolsondesk_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
@@ -26,7 +26,7 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 parking_lot = "0.12"
-rusqlite = { version = "0.32", features = ["bundled"] }
+rusqlite = { version = "0.32", features = ["bundled", "backup"] }
 thiserror = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 base64 = "0.22"

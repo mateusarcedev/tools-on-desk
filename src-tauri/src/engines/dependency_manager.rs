@@ -21,28 +21,12 @@ pub struct DependencyManager;
 
 impl DependencyManager {
     /// Returns the application-managed directory for external binaries.
-    /// On Windows: %LOCALAPPDATA%\ArceTools\binaries
-    /// On Unix/other: ~/.local/share/arce-tools/binaries or ./data/binaries
+    /// Primary: %LOCALAPPDATA%\ToolsOnDesk\binaries
+    /// Fallback / Legacy check: %LOCALAPPDATA%\ArceTools\binaries
     pub fn get_managed_binaries_dir() -> PathBuf {
-        #[cfg(windows)]
-        {
-            if let Ok(local_app_data) = env::var("LOCALAPPDATA") {
-                let path = PathBuf::from(local_app_data)
-                    .join("ArceTools")
-                    .join("binaries");
-                let _ = fs::create_dir_all(&path);
-                return path;
-            }
-        }
-
-        // Fallback for WSL/Linux or when LOCALAPPDATA is absent
-        let base = if let Ok(home) = env::var("HOME") {
-            PathBuf::from(home).join(".local").join("share").join("arce-tools").join("binaries")
-        } else {
-            PathBuf::from("data").join("binaries")
-        };
-        let _ = fs::create_dir_all(&base);
-        base
+        let dir = crate::utils::PathManager::binaries_dir();
+        let _ = fs::create_dir_all(&dir);
+        dir
     }
 
     /// Checks write permissions in a directory by creating and deleting a temporary file.
