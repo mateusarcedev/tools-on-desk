@@ -21,10 +21,10 @@ flowchart LR
 - **Autenticação:** `Authorization: Bearer nvapi-...`
 - **Endpoint:** `/chat/completions`
 - **Modelos Homologados:**
-  - `meta/llama-3.3-70b-instruct` (Padrão para raciocínio e redação publicitária)
+  - `nvidia/llama-3.1-nemotron-70b-instruct` (Padrão para raciocínio e redação publicitária com fallback automático)
   - `nvidia/nemotron-4-340b-instruct` (Direção de arte complexa)
-  - `mistralai/mixtral-8x22b-instruct` (Copies ágeis e legendas dinâmicas)
-  - `deepseek-ai/deepseek-r1` (Raciocínio lógico estruturado)
+  - `mistralai/mistral-large-2-instruct` (Copies ágeis e legendas dinâmicas com 128k context)
+  - `meta/llama-3.2-90b-vision-instruct` (Modelo multimodal de alta fidelidade visual)
 
 ### 1.2 Modelos de Geração e Edição de Imagem
 - **Base URL:** `https://ai.api.nvidia.com/v1/genai`

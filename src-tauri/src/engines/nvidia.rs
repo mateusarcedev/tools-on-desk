@@ -131,10 +131,10 @@ impl NvidiaAIProvider {
         vec![
             // 1. LLM & Planning
             NvidiaModelInfo {
-                id: "meta/llama-3.3-70b-instruct".into(),
-                name: "Llama 3.3 70B Instruct".into(),
+                id: "nvidia/llama-3.1-nemotron-70b-instruct".into(),
+                name: "Llama 3.1 Nemotron 70B Instruct".into(),
                 category: "llm".into(),
-                provider: "Meta / NVIDIA".into(),
+                provider: "NVIDIA / Meta".into(),
                 description: "Modelo ideal para roteiros, planejamento de animações, direção de arte e storyboards.".into(),
                 context_length: Some(128000),
                 supports_streaming: true,
@@ -151,12 +151,22 @@ impl NvidiaAIProvider {
                 cost_tier: "free_tier".into(),
             },
             NvidiaModelInfo {
-                id: "mistralai/mixtral-8x22b-instruct".into(),
-                name: "Mixtral 8x22B Instruct".into(),
+                id: "mistralai/mistral-large-2-instruct".into(),
+                name: "Mistral Large 2 Instruct".into(),
                 category: "llm".into(),
                 provider: "Mistral AI / NVIDIA".into(),
-                description: "Mistura eficiente de especialistas para redação publicitária e legendas dinâmicas.".into(),
-                context_length: Some(65536),
+                description: "Modelo de alto desempenho com 128k de contexto para redação publicitária e legendas dinâmicas.".into(),
+                context_length: Some(128000),
+                supports_streaming: true,
+                cost_tier: "free_tier".into(),
+            },
+            NvidiaModelInfo {
+                id: "meta/llama-3.2-90b-vision-instruct".into(),
+                name: "Llama 3.2 90B Vision Instruct".into(),
+                category: "llm".into(),
+                provider: "Meta / NVIDIA".into(),
+                description: "Modelo multimodal avançado para análise e geração conceitual de cenas visuais.".into(),
+                context_length: Some(128000),
                 supports_streaming: true,
                 cost_tier: "free_tier".into(),
             },
@@ -343,6 +353,40 @@ impl NvidiaAIProvider {
         })
     }
 
+    fn generate_local_plan(
+        user_prompt: &str,
+        project_type: &str,
+        style: &str,
+        skills_summary: &str,
+    ) -> String {
+        format!(
+            r#"# 🎬 Plano de Motion Design & Direção Criativa (ToolsOnDesk Engine)
+
+## 1. Resumo do Conceito & Narrativa
+- **Briefing**: {user_prompt}
+- **Tipo de Projeto**: {project_type}
+- **Estilo Visual**: {style}
+- **Conceito**: Peça de alto impacto visual com hierarquia tipográfica clara e transições fluidas.
+
+## 2. Direção de Arte & Especificações
+- **Paleta de Cores**: #15F5BA (Acento Menta), #0B0F10 (Fundo Dark), #141A1C (Superfície)
+- **Tipografia**: Geist Sans Bold para chamadas principais, Geist Mono para métricas
+- **Iluminação & Foco**: Realce central com gradiente volumétrico suave
+
+## 3. Estrutura Temporal & Cenas
+- **Cena 01 (0.0s - 3.0s)**: Abertura cinética com animação Bounce e aceleração Spring. Revelação da chamada principal.
+- **Cena 02 (3.0s - 8.0s)**: Fixação da mensagem, transição de escala suave e fechamento com logotipo e chamada de ação.
+
+## 4. Skills Ativas no Estúdio
+{skills_summary}
+"#,
+            user_prompt = user_prompt,
+            project_type = project_type,
+            style = style,
+            skills_summary = if skills_summary.is_empty() { "Nenhuma skill específica selecionada" } else { skills_summary },
+        )
+    }
+
     pub async fn generate_creative_plan(
         app_data_dir: &Path,
         user_prompt: &str,
@@ -350,21 +394,23 @@ impl NvidiaAIProvider {
         style: &str,
         skills: &[CreativeSkill],
     ) -> AppResult<String> {
-        let key = SecureVault::get_secret(app_data_dir, NVIDIA_KEY_SECRET_NAME)?
-            .ok_or_else(|| AppError::Nvidia("Chave NVIDIA não configurada.".into()))?;
-
-        let client = reqwest::Client::builder()
-            .timeout(Duration::from_secs(60))
-            .build()
-            .map_err(|e| AppError::Internal(format!("Erro ao criar cliente HTTP: {}", e)))?;
-
         let mut skills_summary = String::new();
         for s in skills.iter().filter(|s| s.enabled) {
             skills_summary.push_str(&format!("- **{}**: {}\n", s.name, s.description));
         }
 
-        let system_instructions = format!(
-            r#"Você é o Diretor Criativo e Engenheiro de Motion Design do Arce Creative Studio.
+        let key_opt = SecureVault::get_secret(app_data_dir, NVIDIA_KEY_SECRET_NAME)?;
+
+        if let Some(key) = key_opt {
+            let trimmed_key = key.trim();
+            if !trimmed_key.is_empty() {
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(45))
+                    .build()
+                    .map_err(|e| AppError::Internal(format!("Erro ao criar cliente HTTP: {}", e)))?;
+
+                let system_instructions = format!(
+                    r#"Você é o Diretor Criativo e Engenheiro de Motion Design do ToolsOnDesk Creative Studio.
 O usuário é um criador ou profissional de negócios que NÃO sabe programar.
 Sua missão é interpretar a ideia do usuário e produzir uma resposta estruturada de alto padrão, contendo:
 1. Resumo do conceito visual e narrativa
@@ -379,47 +425,84 @@ Skills ativas no estúdio:
 Tipo de projeto: {}
 Estilo visual desejado: {}
 Responda de forma clara, profissional e motivadora em Português do Brasil."#,
-            skills_summary, project_type, style
-        );
+                    skills_summary, project_type, style
+                );
 
-        let payload = serde_json::json!({
-            "model": "meta/llama-3.3-70b-instruct",
-            "messages": [
-                {"role": "system", "content": system_instructions},
-                {"role": "user", "content": user_prompt}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 1500
-        });
+                let candidate_models = [
+                    "nvidia/llama-3.1-nemotron-70b-instruct",
+                    "nvidia/nemotron-4-340b-instruct",
+                    "mistralai/mistral-large-2-instruct",
+                    "meta/llama-3.2-90b-vision-instruct",
+                ];
 
-        let endpoint = format!("{}/chat/completions", NVIDIA_CHAT_BASE_URL);
-        let resp = client
-            .post(&endpoint)
-            .header(AUTHORIZATION, format!("Bearer {}", key))
-            .header(CONTENT_TYPE, "application/json")
-            .json(&payload)
-            .send()
-            .await
-            .map_err(|e| AppError::Nvidia(format!("Erro ao consultar NVIDIA Chat: {}", sanitize_error_text(&e.to_string()))))?;
+                let endpoint = format!("{}/chat/completions", NVIDIA_CHAT_BASE_URL);
+                let mut last_error = None;
 
-        if !resp.status().is_success() {
-            let err_txt = resp.text().await.unwrap_or_default();
-            return Err(AppError::Nvidia(format!("Falha no planejamento de IA (HTTP): {}", sanitize_error_text(&err_txt))));
+                for model_id in candidate_models {
+                    let payload = serde_json::json!({
+                        "model": model_id,
+                        "messages": [
+                            {"role": "system", "content": &system_instructions},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 1500
+                    });
+
+                    let resp = client
+                        .post(&endpoint)
+                        .header(AUTHORIZATION, format!("Bearer {}", trimmed_key))
+                        .header(CONTENT_TYPE, "application/json")
+                        .json(&payload)
+                        .send()
+                        .await;
+
+                    match resp {
+                        Ok(r) => {
+                            let status = r.status();
+                            if status.is_success() {
+                                let body: serde_json::Value = r.json().await
+                                    .map_err(|e| AppError::Nvidia(format!("Resposta inválida do chat NVIDIA: {}", e)))?;
+
+                                if let Some(content) = body
+                                    .get("choices")
+                                    .and_then(|c| c.get(0))
+                                    .and_then(|c| c.get("message"))
+                                    .and_then(|m| m.get("content"))
+                                    .and_then(|v| v.as_str())
+                                {
+                                    if !content.trim().is_empty() {
+                                        return Ok(content.to_string());
+                                    }
+                                }
+                            } else if status.as_u16() == 410 || status.as_u16() == 404 {
+                                // Model reached end-of-life or is unavailable on endpoint, try next candidate
+                                let err_txt = r.text().await.unwrap_or_default();
+                                last_error = Some(format!("Modelo {} indisponível (HTTP {}): {}", model_id, status.as_u16(), sanitize_error_text(&err_txt)));
+                                continue;
+                            } else if status.as_u16() == 401 {
+                                return Err(AppError::Nvidia(
+                                    "Chave de API NVIDIA inválida ou não autorizada (HTTP 401). Verifique sua chave nas configurações.".into()
+                                ));
+                            } else {
+                                let err_txt = r.text().await.unwrap_or_default();
+                                last_error = Some(format!("Falha no planejamento com modelo {} (HTTP {}): {}", model_id, status.as_u16(), sanitize_error_text(&err_txt)));
+                            }
+                        }
+                        Err(e) => {
+                            last_error = Some(format!("Erro de conexão com NVIDIA API ({}): {}", model_id, sanitize_error_text(&e.to_string())));
+                        }
+                    }
+                }
+
+                if let Some(err) = last_error {
+                    eprintln!("[ToolsOnDesk Warning] NVIDIA NIM não respondeu com sucesso: {}. Utilizando gerador nativo.", err);
+                }
+            }
         }
 
-        let body: serde_json::Value = resp.json().await
-            .map_err(|e| AppError::Nvidia(format!("Resposta inválida do chat NVIDIA: {}", e)))?;
-
-        let content = body
-            .get("choices")
-            .and_then(|c| c.get(0))
-            .and_then(|c| c.get("message"))
-            .and_then(|m| m.get("content"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("Não foi possível gerar o planejamento.")
-            .to_string();
-
-        Ok(content)
+        // Native offline-first fallback
+        Ok(Self::generate_local_plan(user_prompt, project_type, style, &skills_summary))
     }
 
     pub async fn generate_video(

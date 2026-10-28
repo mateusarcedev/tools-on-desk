@@ -832,7 +832,7 @@ mod tests {
             duration_sec: 15.0,
             prompt: Some("Promoção com preço animado".into()),
             style: Some("Publicitário".into()),
-            model: Some("meta/llama-3.3-70b-instruct".into()),
+            model: Some("nvidia/llama-3.1-nemotron-70b-instruct".into()),
             skills_used: vec!["kinetic-typography".into(), "motion-transitions".into()],
             data_json: "{}".into(),
             output_path: None,

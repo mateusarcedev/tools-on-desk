@@ -735,7 +735,7 @@ export const TauriService = {
       return {
         valid: true,
         message: 'Ambiente de desenvolvimento web',
-        available_models: ['meta/llama-3.3-70b-instruct', 'black-forest-labs/flux.1-schnell'],
+        available_models: ['nvidia/llama-3.1-nemotron-70b-instruct', 'black-forest-labs/flux.1-schnell'],
       };
     }
     return await invoke<NvidiaValidationResult>('validate_nvidia_key', { key });
@@ -745,10 +745,10 @@ export const TauriService = {
     if (!isTauri()) {
       return [
         {
-          id: 'meta/llama-3.3-70b-instruct',
-          name: 'Llama 3.3 70B Instruct',
+          id: 'nvidia/llama-3.1-nemotron-70b-instruct',
+          name: 'Llama 3.1 Nemotron 70B Instruct',
           category: 'llm',
-          provider: 'Meta / NVIDIA',
+          provider: 'NVIDIA / Meta',
           description: 'Modelo de raciocínio e redação criativa',
           context_length: 128000,
           supports_streaming: true,

@@ -247,24 +247,35 @@ export const CreativeStudioScreen: React.FC = () => {
         console.info('Plano de Motion Design gerado com sucesso:', plan.slice(0, 100));
       }
 
-      // Parse plan or apply template
+      // Detect duration if specified in prompt (e.g. "8 segundos")
+      const secMatch = motionPrompt.match(/(\d+)\s*(?:segundos|seg|s\b|seconds|sec)/i);
+      const targetDuration = secMatch ? Math.min(Math.max(parseFloat(secMatch[1]), 3), 60) : 8.0;
+
+      // Extract brand or punchy headline
+      const brandMatch = motionPrompt.match(/para\s+(?:a|o|os|as)?\s*([^,\.;\n]+)/i);
+      const headlineText = brandMatch
+        ? brandMatch[1].trim().toUpperCase()
+        : (motionPrompt.length > 35 ? motionPrompt.slice(0, 32).trim() + '...' : motionPrompt).toUpperCase();
+
+      // Apply composition
       setCurrentComposition((prev) => ({
         ...prev,
-        title: motionPrompt.slice(0, 30),
+        title: brandMatch ? brandMatch[1].trim() : motionPrompt.slice(0, 30),
+        duration_sec: targetDuration,
         scenes: [
           {
             id: 'sc-1',
             title: 'Cena Criada por IA',
             start_time: 0.0,
-            duration_sec: 6.0,
+            duration_sec: targetDuration,
             layers: [
               {
                 id: 'l-1',
                 layer_type: 'text',
                 name: 'Chamada Principal',
-                content: motionPrompt.toUpperCase(),
+                content: headlineText,
                 start_time: 0.3,
-                duration_sec: 5.5,
+                duration_sec: Math.max(targetDuration - 0.5, 1.0),
                 x: 0.1,
                 y: 0.4,
                 width: 0.8,

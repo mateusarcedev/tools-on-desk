@@ -213,7 +213,7 @@ Responsável pela inspeção não-bloqueante de arquivos de mídia via `ffprobe 
 | `validate_nvidia_key` | `apiKey: Option<String>` | `bool` | Valida credencial contra endpoints NVIDIA NIM |
 | `list_nvidia_models` | Nenhum | `Vec<NvidiaModelInfo>` | Lista modelos de linguagem, imagem e vídeo da NVIDIA |
 | `generate_creative_image` | `options: NvidiaImageGenOptions` | `NvidiaImageGenResult` | Gera imagens com FLUX.1/SD3.5 e salva em disco com sanitização |
-| `generate_creative_plan` | `briefing: String, style: String` | `String` | Gera plano criativo estruturado via Llama 3.3 70B |
+| `generate_creative_plan` | `briefing: String, style: String` | `String` | Gera plano criativo estruturado via Llama 3.1 Nemotron 70B com fallback |
 | `generate_creative_video` | `options: NvidiaVideoGenOptions` | `NvidiaVideoGenResult` | Dispara geração de vídeo generativo (Modo A) |
 | `list_creative_skills` | Nenhum | `Vec<CreativeSkill>` | Lista catálogo com as 16 skills embutidas |
 | `toggle_creative_skill` | `id: String, enabled: bool` | `()` | Habilita ou desabilita skill no catálogo |
