@@ -1,6 +1,9 @@
-# Biblioteca de Skills Criativas — Catálogo e Especificação
+# Biblioteca de Skills Criativas — Catálogo e Especificação — ToolsOnDesk (ex-Arce Tools)
 
-Este documento detalha as 16 skills nativas integradas ao **SkillManager** do Arce Tools (`src-tauri/src/engines/skills.rs`), projetadas segundo o padrão universal de agentes `SKILL.md`.
+Este documento detalha as 16 skills nativas integradas ao **SkillManager** do **ToolsOnDesk** (`src-tauri/src/engines/skills.rs`), projetadas segundo o padrão universal de agentes `SKILL.md`.
+
+> [!NOTE]
+> **Evolução de Exportação (Missão 07):** A partir da Missão 07, a exportação de skills para o sistema de arquivos local é roteada dinamicamente via `PathManager::skills_dir()`, residindo em `%LOCALAPPDATA%\ToolsOnDesk\skills\`.
 
 ---
 

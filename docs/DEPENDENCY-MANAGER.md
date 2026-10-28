@@ -1,31 +1,36 @@
-# ARCE TOOLS — Gerenciador de Dependências (`DependencyManager`)
+# ToolsOnDesk (ex-Arce Tools) — Gerenciador de Dependências (`DependencyManager`)
 
-O **DependencyManager** é o subsistema nativo em Rust do Arce Tools responsável pela descoberta, verificação de integridade, instalação assistida, atualização atômica e remoção segura de executáveis e bibliotecas externas necessárias para módulos específicos da aplicação.
+O **DependencyManager** é o subsistema nativo em Rust do **ToolsOnDesk** responsável pela descoberta, verificação de integridade, instalação assistida, atualização atômica e remoção segura de executáveis e bibliotecas externas necessárias para módulos específicos da aplicação.
+
+> [!NOTE]
+> **Evolução de Caminhos (Missão 07):** Na Missão 07, o diretório gerenciado primário passou a ser `%LOCALAPPDATA%\ToolsOnDesk\binaries\`, resolvido centralizadamente via `PathManager::binaries_dir()`. Para assegurar economia de banda aos usuários em upgrade, o motor implementa fallback automático para a pasta legada `%LOCALAPPDATA%\ArceTools\binaries\`.
 
 ---
 
 ## 1. Arquitetura e Princípios
 
 1. **Zero Configuração Manual**: O usuário final nunca precisa abrir terminal, PowerShell, configurar variáveis `PATH`, instalar Node.js/Python ou compilar binários.
-2. **Instalação Isolada por Usuário**: Os binários gerenciados são instalados exclusivamente no diretório `%LOCALAPPDATA%\ArceTools\binaries\` do usuário atual. Não são solicitadas permissões de administrador (UAC) e o sistema global não é alterado.
+2. **Instalação Isolada por Usuário**: Os binários gerenciados são instalados exclusivamente no diretório `%LOCALAPPDATA%\ToolsOnDesk\binaries\` do usuário atual. Não são solicitadas permissões de administrador (UAC) e o sistema global não é alterado.
 3. **Desacoplamento Modular**: Ferramentas 100% nativas em Rust (Imagens com Lanczos3, Poster Studio com geração vetorial de PDF 1.4 e fusão/divisão/compressão do Document Engine com lopdf e docx-rs) continuam operacionais mesmo que nenhum executável externo esteja presente.
 4. **Verificação Funcional Obrigatória**: Um binário nunca é considerado pronto apenas pela existência de um arquivo com seu nome no disco. O motor executa comandos controlados (`-version`, `--version`) com timeouts e validação de código de saída.
 
 ---
 
-## 2. Estratégia de Descoberta (Ordem de Resolução)
+## 2. Estratégia de Descoberta (Ordem de Resolução Atualizada)
 
 Quando uma operação solicita um utilitário (como `ffmpeg`, `ffprobe` ou `yt-dlp`), a busca segue a seguinte prioridade estrita:
 
 ```mermaid
 flowchart TD
-    Start["Início da Descoberta"] --> CheckManaged["1. Diretório Gerenciado\n(%LOCALAPPDATA%\\ArceTools\\binaries\\)"]
+    Start["Início da Descoberta"] --> CheckManaged["1. Diretório Gerenciado ToolsOnDesk\n(%LOCALAPPDATA%\\ToolsOnDesk\\binaries\\)"]
     CheckManaged -- Encontrado --> VerifyExec["Validação Funcional (--version)"]
-    CheckManaged -- Não encontrado --> CheckBundled["2. Diretório da Aplicação\n(./binaries/)"]
+    CheckManaged -- Não encontrado --> CheckLegacy["2. Fallback Gerenciado Arce Tools\n(%LOCALAPPDATA%\\ArceTools\\binaries\\)"]
+    CheckLegacy -- Encontrado --> VerifyExec
+    CheckLegacy -- Não encontrado --> CheckBundled["3. Diretório da Aplicação\n(./binaries/)"]
     CheckBundled -- Encontrado --> VerifyExec
-    CheckBundled -- Não encontrado --> CheckWinGet["3. Pacotes & Links WinGet\n(%LOCALAPPDATA%\\Microsoft\\WinGet\\...)"]
+    CheckBundled -- Não encontrado --> CheckWinGet["4. Pacotes & Links WinGet\n(%LOCALAPPDATA%\\Microsoft\\WinGet\\...)"]
     CheckWinGet -- Encontrado --> VerifyExec
-    CheckWinGet -- Não encontrado --> CheckPath["4. PATH do Sistema Operacional"]
+    CheckWinGet -- Não encontrado --> CheckPath["5. PATH do Sistema Operacional"]
     CheckPath -- Encontrado --> VerifyExec
     CheckPath -- Não encontrado --> Missing["Status: NotInstalled"]
 

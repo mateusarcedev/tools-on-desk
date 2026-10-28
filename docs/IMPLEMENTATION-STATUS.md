@@ -1,6 +1,9 @@
-# ARCE TOOLS — Status de Implementação
+# ToolsOnDesk (ex-Arce Tools) — Status de Implementação
 
-Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01, 02, 02.5, 03, 04, 05 e 06**.
+Documento de acompanhamento detalhado de fases, requisitos e conformidade das **Missões 01 a 07**.
+
+> [!NOTE]
+> **Histórico:** As Missões 01 a 06 foram implementadas e estabilizadas sob o nome **Arce Tools**. A partir da **Missão 07**, o software evoluiu para o nome de trabalho **ToolsOnDesk**, com infraestrutura de caminhos centralizada e migração atômica de dados.
 
 ---
 
@@ -23,7 +26,8 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | **Setup Center (Central de Configuração)**| 05 | Concluído | Assistente de 4 etapas (Boas-vindas, Verificação, Ferramentas, Pronto), persistência SQLite e atalhos |
 | **DependencyManager (Nativo Rust)** | 05 | Concluído | Descoberta em 4 níveis, instalação isolada em `%LOCALAPPDATA%`, proteção Zip Slip, SHA-256 e rollback atômico |
 | **Arce Creative Studio & IA** | 06 | Concluído | 8 sub-views, Briefing Generativo, StyleSelector, StoryboardApprover, AME Canvas 60 FPS, compilador FFmpeg MP4, Remotion TSX, NVIDIA NIM Provider, SecureVault, 16 Skills SKILL.md, OpenCode Sandbox |
-| **Testes Automatizados** | Todas | Concluído | 31 testes Vitest (frontend) + 26 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Rebranding & Migração ToolsOnDesk** | 07 | Concluído | Nome ToolsOnDesk, `com.toolsondesk.desktop`, `PathManager` em Rust, Migração transacional em 10 passos, SQLite Online Backup API, Windows DPAPI (`crypt32.dll`), zeroize de memória, zero dados deletados, modal React |
+| **Testes Automatizados** | Todas | Concluído | 34 testes Vitest (frontend) + 29 testes nativos Rust MSVC (backend) — 100% aprovados |
 
 ---
 
@@ -161,4 +165,44 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 - [x] 16 skills embutidas categorizadas (Design Gráfico, Motion Design, Vídeo, 3D e Qualidade).
 - [x] `OpenCodeManager`: Descoberta em PATH e diretórios de usuário, execução em sandbox invisível (`CREATE_NO_WINDOW`) e cancelamento imediato.
 - [x] Fallback orquestrado 100% nativo em Rust quando o OpenCode não estiver instalado.
+
+---
+
+## 5. Checklist Detalhado da Missão 07 (ToolsOnDesk Rebranding & Migração Segura)
+
+### 5.1 Identidade Visual e Metadados do Aplicativo
+- [x] Nome atualizado para **ToolsOnDesk** em `Cargo.toml`, `tauri.conf.json`, `package.json`, `index.html` e telas.
+- [x] Identificador Tauri atualizado para `com.toolsondesk.desktop`.
+- [x] Ícones vetoriais e rasterizados em todas as resoluções (`icon.ico`, `icon.icns`, `32x32.png`, `128x128.png`, `Square*Logo.png`).
+- [x] Símbolo `t/d` aplicado na TitleBar unificada e cabeçalhos.
+- [x] Zero referências a nomes pessoais em novos identificadores técnicos, diretórios ou metadados públicos.
+
+### 5.2 Camada Centralizada de Resolução de Caminhos (`PathManager`)
+- [x] Módulo `src-tauri/src/utils/paths.rs` centralizando todos os diretórios persistentes sob `%LOCALAPPDATA%\ToolsOnDesk\`.
+- [x] Descoberta automática de dados legados do Arce Tools (`has_legacy_data`, `legacy_database_file`, `legacy_vault_file`).
+- [x] Eliminação de qualquer caminho absoluto hardcoded no código fonte do backend e frontend.
+
+### 5.3 Máquina de Estados de Migração Transacional (`MigrationManager`)
+- [x] 10 etapas atômicas: `DISCOVERY`, `PREFLIGHT`, `BACKUP`, `COPY`, `DATABASE_MIGRATION`, `PATH_RECONCILIATION`, `CREDENTIAL_MIGRATION`, `VALIDATION`, `COMMIT`, `COMPLETED`.
+- [x] Cópia consistente do SQLite via **SQLite Online Backup API** (`rusqlite::backup::Backup`), sem corrupção de WAL.
+- [x] Preservação perpétua dos dados legados (nenhum dado da pasta antiga é deletado).
+- [x] Reconciliação automática de caminhos nas tabelas `tasks`, `creative_assets` e `creative_projects`.
+- [x] Geração de manifesto de auditoria (`manifest.json`) com contagem de registros e status.
+
+### 5.4 Cofre de Credenciais com Windows DPAPI
+- [x] Cifragem nativa do Windows via `CryptProtectData` e `CryptUnprotectData` (`crypt32.dll`).
+- [x] Entropia suplementar de proteção (`TOOLSONDESK_DPAPI_ENTROPY_v1`).
+- [x] Migração transparente e decifração em memória do cofre legado da M06.
+- [x] Rotina `zeroize_bytes` sobrescrevendo buffers voláteis após o uso.
+- [x] Sanitização estrita em logs via regex mascarando chaves com `[PROTECTED_NVIDIA_KEY]`.
+
+### 5.5 Interface do Usuário e Experiência de Onboarding
+- [x] Componente `MigrationModal.tsx` integrado no fluxo de montagem do React (`App.tsx`).
+- [x] Progresso visual em tempo real com lista de etapas, indicador animado e métricas resumidas pós-migração.
+- [x] Botão de detalhes técnicos expansíveis para transparência total com o usuário.
+
+### 5.6 Testes Automatizados
+- [x] Backend Rust: 29 testes nativos MSVC aprovados (100% de sucesso).
+- [x] Frontend React: 34 testes Vitest em 9 suítes aprovados (100% de sucesso).
+- [x] Compilação estrita: `pnpm build` limpo em 319 ms.
 

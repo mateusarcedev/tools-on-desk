@@ -1,6 +1,9 @@
-# ARCE TOOLS — Registro de Decisões de Arquitetura (ADRs)
+# ToolsOnDesk (ex-Arce Tools) — Registro de Decisões de Arquitetura (ADRs)
 
-Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **Arce Tools**, suas motivações, alternativas avaliadas e consequências técnicas (Missões 01 a 06).
+Este documento registra as principais decisões de arquitetura de software adotadas no desenvolvimento do **ToolsOnDesk** (Missões 01 a 07), suas motivações, alternativas avaliadas e consequências técnicas.
+
+> [!NOTE]
+> **Histórico:** As ADRs 001 a 023 foram formuladas durante as Missões 01 a 06 sob o nome **Arce Tools**. As ADRs 024 a 026 formalizam o rebranding, a camada de caminhos e a migração transacional introduzidas na **Missão 07** sob a nova identidade de trabalho **ToolsOnDesk**.
 
 ---
 
@@ -229,3 +232,32 @@ Este documento registra as principais decisões de arquitetura de software adota
 - **Consequências**:
   - O estúdio criativo funciona imediatamente "out-of-the-box" sem obrigar instalação de ferramentas de terceiros.
   - Total transparência das diretrizes de design aplicadas a cada geração.
+
+---
+
+## ADR 024: Rebranding para ToolsOnDesk e Nova Identidade `com.toolsondesk.desktop`
+- **Status**: Aprovado e Implementado (Missão 07)
+- **Contexto**: A identidade original continha nomes pessoais em identificadores técnicos e diretórios (`com.mateusarcedev.arce-tools`). Para preparar a base de código para distribuição profissional, adotou-se o nome de trabalho corporativo **ToolsOnDesk**.
+- **Decisão**: Rebranding técnico de `productName` para `ToolsOnDesk`, executável para `toolsondesk.exe`, identificador Tauri para `com.toolsondesk.desktop`, instalador NSIS para `ToolsOnDesk_0.1.0_x64-setup.exe` e novo monograma `t/d`.
+- **Consequências**: Eliminação de nomes pessoais em identificadores técnicos e metadados públicos, mantendo o histórico de crédito preservado.
+
+---
+
+## ADR 025: Camada Centralizada de Resolução de Caminhos (`PathManager`) e Preservação Perpétua
+- **Status**: Aprovado e Implementado (Missão 07)
+- **Contexto**: A mudança de identificador altera o diretório padrão retornado pelo Tauri de `%LOCALAPPDATA%\com.mateusarcedev.arce-tools` para `%LOCALAPPDATA%\com.toolsondesk.desktop`. Se não tratada com cuidado, essa mudança faria o usuário perder todas as tarefas, projetos, banco SQLite e dependências gerenciadas.
+- **Decisão**:
+  1. Criar o `PathManager` em Rust centralizando todos os diretórios persistentes sob `%LOCALAPPDATA%\ToolsOnDesk\`.
+  2. Implementar descoberta automática de dados legados do Arce Tools (`has_legacy_data`).
+  3. Adotar o princípio de **preservação perpétua**: nunca deletar a pasta ou banco legado no disco, realizando migração por cópia transacional.
+- **Consequências**: Zero risco de perda de dados; se o usuário precisar auditar ou reverter, os dados originais permanecem 100% preservados.
+
+---
+
+## ADR 026: Migração para Windows DPAPI (`crypt32.dll`) e SQLite Online Backup API
+- **Status**: Aprovado e Implementado (Missão 07)
+- **Contexto**: O cofre da M06 utilizava derivação XOR com entropia simples. Para garantir segurança de nível empresarial, as chaves devem ser protegidas por hardware/LSA do Windows. Além disso, a cópia do SQLite durante o uso com arquivos WAL ativos poderia gerar corrupção se feita por cópia de arquivo pura (`fs::copy`).
+- **Decisão**:
+  1. Utilizar a **Windows DPAPI** nativa (`CryptProtectData`/`CryptUnprotectData` via `crypt32.dll`) combinada com entropia estendida e zeroize de memória.
+  2. Utilizar a **SQLite Online Backup API** (`rusqlite::backup::Backup`) para criar snapshots atômicos e consistentes mesmo com o banco legado aberto em modo WAL.
+- **Consequências**: Segurança criptográfica nativa sem introduzir dependências pesadas externas e garantia de integridade estrutural no banco de dados.

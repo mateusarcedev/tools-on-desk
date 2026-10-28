@@ -1,21 +1,29 @@
-# Arce Tools
+# ToolsOnDesk
 
-**Arce Tools** é um aplicativo desktop multiferramentas, gratuito, offline-first, de alta performance e visualmente premium, construído com **Tauri 2**, **Rust**, **React 19** e **TypeScript**.
+> [!NOTE]
+> **Evolução do Projeto:** Desenvolvido, testado e consolidado nas Missões 01 a 06 como **Arce Tools**. A partir da **Missão 07**, o produto evoluiu para a identidade de trabalho **ToolsOnDesk**, com infraestrutura de dados desacoplada, cofre DPAPI e migração automática 100% segura.
 
-O design foi rigorosamente reproduzido a partir do protótipo oficial do **Claude Design**, mantendo fidelidade estrita às famílias tipográficas **Geist** e **Geist Mono**, tema escuro nativo com destaque em **verde-menta** (`#15F5BA`), tema claro correspondente, atalhos de teclado ágeis (`Ctrl+K`, `Ctrl+J`) e barra de título customizada unificada sem duplicação de bordas de janela.
+**ToolsOnDesk** é um aplicativo desktop multiferramentas, gratuito, offline-first, de alta performance e visualmente premium, construído com **Tauri 2**, **Rust**, **React 19** e **TypeScript**.
+
+O design foi rigorosamente construído com foco em produtividade criativa e utilitária, mantendo fidelidade estrita às famílias tipográficas **Geist** e **Geist Mono**, tema escuro nativo com destaque em **verde-menta** (`#15F5BA`), tema claro correspondente, atalhos de teclado ágeis (`Ctrl+K`, `Ctrl+J`) e barra de título customizada unificada sem duplicação de bordas de janela.
 
 ---
 
-## 📦 Distribuição Oficial Windows 11 (Missões 04 e 05)
+## 📦 Distribuição Oficial Windows 11 (Missões 04 a 07)
 
 O aplicativo conta com instalador nativo **NSIS** oficial gerado para arquitetura x64 com runtime WebView2 integrado do sistema:
 
-- **Instalador Oficial:** `src-tauri/target/release/bundle/nsis/Arce Tools_0.1.0_x64-setup.exe`
-- **Tamanho do Instalador:** **4,68 MB** (4.911.065 bytes)
-- **Hash SHA-256:** `609597D7793DC486825523D3C0EF79D8719298312AED731331749E4838F20496`
-- **Executável Principal:** `src-tauri/target/release/arce-tools.exe` (13,48 MB / 14.142.976 bytes)
-- **Modo de Instalação:** `currentUser` (%LOCALAPPDATA%\Programs\Arce Tools) — sem necessidade de permissões de administrador (UAC).
-- **Desinstalação:** Suporte a desinstalação limpa via Painel de Controle e Menu Iniciar, com preservação de dados e histórico no SQLite.
+- **Instalador Oficial:** `src-tauri/target/release/bundle/nsis/ToolsOnDesk_0.1.0_x64-setup.exe`
+- **Tamanho do Instalador:** **4,83 MB** (5.061.863 bytes)
+- **Hash SHA-256 do Instalador:** `A0CE89249AA8BE4DCFC79E602B5513AA060F53BE991279B04B2044D4D90894CE`
+- **Executável Principal:** `src-tauri/target/release/toolsondesk.exe` (13,98 MB / 14.662.144 bytes)
+- **Hash SHA-256 do Executável:** `CCE9A3CE1E80EEC8ABCF604BC8A6E573FE40D6EA91B8A44D2E1368FF465CEC68`
+- **Identificador Tauri:** `com.toolsondesk.desktop`
+- **Diretório de Instalação:** `%LOCALAPPDATA%\Programs\ToolsOnDesk\`
+- **Diretório de Dados:** `%LOCALAPPDATA%\ToolsOnDesk\`
+- **Modo de Instalação:** `currentUser` — sem necessidade de permissões de administrador (UAC).
+- **Desinstalação:** Suporte a desinstalação limpa via Painel de Controle e Menu Iniciar, com preservação integral de dados e histórico no SQLite.
+- **Transição Transparente:** Migração atômica automática de dados legados do Arce Tools no primeiro boot.
 
 ---
 
@@ -174,6 +182,21 @@ Medições realizadas em ambiente de produção com o binário release nativo:
   - Execução segura em sandbox com processos em segundo plano (`CREATE_NO_WINDOW`) e cancelamento atômico.
   - Fallback de orquestração 100% nativo em Rust garantindo funcionamento completo mesmo sem o OpenCode instalado.
 
+### 11. ToolsOnDesk: Rebranding, Migração Segura e DPAPI Vault (Missão 07)
+- **Evolução de Identidade:** Transição oficial para ToolsOnDesk (`toolsondesk.exe`, `com.toolsondesk.desktop`, `ToolsOnDesk_0.1.0_x64-setup.exe`).
+- **Camada Central de Resolução de Caminhos (`PathManager`):** Estrutura unificada e determinística em `%LOCALAPPDATA%\ToolsOnDesk\` eliminando qualquer menção a nomes pessoais ou caminhos hardcoded.
+- **Motor de Migração Transacional (`MigrationManager`):**
+  - 10 etapas atômicas: `DISCOVERY`, `PREFLIGHT`, `BACKUP`, `COPY`, `DATABASE_MIGRATION`, `PATH_RECONCILIATION`, `CREDENTIAL_MIGRATION`, `VALIDATION`, `COMMIT`, `COMPLETED`.
+  - Snapshot seguro do banco de dados legado via **SQLite Online Backup API** (`rusqlite::backup::Backup`), imune a locks do arquivo WAL.
+  - Reconciliação automática de caminhos gravados no banco SQLite para a nova estrutura.
+  - Preservação estrita dos dados legados originais em `%LOCALAPPDATA%\ArceTools` e `%LOCALAPPDATA%\com.mateusarcedev.arce-tools` (zero exclusão destrutiva).
+  - Emissão de manifesto de auditoria com hashes SHA-256 e contagens de tabelas (`manifest.json`).
+- **Cofre de Credenciais com Windows DPAPI:**
+  - Cifragem nativa do Windows (`CryptProtectData` e `CryptUnprotectData` via `crypt32.dll`) atrelada à sessão do usuário e entropia adicional.
+  - Migração em memória do cofre legado com limpeza forçada de buffers voláteis (`zeroize_bytes`).
+  - Proteção absoluta contra vazamento de chaves em logs (`[PROTECTED_NVIDIA_KEY]`).
+- **Experiência de Onboarding e Notificação Visual:** Modal React responsivo apresentando boas-vindas, etapas da migração, detalhes expansíveis e métricas resumidas.
+
 ---
 
 ## 🛠️ Stack Tecnológica
@@ -182,7 +205,8 @@ Medições realizadas em ambiente de produção com o binário release nativo:
 - **Linguagem Backend:** [Rust 1.99+ MSVC](https://www.rust-lang.org/)
 - **Frontend:** [React 19](https://react.dev/) + [TypeScript Strict](https://www.typescriptlang.org/)
 - **Bundler:** [Vite 8](https://vite.dev/)
-- **Banco de Dados Local:** SQLite com [rusqlite](https://crates.io/crates/rusqlite) (modo WAL)
+- **Banco de Dados Local:** SQLite com [rusqlite 0.32](https://crates.io/crates/rusqlite) (modo WAL + Online Backup API)
+- **Criptografia Nativa:** Windows DPAPI (`crypt32.dll`)
 - **Manipulação de PDF:** [lopdf 0.46](https://crates.io/crates/lopdf)
 - **Geração de Word (.docx):** [docx-rs 0.4](https://crates.io/crates/docx-rs)
 - **Acesso ao Clipboard do Sistema:** [arboard 3.7](https://crates.io/crates/arboard)
@@ -199,15 +223,15 @@ A base de código conta com cobertura completa em frontend e backend:
 ```bash
 # Execução dos testes de interface e componentes (Vitest)
 pnpm test
-# Resultado: 31/31 testes aprovados (100% de sucesso em 8 suítes)
+# Resultado: 34/34 testes aprovados (100% de sucesso em 9 suítes)
 
-# Verificação estrita de tipagem TypeScript
+# Verificação estrita de tipagem TypeScript e empacotamento Vite
 pnpm build
-# Resultado: 0 erros, compilação estrita limpa
+# Resultado: 0 erros, compilação estrita limpa (319 ms)
 
 # Execução dos testes unitários de backend nativo (Cargo MSVC)
 cargo test --lib
-# Resultado: 26/26 testes aprovados (100% de sucesso)
+# Resultado: 29/29 testes aprovados (100% de sucesso)
 
 # Verificação de linter e estilo Rust
 cargo clippy --lib -- -D warnings
@@ -218,12 +242,12 @@ cargo clippy --lib -- -D warnings
 
 ## 🏗️ Como Gerar os Binários e o Instalador
 
-### 1. Build do Executável Néctar (`.exe` simples):
+### 1. Build do Executável Simples (`.exe`):
 ```bash
 pnpm build
 cargo build --release
 ```
-O executável de produção é gerado em `src-tauri/target/release/arce-tools.exe`.
+O executável de produção é gerado em `src-tauri/target/release/toolsondesk.exe`.
 
 ### 2. Build do Instalador Oficial NSIS (`.exe` com assistente de instalação):
 ```powershell
@@ -231,4 +255,4 @@ pnpm build
 cargo tauri build
 ```
 O instalador é gerado em:
-`src-tauri/target/release/bundle/nsis/Arce Tools_0.1.0_x64-setup.exe`
+`src-tauri/target/release/bundle/nsis/ToolsOnDesk_0.1.0_x64-setup.exe`

@@ -1,38 +1,42 @@
-# Validação do Instalador Windows (NSIS) — Arce Tools
+# Validação do Instalador Windows (NSIS) — ToolsOnDesk (ex-Arce Tools)
 
-Este documento relata a validação técnica do pacote executável gerado para instalação e distribuição no Windows 11 x64.
+Este documento relata a validação técnica dos pacotes executáveis gerados para instalação e distribuição no Windows 11 x64, abrangendo a evolução da Missão 04 até a **Missão 07 (ToolsOnDesk)**.
 
----
-
-## 1. Identificação do Pacote Gerado
-
-| Propriedade | Valor Medido |
-|---|---|
-| **Nome do Arquivo** | `Arce Tools_0.1.0_x64-setup.exe` |
-| **Localização de Build** | `src-tauri/target/release/bundle/nsis/Arce Tools_0.1.0_x64-setup.exe` |
-| **Tamanho do Arquivo** | **4.911.065 bytes** (4,68 MB) |
-| **Tecnologia de Empacotamento** | Nullsoft Scriptable Install System (NSIS 3.13) via Tauri 2 Bundler |
-| **Arquitetura-Alvo** | Windows x64 (MSVC ABI) |
-| **Versão do Produto** | 0.1.0 |
-| **Identificador Tauri** | `com.mateusarcedev.arce-tools` |
-| **Assinatura / Hash SHA-256** | `609597D7793DC486825523D3C0EF79D8719298312AED731331749E4838F20496` |
-| **Modo de Instalação** | `currentUser` (%LOCALAPPDATA%\Programs\Arce Tools) — sem telas UAC |
-| **Status de Assinatura Digital** | Não assinado comercialmente (auto-contido para validação local; SmartScreen exibirá aviso em downloads externos até aquisição de certificado EV/OV) |
+> [!NOTE]
+> **Evolução de Pacote:** O instalador inicial foi validado na Missão 04 sob o nome `Arce Tools_0.1.0_x64-setup.exe`. Na **Missão 07**, o empacotamento foi migrado para a identidade corporativa `ToolsOnDesk_0.1.0_x64-setup.exe` com identificador `com.toolsondesk.desktop`, garantindo coexistência pacífica e migração de dados automatizada no primeiro boot.
 
 ---
 
-## 2. Estrutura e Comportamento da Instalação
+## 1. Comparativo de Identificação dos Pacotes
+
+| Propriedade | Versão Legada (M04–M06) | Versão Atual ToolsOnDesk (M07) |
+|---|---|---|
+| **Nome do Instalador** | `Arce Tools_0.1.0_x64-setup.exe` | `ToolsOnDesk_0.1.0_x64-setup.exe` |
+| **Tamanho do Instalador** | 4.911.065 bytes (4,68 MB) | **5.061.863 bytes (4,83 MiB)** |
+| **Hash SHA-256 do Instalador** | `609597D7793DC486825523D3C0EF79D8719298312AED731331749E4838F20496` | `A0CE89249AA8BE4DCFC79E602B5513AA060F53BE991279B04B2044D4D90894CE` |
+| **Executável Principal** | `arce-tools.exe` (14.142.976 bytes) | `toolsondesk.exe` (**14.662.144 bytes**) |
+| **Hash SHA-256 do Executável** | - | `CCE9A3CE1E80EEC8ABCF604BC8A6E573FE40D6EA91B8A44D2E1368FF465CEC68` |
+| **Identificador Tauri** | `com.mateusarcedev.arce-tools` | `com.toolsondesk.desktop` |
+| **Diretório de Instalação** | `%LOCALAPPDATA%\Programs\Arce Tools\` | `%LOCALAPPDATA%\Programs\ToolsOnDesk\` |
+| **Diretório de Dados AppData** | `%LOCALAPPDATA%\ArceTools\` | `%LOCALAPPDATA%\ToolsOnDesk\` |
+| **Atalho Menu Iniciar** | `Arce Tools.lnk` | `ToolsOnDesk.lnk` |
+| **Modo de Instalação NSIS** | `currentUser` (sem UAC) | `currentUser` (sem UAC) |
+| **Chave de Desinstalação** | `HKCU\...\Uninstall\Arce Tools` | `HKCU\...\Uninstall\ToolsOnDesk` |
+
+---
+
+## 2. Estrutura e Comportamento da Instalação ToolsOnDesk
 
 ### 2.1. Diretório de Instalação Padrão
 O instalador é configurado como **instalação por usuário** (sem necessidade de privilégios de administrador UAC para instalar):
-- Caminho: `%LOCALAPPDATA%\Programs\Arce Tools\`
-- Executável Principal: `arce-tools.exe` (14.142.976 bytes)
-- Recursos embutidos: Assets web compilados (`dist/`), ícones (`.ico`), fontes Geist e Geist Mono.
+- Caminho: `%LOCALAPPDATA%\Programs\ToolsOnDesk\`
+- Executável Principal: `toolsondesk.exe`
+- Recursos embutidos: Assets web compilados (`dist/`), novos ícones `t/d`, fontes Geist e Geist Mono.
 
 ### 2.2. Atalhos e Registro no Sistema
-- **Menu Iniciar:** Cria atalho em `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Arce Tools.lnk`.
-- **Desinstalador Oficial:** Cria `Uninstall Arce Tools.exe` e registra entrada nativa no painel **Aplicativos Instalados** do Windows 11.
-- **Desinstalação Limpa:** Remove completamente os binários e atalhos sem deixar chaves espúrias no registro do sistema. Dados pessoais e banco SQLite em `%LOCALAPPDATA%\ArceTools` são preservados por padrão.
+- **Menu Iniciar:** Cria atalho em `%APPDATA%\Microsoft\Windows\Start Menu\Programs\ToolsOnDesk.lnk`.
+- **Desinstalador Oficial:** Cria `Uninstall ToolsOnDesk.exe` e registra entrada nativa no painel **Aplicativos Instalados** do Windows 11.
+- **Desinstalação Limpa e Segura:** Remove os binários e atalhos de ToolsOnDesk. O desinstalador da versão antiga do Arce Tools pode ser executado a qualquer momento sem afetar a instalação ou os dados do ToolsOnDesk.
 
 ---
 

@@ -1,12 +1,15 @@
-# ARCE TOOLS — Arquitetura do Sistema
+# ToolsOnDesk (ex-Arce Tools) — Arquitetura do Sistema
 
-Documento de especificação técnica e arquitetura da aplicação desktop **Arce Tools** (Missões 01, 02 e 02.5).
+Documento de especificação técnica e arquitetura da aplicação desktop **ToolsOnDesk** (Missões 01 a 07).
+
+> [!NOTE]
+> **Histórico:** Desenvolvido originalmente como **Arce Tools** (M01–M06). A partir da **Missão 07**, o projeto adotou a identidade de trabalho **ToolsOnDesk**, com identificador `com.toolsondesk.desktop` e infraestrutura de caminhos centralizada.
 
 ---
 
 ## 1. Visão Geral
 
-O **Arce Tools** é um aplicativo desktop multiferramentas offline-first, de alta fidelidade visual e baixo consumo de recursos, projetado nativamente para Windows 11 (x64) com suporte para Linux e macOS.
+O **ToolsOnDesk** é um aplicativo desktop multiferramentas offline-first, de alta fidelidade visual e baixo consumo de recursos, projetado nativamente para Windows 11 (x64) com suporte para Linux e macOS.
 
 A arquitetura adota o modelo desacoplado do **Tauri 2**, separando estritamente a interface do usuário (Webview2 / React 19) do motor de execução nativo de alto desempenho (Rust / Tokio / SQLite) e dos motores externos especializados (**FFmpeg**, **ffprobe**, **yt-dlp**).
 
@@ -322,4 +325,67 @@ flowchart TD
 ### 6.3 Biblioteca de 16 Skills Nativas e OpenCode
 - **Padrão SKILL.md**: Cada skill possui manifesto completo com categoria, critérios de qualidade técnica, restrições e exemplos.
 - **OpenCode Sandboxed**: Descoberta assíncrona do binário no sistema, execução com `CREATE_NO_WINDOW` em pasta de workspace isolada e cancelamento atômico.
-- **Orquestrador Fallback**: Se o OpenCode não estiver disponível na máquina, o Arce Tools utiliza seu planejador nativo em Rust garantindo 100% de disponibilidade.
+- **Orquestrador Fallback**: Se o OpenCode não estiver disponível na máquina, o ToolsOnDesk utiliza seu planejador nativo em Rust garantindo 100% de disponibilidade.
+
+---
+
+## 7. Arquitetura da Missão 07: Rebranding, Camada de Caminhos e Migração Transacional
+
+```mermaid
+flowchart TD
+    subgraph LegacyData ["Dados Legados (Arce Tools)"]
+        OldDB["%LOCALAPPDATA%\\ArceTools\\arce_tools.db (+ WAL/SHM)"]
+        OldVault["%LOCALAPPDATA%\\ArceTools\\.vault_keys.enc"]
+        OldBin["%LOCALAPPDATA%\\ArceTools\\binaries\\"]
+        OldWork["%LOCALAPPDATA%\\ArceTools\\workspace\\"]
+        OldAssets["%LOCALAPPDATA%\\ArceTools\\assets\\"]
+    end
+
+    subgraph PathMgr ["PathManager (utils/paths.rs)"]
+        Root["%LOCALAPPDATA%\\ToolsOnDesk\\"]
+        Discovery["has_legacy_data() / legacy_*_dir()"]
+    end
+
+    subgraph MigStateMachine ["MigrationManager (storage/migration.rs)"]
+        S1["1. DISCOVERY"] --> S2["2. PREFLIGHT"]
+        S2 --> S3["3. BACKUP (SQLite Online Backup)"]
+        S3 --> S4["4. COPY (Assets, Projects, Skills)"]
+        S4 --> S5["5. DATABASE_MIGRATION"]
+        S5 --> S6["6. PATH_RECONCILIATION (/ArceTools/ -> /ToolsOnDesk/)"]
+        S6 --> S7["7. CREDENTIAL_MIGRATION (M06 -> Windows DPAPI)"]
+        S7 --> S8["8. VALIDATION (Integrity Check)"]
+        S8 --> S9["9. COMMIT (manifest.json)"]
+        S9 --> S10["10. COMPLETED"]
+    end
+
+    subgraph NewData ["Estrutura Nova (ToolsOnDesk)"]
+        NewDB["%LOCALAPPDATA%\\ToolsOnDesk\\database\\toolsondesk.db"]
+        NewVault["%LOCALAPPDATA%\\ToolsOnDesk\\vault\\credentials.enc (DPAPI)"]
+        NewBin["%LOCALAPPDATA%\\ToolsOnDesk\\binaries\\"]
+        NewWork["%LOCALAPPDATA%\\ToolsOnDesk\\workspace\\"]
+        NewAssets["%LOCALAPPDATA%\\ToolsOnDesk\\assets\\"]
+        Manifest["%LOCALAPPDATA%\\ToolsOnDesk\\manifest.json"]
+    end
+
+    LegacyData --> Discovery
+    Discovery --> MigStateMachine
+    MigStateMachine --> NewData
+```
+
+### 7.1 Camada Centralizada `PathManager`
+- Nenhuma string de caminho persistente é hardcoded no código da aplicação.
+- Todos os caminhos convergem para `%LOCALAPPDATA%\ToolsOnDesk\`:
+  - `database_file()`: `.../database/toolsondesk.db`
+  - `vault_file()`: `.../vault/credentials.enc`
+  - `binaries_dir()`: `.../binaries/` (com fallback seguro para o legado)
+  - `workspace_dir()`, `projects_dir()`, `assets_dir()`, `skills_dir()`, `backups_dir()`, `cache_dir()`, `logs_dir()`.
+
+### 7.2 Windows DPAPI SecureVault
+- Eliminação do mecanismo de criptografia anterior em favor da API nativa do Windows:
+  - `CryptProtectData` e `CryptUnprotectData` via `crypt32.dll`.
+  - Cifragem vinculada diretamente às credenciais de logon do usuário e entropia `TOOLSONDESK_DPAPI_ENTROPY_v1`.
+  - Função de higienização de memória `zeroize_bytes` sobrescrevendo vetores de segredos em RAM.
+
+### 7.3 SQLite Online Backup API
+- Migração do banco transacional via `rusqlite::backup::Backup`, permitindo cópia de alta fidelidade sem corrupção mesmo que conexões legadas estejam em modo WAL.
+- Preservação perpétua dos dados legados originais (nenhuma deleção é executada na pasta antiga).

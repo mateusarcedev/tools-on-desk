@@ -1,6 +1,9 @@
-# Instruções para Agentes de IA e Desenvolvedores — ARCE TOOLS
+# Instruções para Agentes de IA e Desenvolvedores — ToolsOnDesk (ex-Arce Tools)
 
-Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **Arce Tools** (Missões 01 a 06).
+Este documento define regras obrigatórias de arquitetura, padrões de código, estilo visual e procedimentos para qualquer IA ou desenvolvedor que for manter ou expandir o **ToolsOnDesk** (Missões 01 a 07).
+
+> [!NOTE]
+> **Histórico de Identidade:** O aplicativo foi desenvolvido e estabilizado das Missões 01 a 06 com o nome **Arce Tools**. A partir da **Missão 07**, o produto evoluiu para o nome de trabalho **ToolsOnDesk**, com identificador `com.toolsondesk.desktop`, migração automática de dados e proteção de credenciais nativa via Windows DPAPI. Todas as diretrizes visuais e arquiteturais originais foram 100% mantidas.
 
 ---
 
@@ -64,6 +67,15 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
    - Toda execução de binários do OpenCode deve ocorrer com `CREATE_NO_WINDOW = 0x08000000` em um diretório de workspace isolado.
    - Caso o OpenCode não esteja instalado, utilize o orquestrador nativo em Rust (`orchestrate_rust_fallback`) para garantir funcionamento ininterrupto de todas as ferramentas criativas.
 
+10. **Resolução Centralizada de Caminhos (`PathManager`) e Migração de Dados (Missão 07)**:
+   - **NUNCA codifique caminhos absolutos ou strings de diretórios persistentes no código**. Todos os acessos a bancos, pastas de trabalho, projetos, assets, credenciais e binários DEVEM passar pelo `PathManager` (`src-tauri/src/utils/paths.rs`).
+   - Todos os dados novos residem exclusivamente em `%LOCALAPPDATA%\ToolsOnDesk\`.
+   - Dados legados em `%LOCALAPPDATA%\com.mateusarcedev.arce-tools\` e `%LOCALAPPDATA%\ArceTools\` NUNCA devem ser deletados automaticamente.
+   - Qualquer migração deve ser transacional, idempotente e verificável via hash SHA-256 e manifesto de auditoria (`manifest.json`).
+11. **Proteção de Credenciais com Windows DPAPI (Missão 07)**:
+   - Credenciais de API são protegidas via Windows Data Protection API (`CryptProtectData`/`CryptUnprotectData` via `crypt32.dll`) com entropia suplementar (`TOOLSONDESK_DPAPI_ENTROPY_v1`).
+   - Buffers de memória contendo segredos em texto puro devem ser sobrescritos (`zeroize_bytes`) imediatamente após o uso.
+
 ### 2.2 Frontend React (`src/`)
 1. **TypeScript Estrito**:
    - `strict: true` ativado no `tsconfig.json`.
@@ -95,5 +107,5 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
     cargo build --release
     ```
 - **Testes Automatizados Obrigatórios**:
-  - Frontend: `pnpm test` (31 testes Vitest em 8 suítes)
-  - Backend: `cargo test` (26 testes nativos MSVC)
+  - Frontend: `pnpm test` (34 testes Vitest em 9 suítes)
+  - Backend: `cargo test` (29 testes nativos MSVC)

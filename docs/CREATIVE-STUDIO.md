@@ -1,6 +1,9 @@
-# Arce Creative Studio — Visão Geral e Guia de Uso
+# ToolsOnDesk Creative Studio (ex-Arce Creative Studio) — Visão Geral e Guia de Uso
 
-O **Arce Creative Studio** é o módulo criativo com inteligência artificial integrado ao **Arce Tools** (Missão 06). Foi projetado especificamente para que criadores de conteúdo, profissionais de marketing, empreendedores e designers produzam peças visuais, motion graphics, vídeos comerciais e roteiros persuasivos sem a necessidade de conhecimento prévio em programação ou ferramentas de linha de comando.
+O **ToolsOnDesk Creative Studio** é o módulo criativo com inteligência artificial integrado ao **ToolsOnDesk** (Missões 06 e 07). Foi projetado especificamente para que criadores de conteúdo, profissionais de marketing, empreendedores e designers produzam peças visuais, motion graphics, vídeos comerciais e roteiros persuasivos sem a necessidade de conhecimento prévio em programação ou ferramentas de linha de comando.
+
+> [!NOTE]
+> **Evolução de Marca e Infraestrutura (Missão 07):** Originalmente lançado como *Arce Creative Studio*, o estúdio foi renomeado para **ToolsOnDesk Creative Studio**. Seus dados de persistência foram transferidos com segurança para `%LOCALAPPDATA%\ToolsOnDesk\projects\` e `%LOCALAPPDATA%\ToolsOnDesk\assets\`, e suas chaves de API da NVIDIA foram promovidas para proteção com **Windows DPAPI**.
 
 ---
 
