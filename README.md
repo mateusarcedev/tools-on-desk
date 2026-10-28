@@ -16,7 +16,18 @@
 [![macOS](https://img.shields.io/badge/macOS-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
 [![Android](https://img.shields.io/badge/Android-futuro-8C9B96?style=flat-square&labelColor=141A1C)](#roadmap)
 
-**[Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Instalação](#instala%C3%A7%C3%A3o) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
+**[Download](#download-versão-portátil-para-testes) · [Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
+
+<p align="center">
+  <br />
+  <a href="https://github.com/mateusarcedev/tools-on-desk/releases/download/v0.1.0/toolsondesk.exe">
+    <img src="https://img.shields.io/badge/⬇%20Baixar%20toolsondesk.exe-Portátil%20(14.6%20MB)-15F5BA?style=for-the-badge&logo=windows&logoColor=0B0F10&labelColor=141A1C" alt="Baixar toolsondesk.exe" />
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://github.com/mateusarcedev/tools-on-desk/releases/download/v0.1.0/toolsondesk-windows-x64-portable.zip">
+    <img src="https://img.shields.io/badge/⬇%20Baixar%20Pacote%20ZIP-Portátil%20(6.6%20MB)-15F5BA?style=for-the-badge&logo=zip&logoColor=15F5BA&labelColor=141A1C" alt="Baixar pacote ZIP" />
+  </a>
+</p>
 
 </div>
 
@@ -103,30 +114,36 @@ O objetivo do ToolsOnDesk é oferecer uma experiência **desktop nativa em Windo
 
 ---
 
-## Instalação e Testes Rápidos
+## Download (Versão Portátil para Testes)
 
-### Windows — Opções de Execução para Testes Internos
+Para que qualquer pessoa possa testar o **ToolsOnDesk** imediatamente sem precisar passar pelo instalador do Windows, a versão portátil auto-contida está disponível para download direto:
 
-Para facilitar testes ágeis durante o desenvolvimento sem a necessidade de instalar ou alterar o registro do sistema, disponibilizamos o executável direto:
+| Arquivo | Formato | Tamanho | Descrição | Link de Download |
+|---|:---:|:---:|---|:---:|
+| **`toolsondesk.exe`** | Executável Windows (x64) | **14,6 MB** | Executável único standalone. Não requer instalação, basta baixar e abrir. | [**⬇ Baixar .exe direto**](https://github.com/mateusarcedev/tools-on-desk/releases/download/v0.1.0/toolsondesk.exe) |
+| **`toolsondesk-windows-x64-portable.zip`** | Pacote ZIP | **6,67 MB** | Arquivo compactado contendo o executável e o manual de testes rápidos. | [**⬇ Baixar Pacote .zip**](https://github.com/mateusarcedev/tools-on-desk/releases/download/v0.1.0/toolsondesk-windows-x64-portable.zip) |
 
-#### Opção A: Executável Portátil / Standalone (Recomendado para Testes)
-- Localização no repositório: `release-standalone/toolsondesk.exe`
-- Localização na Área de Trabalho: `Desktop/ToolsOnDesk-Portable/toolsondesk.exe`
-- **Como usar:** Basta dar um duplo clique em `toolsondesk.exe`.
-- Não requer instalação, não precisa de privilégios de administrador (UAC) e todos os assets visuais, fontes e telas estão 100% embutidos no binário.
-- Os dados do usuário, banco SQLite e projetos são mantidos em `%LOCALAPPDATA%\ToolsOnDesk\`.
+#### Como Executar e Testar:
+1. Baixe o executável **[`toolsondesk.exe`](https://github.com/mateusarcedev/tools-on-desk/releases/download/v0.1.0/toolsondesk.exe)**.
+2. Dê um duplo clique no arquivo para abrir o aplicativo.
+3. **Não requer privilégios de administrador (UAC)** e não faz alterações no Registro do sistema operacional.
+4. Toda a interface visual, fontes Geist e motores nativos estão 100% incorporados no executável.
+5. Seus dados, banco SQLite, tarefas e projetos são salvos com segurança em `%LOCALAPPDATA%\ToolsOnDesk\`.
+6. Se você já usava o Arce Tools, seus dados serão migrados automaticamente na primeira abertura.
 
-#### Opção B: Instalador Completo NSIS (Para Validação do Ciclo de Instalação)
-1. Obtenha o instalador **`ToolsOnDesk_0.1.0_x64-setup.exe`** (`src-tauri/target/release/bundle/nsis/`).
-2. Execute o instalador (instalação por usuário, dispensando telas UAC de administrador).
-3. Cria atalhos no Menu Iniciar e registro no painel *Aplicativos Instalados* do Windows.
+---
 
-#### Primeiro Uso e Migração:
-- Se você já utilizava o aplicativo anterior (**Arce Tools**), o **MigrationModal** confirmará a migração transparente de seus dados, histórico e chaves.
+## Instalação e Testes Avançados
+
+### Opções de Execução
+
+- **Versão Portátil (Recomendada para Testes):** Disponível para download direto acima ou localmente na pasta `release-standalone/toolsondesk.exe`.
+- **Instalador Completo NSIS (Para Validação do Instalador):** Disponível no repositório em `src-tauri/target/release/bundle/nsis/ToolsOnDesk_0.1.0_x64-setup.exe` (instalação por usuário dispensando UAC, com criação de atalhos no Menu Iniciar).
+
+#### Primeiro Uso e Configuração:
+- O **MigrationModal** confirma a migração transparente caso existam dados legados.
 - O **Setup Center** guiará o diagnóstico e o download opcional de utilitários externos (`FFmpeg`, `ffprobe`, `yt-dlp`).
 - No **Creative Studio → Configurações IA**, é possível configurar sua chave NVIDIA NIM. Ferramentas locais operam 100% offline.
-
-> O aplicativo não possui download público até a formalização marcária no INPI, auditoria de licenças de terceiros e aquisição de certificado digital comercial de assinatura de código.
 
 ### Linux e macOS
 
