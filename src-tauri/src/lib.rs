@@ -21,17 +21,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
-            // Determine database directory
-            let app_data = app.path().app_data_dir().unwrap_or_else(|_| {
-                std::env::current_dir()
-                    .unwrap_or_else(|_| std::path::PathBuf::from("."))
-                    .join("data")
-            });
+            // Ensure all ToolsOnDesk directories exist
+            let _ = crate::utils::PathManager::ensure_all_dirs();
+            let db_path = crate::utils::PathManager::database_file();
 
-            let _ = std::fs::create_dir_all(&app_data);
-            let db_path = app_data.join("arce_tools.db");
+            // Automatic seamless migration if legacy data exists and target DB is not yet created
+            if crate::utils::PathManager::has_legacy_data() && !db_path.exists() {
+                let _ = crate::storage::MigrationManager::run_migration(Some(app.handle()));
+            }
 
-            let db = Db::new(&db_path).expect("Falha ao inicializar o banco de dados SQLite");
+            let db = Db::new(&db_path).expect("Falha ao inicializar o banco de dados SQLite do ToolsOnDesk");
             let mut task_mgr = TaskManager::new(db.clone(), Some(app.handle().clone()));
             task_mgr.set_app_handle(app.handle().clone());
 
@@ -117,6 +116,9 @@ pub fn run() {
             commands::render_motion_project,
             commands::export_remotion_project,
             commands::list_creative_templates,
+            commands::get_migration_status,
+            commands::run_migration,
+            commands::dismiss_migration_prompt,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

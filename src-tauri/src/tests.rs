@@ -940,4 +940,123 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    #[test]
+    fn test_path_manager_structure() {
+        let root = crate::utils::PathManager::app_root_dir();
+        assert!(root.to_string_lossy().contains("ToolsOnDesk"));
+
+        let db_file = crate::utils::PathManager::database_file();
+        assert!(db_file.to_string_lossy().ends_with("toolsondesk.db"));
+
+        let bin_dir = crate::utils::PathManager::binaries_dir();
+        assert!(bin_dir.to_string_lossy().ends_with("binaries"));
+
+        let vault_file = crate::utils::PathManager::vault_file();
+        assert!(vault_file.to_string_lossy().ends_with(".vault_dpapi.enc"));
+    }
+
+    #[test]
+    fn test_migration_manager_idempotence_and_preservation() {
+        let temp_dir = std::env::temp_dir().join(format!("toolsondesk_test_migration_{}", uuid::Uuid::new_v4()));
+        let legacy_dir = temp_dir.join("legacy_app_data");
+        let target_dir = temp_dir.join("target_app_data");
+        std::fs::create_dir_all(&legacy_dir).unwrap();
+        std::fs::create_dir_all(&target_dir).unwrap();
+
+        let legacy_db_file = legacy_dir.join("arce_tools.db");
+        let target_db_file = target_dir.join("toolsondesk.db");
+
+        // 1. Create populated legacy database
+        let legacy_db = crate::storage::Db::new(&legacy_db_file).unwrap();
+        let project = crate::domain::CreativeProject {
+            id: "proj-legacy-1".into(),
+            title: "Vídeo Promocional Legado".into(),
+            project_type: "motion".into(),
+            aspect_ratio: "16:9".into(),
+            width: 1920,
+            height: 1080,
+            fps: 60,
+            duration_sec: 5.0,
+            prompt: Some("Criar logo animado".into()),
+            style: Some("Publicitário".into()),
+            model: Some("Llama 3.3".into()),
+            skills_used: vec!["logo-animation".into()],
+            data_json: "{}".into(),
+            output_path: Some("C:\\Users\\User\\AppData\\Local\\ArceTools\\workspace\\out.mp4".into()),
+            thumbnail_path: None,
+            status: "completed".into(),
+            created_at: "2026-10-28T12:00:00Z".into(),
+            updated_at: "2026-10-28T12:00:00Z".into(),
+        };
+        legacy_db.insert_creative_project(&project).unwrap();
+
+        let asset = crate::domain::CreativeAsset {
+            id: "asset-legacy-1".into(),
+            project_id: Some("proj-legacy-1".into()),
+            name: "logo.png".into(),
+            asset_type: "image".into(),
+            file_path: "C:\\Users\\User\\AppData\\Local\\ArceTools\\workspace\\logo.png".into(),
+            file_size_bytes: 4096,
+            width: Some(512),
+            height: Some(512),
+            duration_sec: None,
+            mime_type: Some("image/png".into()),
+            created_at: "2026-10-28T12:00:00Z".into(),
+        };
+        legacy_db.insert_creative_asset(&asset).unwrap();
+
+        legacy_db.set_preference("user_theme", "dark").unwrap();
+
+        // 2. Perform direct cross-database copy with backup simulation
+        let backup_file = target_dir.join("arce_tools_backup.db");
+        {
+            let src_conn = rusqlite::Connection::open(&legacy_db_file).unwrap();
+            let mut dst_conn = rusqlite::Connection::open(&backup_file).unwrap();
+            let backup = rusqlite::backup::Backup::new(&src_conn, &mut dst_conn).unwrap();
+            backup.run_to_completion(100, std::time::Duration::from_millis(10), None).unwrap();
+        }
+
+        let target_db = crate::storage::Db::new(&target_db_file).unwrap();
+        {
+            let target_conn = rusqlite::Connection::open(&target_db_file).unwrap();
+            target_conn.execute_batch(&format!(
+                "ATTACH DATABASE '{}' AS legacy;",
+                backup_file.to_string_lossy().replace('\\', "/")
+            )).unwrap();
+
+            target_conn.execute("INSERT OR IGNORE INTO creative_projects SELECT * FROM legacy.creative_projects;", []).unwrap();
+            target_conn.execute("INSERT OR IGNORE INTO creative_assets SELECT * FROM legacy.creative_assets;", []).unwrap();
+            target_conn.execute("INSERT OR IGNORE INTO preferences SELECT * FROM legacy.preferences;", []).unwrap();
+            target_conn.execute_batch("DETACH DATABASE legacy;").unwrap();
+        }
+
+        // 3. Verify data preservation
+        let projects = target_db.list_creative_projects(None).unwrap();
+        assert_eq!(projects.len(), 1);
+        assert_eq!(projects[0].title, "Vídeo Promocional Legado");
+
+        let assets = target_db.list_creative_assets(None).unwrap();
+        assert_eq!(assets.len(), 1);
+        assert_eq!(assets[0].name, "logo.png");
+
+        let theme_pref = target_db.get_preference("user_theme").unwrap();
+        assert_eq!(theme_pref, Some("dark".to_string()));
+
+        // 4. Test idempotence: executing again does not duplicate or fail
+        {
+            let target_conn = rusqlite::Connection::open(&target_db_file).unwrap();
+            target_conn.execute_batch(&format!(
+                "ATTACH DATABASE '{}' AS legacy;",
+                backup_file.to_string_lossy().replace('\\', "/")
+            )).unwrap();
+            target_conn.execute("INSERT OR IGNORE INTO creative_projects SELECT * FROM legacy.creative_projects;", []).unwrap();
+            target_conn.execute_batch("DETACH DATABASE legacy;").unwrap();
+        }
+
+        let projects_after = target_db.list_creative_projects(None).unwrap();
+        assert_eq!(projects_after.len(), 1, "Idempotência violada: registros duplicados");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }

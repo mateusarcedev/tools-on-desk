@@ -7,6 +7,7 @@ pub mod error_log;
 pub mod history;
 pub mod image;
 pub mod media;
+pub mod migration;
 pub mod poster;
 pub mod task;
 pub mod video;
@@ -33,6 +34,7 @@ pub use error_log::{CreateErrorLogPayload, ErrorLogEntry, ErrorLogFilter, ErrorL
 pub use history::HistoryEntry;
 pub use image::{ImageConvertOptions, ImagesToPdfOptions};
 pub use media::{AudioStreamInfo, MediaInfo, VideoStreamInfo};
+pub use migration::{MigrationManifest, MigrationProgressEvent, MigrationStatus, MigrationStep};
 pub use poster::{PosterOptions, PosterSpec};
 pub use task::{Task, TaskStatus};
 pub use video::{
