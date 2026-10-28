@@ -103,16 +103,28 @@ O objetivo do ToolsOnDesk é oferecer uma experiência **desktop nativa em Windo
 
 ---
 
-## Instalação
+## Instalação e Testes Rápidos
 
-### Windows — Build Interno
+### Windows — Opções de Execução para Testes Internos
 
-1. Obtenha o instalador oficial **`ToolsOnDesk_0.1.0_x64-setup.exe`** disponibilizado para homologação interna.
+Para facilitar testes ágeis durante o desenvolvimento sem a necessidade de instalar ou alterar o registro do sistema, disponibilizamos o executável direto:
+
+#### Opção A: Executável Portátil / Standalone (Recomendado para Testes)
+- Localização no repositório: `release-standalone/toolsondesk.exe`
+- Localização na Área de Trabalho: `Desktop/ToolsOnDesk-Portable/toolsondesk.exe`
+- **Como usar:** Basta dar um duplo clique em `toolsondesk.exe`.
+- Não requer instalação, não precisa de privilégios de administrador (UAC) e todos os assets visuais, fontes e telas estão 100% embutidos no binário.
+- Os dados do usuário, banco SQLite e projetos são mantidos em `%LOCALAPPDATA%\ToolsOnDesk\`.
+
+#### Opção B: Instalador Completo NSIS (Para Validação do Ciclo de Instalação)
+1. Obtenha o instalador **`ToolsOnDesk_0.1.0_x64-setup.exe`** (`src-tauri/target/release/bundle/nsis/`).
 2. Execute o instalador (instalação por usuário, dispensando telas UAC de administrador).
-3. Na primeira inicialização:
-   - Se você já utilizava o aplicativo anterior (**Arce Tools**), o **MigrationModal** exibirá a confirmação da migração segura dos seus dados, projetos e credenciais.
-   - Para novos usuários, o **Setup Center** guiará o diagnóstico do sistema e a detecção de dependências (`FFmpeg`, `ffprobe`, `yt-dlp`).
-4. Caso deseje utilizar geração de imagens por IA, abra **Creative Studio → Configurações IA** e adicione sua chave de API da NVIDIA. As ferramentas locais não requerem chave e operam 100% offline.
+3. Cria atalhos no Menu Iniciar e registro no painel *Aplicativos Instalados* do Windows.
+
+#### Primeiro Uso e Migração:
+- Se você já utilizava o aplicativo anterior (**Arce Tools**), o **MigrationModal** confirmará a migração transparente de seus dados, histórico e chaves.
+- O **Setup Center** guiará o diagnóstico e o download opcional de utilitários externos (`FFmpeg`, `ffprobe`, `yt-dlp`).
+- No **Creative Studio → Configurações IA**, é possível configurar sua chave NVIDIA NIM. Ferramentas locais operam 100% offline.
 
 > O aplicativo não possui download público até a formalização marcária no INPI, auditoria de licenças de terceiros e aquisição de certificado digital comercial de assinatura de código.
 
