@@ -16,7 +16,7 @@
 [![macOS](https://img.shields.io/badge/macOS-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
 [![Android](https://img.shields.io/badge/Android-futuro-8C9B96?style=flat-square&labelColor=141A1C)](#roadmap)
 
-**[Download](#download-versão-portátil-para-testes) · [Landing Page](./landing/index.html) · [Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
+**[Download](#download-versão-portátil-para-testes) · [Landing Page Online](https://mateusarcedev.github.io/tools-on-desk/) · [Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
 
 <p align="center">
   <br />
