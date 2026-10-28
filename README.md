@@ -1,258 +1,299 @@
-# ToolsOnDesk
+<div align="center">
+
+<img src="./public/logo-toolsondesk.svg" alt="ToolsOnDesk" width="360" />
+
+### Seu espaço de criação. Suas ferramentas. Um só lugar.
+
+**Crie, converta, edite e produza — direto do seu desktop.**
+
+[![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0-15F5BA?style=flat-square&labelColor=141A1C)](#status-do-projeto)
+[![Tauri](https://img.shields.io/badge/Tauri-2-15F5BA?style=flat-square&labelColor=141A1C)](https://tauri.app/)
+[![Rust](https://img.shields.io/badge/Rust-native-15F5BA?style=flat-square&labelColor=141A1C)](https://www.rust-lang.org/)
+[![React](https://img.shields.io/badge/React-19-15F5BA?style=flat-square&labelColor=141A1C)](https://react.dev/)
+[![Testes](https://img.shields.io/badge/testes-63%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
+[![Windows](https://img.shields.io/badge/Windows-build%20interno%20dispon%C3%ADvel-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
+[![Linux](https://img.shields.io/badge/Linux-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
+[![macOS](https://img.shields.io/badge/macOS-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
+[![Android](https://img.shields.io/badge/Android-futuro-8C9B96?style=flat-square&labelColor=141A1C)](#roadmap)
+
+**[Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Instalação](#instala%C3%A7%C3%A3o) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
+
+</div>
+
+---
 
 > [!NOTE]
-> **Evolução do Projeto:** Desenvolvido, testado e consolidado nas Missões 01 a 06 como **Arce Tools**. A partir da **Missão 07**, o produto evoluiu para a identidade de trabalho **ToolsOnDesk**, com infraestrutura de dados desacoplada, cofre DPAPI e migração automática 100% segura.
-
-**ToolsOnDesk** é um aplicativo desktop multiferramentas, gratuito, offline-first, de alta performance e visualmente premium, construído com **Tauri 2**, **Rust**, **React 19** e **TypeScript**.
-
-O design foi rigorosamente construído com foco em produtividade criativa e utilitária, mantendo fidelidade estrita às famílias tipográficas **Geist** e **Geist Mono**, tema escuro nativo com destaque em **verde-menta** (`#15F5BA`), tema claro correspondente, atalhos de teclado ágeis (`Ctrl+K`, `Ctrl+J`) e barra de título customizada unificada sem duplicação de bordas de janela.
+> **Histórico do Projeto:** O aplicativo foi fundado, testado e estabilizado ao longo das Missões 01 a 06 sob o nome **Arce Tools**. A partir da **Missão 07**, o produto evoluiu para a marca de trabalho **ToolsOnDesk** (`com.toolsondesk.desktop`), com camada unificada de caminhos (`PathManager`), proteção nativa de credenciais via Windows DPAPI e rotina de migração transacional com preservação integral de dados legados.
 
 ---
 
-## 📦 Distribuição Oficial Windows 11 (Missões 04 a 07)
+## O que é o ToolsOnDesk?
 
-O aplicativo conta com instalador nativo **NSIS** oficial gerado para arquitetura x64 com runtime WebView2 integrado do sistema:
+O **ToolsOnDesk** é uma suíte desktop offline-first e de alta fidelidade visual que reúne ferramentas essenciais do dia a dia e um estúdio criativo em uma única interface coesa. Converta documentos, processe imagens, trabalhe com áudio e vídeo, crie pôsteres para impressão e explore recursos de criação com inteligência artificial — sem depender de dezenas de sites lentos ou aplicativos dispersos.
 
-- **Instalador Oficial:** `src-tauri/target/release/bundle/nsis/ToolsOnDesk_0.1.0_x64-setup.exe`
-- **Tamanho do Instalador:** **4,83 MB** (5.061.863 bytes)
-- **Hash SHA-256 do Instalador:** `A0CE89249AA8BE4DCFC79E602B5513AA060F53BE991279B04B2044D4D90894CE`
-- **Executável Principal:** `src-tauri/target/release/toolsondesk.exe` (13,98 MB / 14.662.144 bytes)
-- **Hash SHA-256 do Executável:** `CCE9A3CE1E80EEC8ABCF604BC8A6E573FE40D6EA91B8A44D2E1368FF465CEC68`
-- **Identificador Tauri:** `com.toolsondesk.desktop`
-- **Diretório de Instalação:** `%LOCALAPPDATA%\Programs\ToolsOnDesk\`
-- **Diretório de Dados:** `%LOCALAPPDATA%\ToolsOnDesk\`
-- **Modo de Instalação:** `currentUser` — sem necessidade de permissões de administrador (UAC).
-- **Desinstalação:** Suporte a desinstalação limpa via Painel de Controle e Menu Iniciar, com preservação integral de dados e histórico no SQLite.
-- **Transição Transparente:** Migração atômica automática de dados legados do Arce Tools no primeiro boot.
+Construído sobre a arquitetura moderna do **Tauri 2, Rust e React 19**, o projeto prioriza integração profunda com o sistema operacional, execução local de alto desempenho sempre que possível, tarefas assíncronas em segundo plano com controle de cancelamento e uma experiência simples até para quem não possui conhecimentos técnicos.
+
+> **Estado atual:** versão `0.1.0` em homologação interna. O instalador **Windows x64 (NSIS)** já foi gerado e validado nos testes técnicos do projeto. **Linux e macOS estão no planejamento de portabilidade nativa**, e **Android figura no roadmap futuro**. Não há link de download público anunciado neste README.
 
 ---
 
-## ⚡ Métricas Reais de Desempenho (Windows 11 x64)
+## O que você pode fazer
 
-Medições realizadas em ambiente de produção com o binário release nativo:
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h3>✦ Creative Studio</h3>
+      <p>Crie imagens com IA quando houver modelo disponível para sua conta, prepare briefings guiados, compare propostas lado a lado, explore templates e organize seus projetos visuais.</p>
+    </td>
+    <td width="50%" valign="top">
+      <h3>▶ Motion & Vídeo</h3>
+      <p>Monte composições com textos, formas, transições e áudio; visualize animações no player Canvas a 60 FPS e renderize MP4 localmente utilizando o motor Rust e FFmpeg.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>▧ Documentos & PDF</h3>
+      <p>Inspecione metadados, una múltiplos PDFs com renumeração de objetos, divida por intervalos ou blocos, reorganize páginas e comprima com algoritmo Deflate. Conversão DOCX/PDF integrada via LibreOffice.</p>
+    </td>
+    <td valign="top">
+      <h3>◫ Imagens & Poster Studio</h3>
+      <p>Converta e redimensione imagens com amostragem Lanczos3. Prepare pôsteres em múltiplas folhas com geometria milimétrica, sobreposição (overlap), retícula halftone e silhueta humana proporcional.</p>
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h3>↓ Downloads</h3>
+      <p>Gerencie downloads de mídias autorizadas em 13+ plataformas via yt-dlp, extraia áudios em alta fidelidade (MP3/FLAC/WAV/OPUS), com defesa ativa contra SSRF e limpeza de arquivos temporários.</p>
+    </td>
+    <td valign="top">
+      <h3>♫ Áudio & Conversão</h3>
+      <p>Converta contêineres e codecs de áudio/vídeo, recorte trechos temporais com precisão, normalize volumes pelo padrão EBU R128 e extraia frames em alta definição.</p>
+    </td>
+  </tr>
+</table>
 
-| Indicador | Medição Real | Alvo / Referência |
-|---|---|---|
-| **Tempo de Inicialização a Frio** | **1.697 ms (1,70 s)** | < 3,00 s |
-| **Tempo de Inicialização a Quente** | **934 ms (< 1,00 s)** | < 1,50 s |
-| **Memória RAM — Processo Principal (Rust)** | **28,03 MB** | < 40,00 MB |
-| **Memória RAM — Total em Repouso (Rust + WebView2)** | **141,47 MB** | < 180,00 MB |
-| **Memória RAM sob Carga Multimídia** | **180 - 220 MB** | < 300,00 MB |
-| **Uso de CPU em Repouso** | **0,00%** | < 0,50% |
-| **Taxa de Quadros da Interface** | **60 fps cravados** | 60 fps |
+### Um estúdio criativo que cresce com você
 
----
+O Creative Studio inclui um catálogo nativo de **16 skills padronizadas com o padrão universal `SKILL.md`** (cobrindo direção de arte, motion design, vídeo, 3D e controle de qualidade), além de **templates prontos para uso** em e-commerce, anúncios, thumbnails e mídias sociais. 
 
-## 🚀 Funcionalidades Implementadas
+- **OpenCode:** integração opcional detectada automaticamente quando presente no ambiente; o ToolsOnDesk possui um orquestrador fallback 100% nativo em Rust que garante a operação completa do estúdio mesmo sem o OpenCode instalado.
+- **Modelos de IA:** os recursos generativos utilizam a **API NVIDIA NIM** quando configurada com uma chave válida. A geração de imagens (FLUX.1, SD 3.5) conecta-se a endpoints de inferência visual; a **composição e renderização de motion design** é 100% local e opera sem necessidade de internet.
 
-### 1. Módulo de Documentos — Document Engine Real (Missão 03)
-- **PDF Inspector (`inspect_pdf`):** Análise em tempo real de contagem de páginas, tamanho legível, orientação (Retrato/Paisagem), detecção de proteção por senha e identificação de texto selecionável vs digitalizações.
-- **União de Múltiplos PDFs (`merge_pdfs`):** Fusão estrutural de múltiplos documentos em sequência customizável com algoritmo seguro de renumeração de identificadores de objetos indiretos (`lopdf`).
-- **Divisão de PDFs (`split_pdf`):**
-  - *Todas as páginas:* exportação de cada folha individualmente.
-  - *Intervalos customizados:* parsing robusto de expressões (ex: `1-3, 5, 8-10`) com cálculo prévio de total de páginas.
-  - *A cada N páginas:* agrupamento em blocos regulares.
-  - *Arquivo único vs múltiplos arquivos:* opção para consolidar a seleção em um só documento.
-- **Organizador e Rotacionador de Páginas (`organize_pdf`):**
-  - Grade visual de páginas com coordenadas e índices originais.
-  - Reordenação (mover esquerda/direita), rotação 90° em sentido horário e exclusão de folhas.
-  - **Preservação de Integridade:** o arquivo original nunca é sobrescrito; um novo PDF organizado é gravado no diretório de exportação.
-- **Compressão de PDF sem Perda Visual (`compress_pdf`):**
-  - Poda de objetos órfãos (`prune_objects`) e recompactação de fluxos via algoritmo Deflate seguro.
-  - Níveis de compressão: *Sem perdas* (Estrutural), *Recomendada* e *Extrema*.
-  - Cálculo e exibição do percentual exato de economia em bytes no disco.
-- **Conversão Word para PDF (`convert_word_to_pdf`):**
-  - Conversão offline de DOCX, DOC e ODT via motor LibreOffice Headless.
-  - Isolamento de perfil (`-env:UserInstallation`) evitando conflitos com outras janelas abertas pelo usuário.
-  - Detecção automática de instalação e exibição do comando `winget` com cópia direta para o clipboard.
-- **Conversão PDF para Word (`convert_pdf_to_docx`):**
-  - Extração de parágrafos e títulos diretamente para arquivos OpenXML (`.docx`) nativos via `docx-rs`.
-  - Tratamento inteligente informando a necessidade de OCR óptico em PDFs digitalizados/rasterizados.
-
-### 2. Central de Erros e Diagnósticos Persistente (Missões 03 e 04)
-- **Persistência Relacional em SQLite:** Tabela `error_logs` com 6 índices de alto desempenho, registrando falhas de tarefas, erros de comandos IPC e exceções da interface React.
-- **Pipeline de Sanitização Multicamadas (7 Camadas):** Mascaramento automático de senhas, chaves de API, tokens Bearer, cookies de sessão, query params sensíveis, blocos de chaves privadas PEM e caminhos confidenciais (`C:\Users\[USER]\...`).
-- **Lookahead Guard Negativo:** Previne corrupção recursiva de tags `[REDACTED]` em reprocessamentos de logs.
-- **Deduplicação Temporal (3s):** Supressão de rajadas de erros duplicados no banco SQLite para incidentes repetitivos em lote.
-- **Ações Globais de Cópia e Exportação (Missão 04):**
-  - **"Copiar todos"**: busca todo o histórico não-paginado do banco SQLite e formata como relatório no clipboard.
-  - **"Copiar filtrados"**: copia todo o histórico correspondente aos filtros ativos.
-  - **"Exportar TXT"**: relatório estruturado legível em formato texto com separadores e metadados.
-  - **"Exportar JSON"**: dump JSON estruturado completo de todos os registros para auditoria técnica.
-  - **Feedback Visual Instantâneo**: botão de cópia com animação "Copiado!" e checkmark por 2 segundos.
-- **Atalhos Rápidos na Gaveta de Tarefas (`TaskDrawer`):** Botão "Copiar erro" direto no card da tarefa com falha e botão "Ver detalhes do erro", que navega para a Central de Diagnósticos com a falha destacada.
-- **Acesso Nativo ao Clipboard Win32 via `arboard`:** Cópia instantânea e 100% garantida de registros individuais ou relatórios consolidados.
-
-### 3. Poster Studio Avançado (Referência Rasterbator.net & Além — Missão 02.5)
-- **Dois Modos de Operação:**
-  - *Modo Rápido:* Drop da imagem $\rightarrow$ seletor de folhas $\rightarrow$ exportação instantânea de PDF.
-  - *Modo Avançado (6 Etapas):* Wizard completo com Imagem, Tamanho, Estilo, Cores, Impressão e Exportação.
-- **Tipos de Papel e Orientação:** Suporte a **A4**, **A3**, **Letter**, **Legal** e **Personalizado** em milímetros, nas orientações Retrato e Paisagem.
-- **Geometria de Margens e Sobreposição (*Overlap*):** Margens não-imprimíveis e sobreposição milimétrica para colagem contínua sem quebras de imagem.
-- **Silhueta Humana Proporcional (1,80 m):** Proporção visual exata renderizada em relação à altura total do pôster montado (com toggle on/off).
-- **Indicador de DPI Efetivo:** Monitoramento em tempo real da densidade de pixels impressos com alertas técnicos (Baixa resolução, Boa definição, Alta definição).
-- **Estilos Artísticos de Retícula e Pontilhismo:**
-  - *Original:* fidelidade total da foto.
-  - *Preto & Branco:* conversão por luminância.
-  - *Halftone Monocromático:* retícula geométrica estilo Rasterbator (pontos circulares ou quadrados antialiased com pitch e tamanhos min/max customizáveis).
-  - *Halftone Colorido:* amostragem colorida em grade com fundo ajustável.
-  - *Dithering Floyd-Steinberg:* difusão de erro bidimensional de padrão artístico.
-  - *Alto Contraste:* binarização de alto impacto gráfico.
-- **Paletas e Cores Customizadas:** Presets de cor (Cyberpunk Menta, Clássico P&B, Âmbar, Blueprint) e cores hexadecimais livres.
-- **Workspace Interativo & Preview em Tempo Real:** Renderização Rust em base64 do efeito antes de exportar, zoom de 25% a 200%, ajuste de tela e numeração alfanumérica de cada folha (A1, A2, B1...).
-- **Geração de PDF Multipágina:** Criação vetorial com marcas de corte, legendas de montagem e botão de acesso direto no Windows Explorer.
-
-### 4. Downloader Multiplataforma & Seguro (Missões 02.5 e 04)
-- **Reconhecimento Automático de 13+ Redes:** YouTube, YouTube Shorts, Instagram Posts & Reels, TikTok, Facebook / FB Watch, X (Twitter), Reddit, Pinterest, Vimeo, Twitch, SoundCloud, Dailymotion e compatíveis com yt-dlp.
-- **Gestão Inteligente de Playlists:** Leitura via `--flat-playlist` sem download prévio, listagem de itens e seleção individual ou em lote.
-- **Download em Lote (Multi-URL):** Textarea com suporte a dezenas de links, validação em tempo real e enfileiramento concorrente.
-- **Extração de Áudio Expandida:** Extração de alta qualidade em **MP3**, **M4A**, **WAV**, **FLAC** e **OPUS**.
-- **Defesa Rigorosa contra SSRF:** Bloqueio estrito de `localhost`, `127.0.0.1`, loopbacks IPv6, faixas privadas RFC 1918 e metadados de nuvem.
-- **Limpeza Automática de Parciais (Missão 04):** Exclusão garantida de arquivos `.part`, `.ytdl` e `.temp` em cancelamentos.
-- **Card de Auditoria yt-dlp:** Indicador em tempo real de versão, status e conformidade com direitos autorais.
-
-### 5. Módulo de Áudio (Missão 02)
-- **Inspeção de Metadados Reais:** Análise instantânea via `ffprobe` com duração precisa, taxa de amostragem (Hz), número de canais e bitrate original.
-- **Conversão de Formatos:** MP3, WAV, FLAC, M4A, OGG e OPUS com ajuste de bitrate (128k a 320k) e canais (Mono/Estéreo).
-- **Normalização de Volume:** Algoritmo broadcast padrão EBU R128 (`loudnorm=I=-14:LRA=11:TP=-1.5`) para streaming e podcasts.
-- **Corte por Intervalo:** Recorte temporal milimétrico com início e fim configuráveis em segundos.
-- **Waveform Dinâmico:** Visualizador de forma de onda reativo e leve.
-- **Extração de Áudio de Vídeos:** Conversão direta de trilhas sonoras de vídeos para áudio.
-
-### 6. Módulo de Vídeo (Missão 02)
-- **Inspeção e Metadados de Vídeo:** Detecção de resolução original (largura $\times$ altura), taxa de quadros (FPS), codec de vídeo e duração real.
-- **Conversão de Contêineres:** MP4, MKV e WEBM com suporte a codecs modernos (`libx264`, `libx265`, `libvpx-vp9`).
-- **Compressão com Presets de CRF:** Qualidade alta (CRF 18), Equilibrado (CRF 23) e Arquivo menor (CRF 28).
-- **Corte Rápido e Preciso:** `-c copy` instantâneo sem perda de qualidade ou recodificação quadro a quadro.
-- **Extração de Frames Estáticos:** Captura de fotos em alta resolução em timestamps selecionados nos formatos JPG e PNG.
-
-### 7. Conversão e Otimização de Imagens (Missão 01)
-- Conversão individual ou em lote entre PNG e JPEG.
-- Redimensionamento por amostragem **Lanczos3** de alta fidelidade visual.
-- Compilação de múltiplas imagens em um único arquivo PDF.
-
-### 8. Motor Global de Tarefas & Shell Desktop (Missões 01 a 04)
-- Fila assíncrona baseada em Tokio com controle de concorrência por semáforo e persistência contínua em SQLite (modo WAL).
-- **Encerramento Limpo de Árvore de Processos (Missão 04):** Invocação de `taskkill /F /T /PID` no Windows para liquidar subprocessos netos e evitar vazamentos de CPU/memória.
-- Paleta universal de comandos (`Ctrl+K`) e gaveta de tarefas ativas (`Ctrl+J`).
-- Barra de título unificada sem bordas duplicadas do Windows 11 (`decorations: false` e `data-tauri-drag-region`).
-
-### 9. Central de Configuração Inicial (Setup Center) & DependencyManager (Missão 05)
-- **Assistente Interativo de Primeiro Uso (Setup Center):**
-  - Exibido automaticamente na primeira abertura ou reaberto pelas Configurações / Command Palette.
-  - 4 etapas: Boas-vindas $\rightarrow$ Diagnóstico do Sistema $\rightarrow$ Configuração de Ferramentas $\rightarrow$ Tudo Pronto.
-  - Diagnóstico instantâneo de SO, arquitetura, permissão de gravação e espaço livre em disco.
-- **DependencyManager Nativo (Rust):**
-  - Descoberta inteligente em cascata: pasta gerenciada `%LOCALAPPDATA%\ArceTools\binaries\`, `./binaries/`, WinGet e `PATH`.
-  - Instalação assistida de FFmpeg/ffprobe e yt-dlp com validação TLS, hash SHA-256 e barra de progresso em tempo real.
-  - Proteção rígida contra ataques de travessia em arquivos compactados (*Zip Slip*).
-  - Atualização atômica com rollback automático em caso de falha.
-  - Remoção segura restrita à pasta gerenciada sem afetar utilitários globais do sistema operacional.
-- **Seção Ferramentas e Dependências nas Configurações:** Visão geral de status, origens, versões, caminhos seguros e botões contextuais (Instalar, Atualizar, Verificar, Remover e Configurar caminho para LibreOffice).
-
-### 10. Arce Creative Studio — IA Generativa e Motion Design (Missão 06)
-- **Fluxo Visual para Criadores Não-Programadores:**
-  - Experiência guiada em 6 etapas: *Descrever Ideia $\rightarrow$ Escolher Estilo $\rightarrow$ Gerar $\rightarrow$ Pré-visualizar (60 FPS) $\rightarrow$ Ajustar Parâmetros $\rightarrow$ Exportar*.
-  - Assistente de Briefing interativo em 3 etapas sintetizando estilo, especificações técnicas e seleção automática de skills relevantes.
-- **AI Image Studio:**
-  - Geração visual de alta fidelidade via modelos de ponta (FLUX.1-schnell, FLUX.1-dev, SD 3.5 Large).
-  - 9 estilos artísticos calibrados: *Publicitário, Fotográfico, Cinematográfico, Minimalista, Editorial, Ilustração, 3D, Produto e Social Media*.
-  - Comparador visual de propostas lado a lado com métricas de resolução e proporção (1:1, 16:9, 9:16, 4:5, 21:9).
-- **Motion Design Studio & Arce Motion Engine (AME):**
-  - Player em tempo real HTML5 Canvas renderizando a **60 FPS** com scrub timeline interativo, timecodes e controles de reprodução.
-  - Motor de renderização nativo em Rust compilando composições multi-camadas em grafos de filtros complexos do FFmpeg para MP4 (H.264 / AAC).
-  - Suporte completo a animações vetoriais, keyframes, opacidade, escala, posição e interpolações com física de molas (*spring physics*).
-  - Exportação de código fonte editável do projeto para **Remotion TSX**, permitindo integração direta com pipelines web de desenvolvedores.
-- **AI Video Studio:**
-  - *Modo A (Generativo):* Integração transparente com APIs de vídeo da nuvem NVIDIA quando autorizadas, com rastreamento honesto de cotas.
-  - *Modo B (Composto Local):* Montagem de vídeos promocionais offline unindo imagens geradas/importadas, legendas animadas, trilha sonora e transições via FFmpeg nativo sem custo de nuvem.
-- **Biblioteca de 16 Skills Nativas com Padrão SKILL.md:**
-  - Formato padronizado contendo instruções técnicas de direção de arte, critérios de qualidade, restrições e ferramentas.
-  - Catálogo filtrável por categorias (Design Gráfico, Motion Design, Produção de Vídeo, 3D e Qualidade).
-  - Suporte a ativação contextual sob demanda e exportação direta para o disco local.
-- **Workspace de Projetos e Biblioteca de Assets:**
-  - Persistência estruturada em SQLite (`creative_projects`, `creative_assets`, `creative_generation_history`) com modo WAL.
-  - Gerenciamento de metadados, versões de prompts, tags, dimensões e arquivos gerados em diretórios isolados.
-- **NVIDIA AI Provider com Vault Seguro:**
-  - Armazenamento de chaves criptografadas no disco com entropia derivada do hardware local.
-  - Zero persistência de credenciais em texto puro no SQLite.
-  - Mascaramento automático de chaves nos logs através de regex com lookahead guard (`[PROTECTED_NVIDIA_KEY]`).
-- **Integração com OpenCode:**
-  - Detecção inteligente do executável do OpenCode em PATH e diretórios de usuário.
-  - Execução segura em sandbox com processos em segundo plano (`CREATE_NO_WINDOW`) e cancelamento atômico.
-  - Fallback de orquestração 100% nativo em Rust garantindo funcionamento completo mesmo sem o OpenCode instalado.
-
-### 11. ToolsOnDesk: Rebranding, Migração Segura e DPAPI Vault (Missão 07)
-- **Evolução de Identidade:** Transição oficial para ToolsOnDesk (`toolsondesk.exe`, `com.toolsondesk.desktop`, `ToolsOnDesk_0.1.0_x64-setup.exe`).
-- **Camada Central de Resolução de Caminhos (`PathManager`):** Estrutura unificada e determinística em `%LOCALAPPDATA%\ToolsOnDesk\` eliminando qualquer menção a nomes pessoais ou caminhos hardcoded.
-- **Motor de Migração Transacional (`MigrationManager`):**
-  - 10 etapas atômicas: `DISCOVERY`, `PREFLIGHT`, `BACKUP`, `COPY`, `DATABASE_MIGRATION`, `PATH_RECONCILIATION`, `CREDENTIAL_MIGRATION`, `VALIDATION`, `COMMIT`, `COMPLETED`.
-  - Snapshot seguro do banco de dados legado via **SQLite Online Backup API** (`rusqlite::backup::Backup`), imune a locks do arquivo WAL.
-  - Reconciliação automática de caminhos gravados no banco SQLite para a nova estrutura.
-  - Preservação estrita dos dados legados originais em `%LOCALAPPDATA%\ArceTools` e `%LOCALAPPDATA%\com.mateusarcedev.arce-tools` (zero exclusão destrutiva).
-  - Emissão de manifesto de auditoria com hashes SHA-256 e contagens de tabelas (`manifest.json`).
-- **Cofre de Credenciais com Windows DPAPI:**
-  - Cifragem nativa do Windows (`CryptProtectData` e `CryptUnprotectData` via `crypt32.dll`) atrelada à sessão do usuário e entropia adicional.
-  - Migração em memória do cofre legado com limpeza forçada de buffers voláteis (`zeroize_bytes`).
-  - Proteção absoluta contra vazamento de chaves em logs (`[PROTECTED_NVIDIA_KEY]`).
-- **Experiência de Onboarding e Notificação Visual:** Modal React responsivo apresentando boas-vindas, etapas da migração, detalhes expansíveis e métricas resumidas.
+> **Nota:** MOTION é um projeto independente em desenvolvimento. Sua futura integração ocorrerá à medida que sua especificação e termos de licenciamento estiverem concluídos.
 
 ---
 
-## 🛠️ Stack Tecnológica
+## Plataformas
 
-- **Framework Desktop:** [Tauri 2](https://v2.tauri.app/)
-- **Linguagem Backend:** [Rust 1.99+ MSVC](https://www.rust-lang.org/)
-- **Frontend:** [React 19](https://react.dev/) + [TypeScript Strict](https://www.typescriptlang.org/)
-- **Bundler:** [Vite 8](https://vite.dev/)
-- **Banco de Dados Local:** SQLite com [rusqlite 0.32](https://crates.io/crates/rusqlite) (modo WAL + Online Backup API)
-- **Criptografia Nativa:** Windows DPAPI (`crypt32.dll`)
-- **Manipulação de PDF:** [lopdf 0.46](https://crates.io/crates/lopdf)
-- **Geração de Word (.docx):** [docx-rs 0.4](https://crates.io/crates/docx-rs)
-- **Acesso ao Clipboard do Sistema:** [arboard 3.7](https://crates.io/crates/arboard)
-- **Processamento Gráfico:** [image-rs](https://crates.io/crates/image) (Lanczos3)
-- **Motores Multimídia:** [FFmpeg](https://ffmpeg.org/), [ffprobe](https://ffmpeg.org/ffprobe.html) e [yt-dlp](https://github.com/yt-dlp/yt-dlp)
-- **Compilador de Instalador:** NSIS 3.0+
+O objetivo do ToolsOnDesk é oferecer uma experiência **desktop nativa em Windows, Linux e macOS**, compartilhando a mesma identidade visual, projetos e banco de dados local — adaptando integrações específicas de cada sistema operacional.
+
+| Sistema Operacional | Distribuição Pretendida | Estado Atual |
+| :-- | :-- | :-- |
+| **Windows 11 / x64** | Instalador `.exe` via NSIS (`currentUser`) | **Build interno gerado e testado; homologação concluída** |
+| **Linux / x64** | Pacotes `.AppImage`, `.deb` e `.rpm` | **Portabilidade e builds nativos planejados** |
+| **macOS / Apple Silicon e Intel** | Aplicativo `.app` e instalador `.dmg` | **Portabilidade, assinatura e notarização planejadas** |
+| **Android** | Aplicativo móvel adaptado | **Roadmap futuro; não disponível** |
+
+### O que significa “nativo” aqui?
+
+- **Windows:** executável Rust compilado com toolchain MSVC + WebView2 Runtime do sistema e instalador NSIS.
+- **Linux:** executável Rust integrado a WebKitGTK e pacotes nativos da distribuição (`.deb` / `.AppImage`).
+- **macOS:** app bundle compilado contra o WebKit do macOS, com requisitos de assinatura digital Apple e notarização.
+- **Android (futuro):** interface e capacidades reconstruídas com foco nos padrões ergonômicos e restrições de permissão de dispositivos móveis.
 
 ---
 
-## 🧪 Suíte de Testes Automatizados
+## Instalação
 
-A base de código conta com cobertura completa em frontend e backend:
+### Windows — Build Interno
+
+1. Obtenha o instalador oficial **`ToolsOnDesk_0.1.0_x64-setup.exe`** disponibilizado para homologação interna.
+2. Execute o instalador (instalação por usuário, dispensando telas UAC de administrador).
+3. Na primeira inicialização:
+   - Se você já utilizava o aplicativo anterior (**Arce Tools**), o **MigrationModal** exibirá a confirmação da migração segura dos seus dados, projetos e credenciais.
+   - Para novos usuários, o **Setup Center** guiará o diagnóstico do sistema e a detecção de dependências (`FFmpeg`, `ffprobe`, `yt-dlp`).
+4. Caso deseje utilizar geração de imagens por IA, abra **Creative Studio → Configurações IA** e adicione sua chave de API da NVIDIA. As ferramentas locais não requerem chave e operam 100% offline.
+
+> O aplicativo não possui download público até a formalização marcária no INPI, auditoria de licenças de terceiros e aquisição de certificado digital comercial de assinatura de código.
+
+### Linux e macOS
+
+As versões nativas para Linux e macOS estão em fase de planejamento arquitetural. Os pacotes oficiais serão publicados após a adaptação de dependências de sistema (como WebKitGTK e keychain do macOS) e validação em pipelines de CI dedicadas.
+
+---
+
+## IA sem complicação
+
+O ToolsOnDesk foi projetado para oferecer inteligência artificial generativa sem que o usuário precise configurar ambientes Python, CUDA, terminais ou repositórios Git:
+
+1. Abra o **Creative Studio** (`Ctrl+6`).
+2. Adicione sua chave da NVIDIA no cofre seguro, caso utilize modelos de visão.
+3. Escolha uma ferramenta, estilo visual (Publicitário, Fotográfico, 3D, Minimalista...) ou template pronto.
+4. Gere, ajuste os parâmetros na interface e exporte em alta resolução.
+
+```mermaid
+flowchart LR
+    A["Chave de API NVIDIA"] --> B["Windows DPAPI (crypt32.dll)"]
+    B --> C["credentials.enc (Cofre Cifrado)"]
+    A -.-> D["zeroize_bytes() limpa RAM imediatamente"]
+    C --> E["Sanitizer: mascaramento regex [PROTECTED_NVIDIA_KEY]"]
+```
+
+- **Proteção de Credenciais:** No Windows, o ToolsOnDesk utiliza **Windows DPAPI** (`CryptProtectData` via `crypt32.dll`) com entropia da máquina. Chaves nunca são salvas em texto puro no SQLite.
+- **Sanitização Contínua:** Expressões de chave (`nvapi-...`) são mascaradas preventivamente em todos os logs e eventos IPC como `[PROTECTED_NVIDIA_KEY]`.
+- **Transparência de Quotas:** Modelos indisponíveis na conta NVIDIA do usuário são sinalizados de forma clara, mantendo todas as ferramentas locais do desktop funcionando sem bloqueios.
+
+---
+
+## Projetado para trabalhar localmente
+
+```mermaid
+flowchart LR
+  U["Interface React 19\n(Geist / Tokens CSS)"] --> T["Tauri 2 IPC\n(Comandos Tipados)"]
+  T --> R["Core Nativo Rust\n(Tokio / TaskManager)"]
+  R --> D[("SQLite WAL\n(toolsondesk.db)")]
+  R --> P["PathManager\n(%LOCALAPPDATA%\\ToolsOnDesk)"]
+  R --> L["Ferramentas Locais\n(FFmpeg / yt-dlp / PDF / Imagens)"]
+  R --> C["Creative Studio\n(Motion Canvas 60 FPS)"]
+  C --> S["16 Skills SKILL.md"]
+  C -. quando configurado .-> N["API NVIDIA NIM"]
+  C -. opcional .-> O["OpenCode Sandbox"]
+```
+
+- **Interface:** React 19, TypeScript em modo estrito, Vite 8 e tipografia local `Geist` / `Geist Mono`.
+- **Desktop Shell:** Tauri 2, barra de título frameless customizada com controles integrados e tema Dark/Light.
+- **Core Nativo:** Rust 1.84+ (MSVC ABI), fila de tarefas concorrente assíncrona com tokens de cancelamento.
+- **Dados:** SQLite em modo WAL com transações atômicas e **SQLite Online Backup API** para snapshots.
+- **Caminhos Centralizados:** Gestão unificada via `PathManager` sob `%LOCALAPPDATA%\ToolsOnDesk\`.
+
+---
+
+## Métricas Reais do Pacote Oficial (Windows 11 x64)
+
+Medições realizadas em ambiente de homologação com os binários gerados pela toolchain MSVC:
+
+| Indicador Técnico | Medição Real | Referência de Engenharia |
+|---|:---:|:---:|
+| **Instalador Oficial NSIS** | **5.061.863 bytes (4,83 MiB)** | `ToolsOnDesk_0.1.0_x64-setup.exe` |
+| **Hash SHA-256 do Instalador** | `A0CE89249AA8BE4DCFC79E602B5513AA060F53BE991279B04B2044D4D90894CE` | Verificado via PowerShell |
+| **Executável Principal** | **14.662.144 bytes (13,98 MiB)** | `toolsondesk.exe` |
+| **Hash SHA-256 do Executável** | `CCE9A3CE1E80EEC8ABCF604BC8A6E573FE40D6EA91B8A44D2E1368FF465CEC68` | Verificado via PowerShell |
+| **Tempo de Inicialização a Frio** | **1,69 s** | < 3,00 s |
+| **Tempo de Inicialização a Quente** | **0,93 s** | < 1,50 s |
+| **Memória RAM — Processo Rust** | **~28 MB** | < 40 MB |
+| **Memória RAM — Total em Repouso** | **~141 MB** | < 180 MB |
+| **Taxa de Quadros da Interface & Player** | **60 FPS estáveis** | 60 FPS |
+
+---
+
+## Desenvolvimento
+
+**Pré-requisitos:** Node.js 20+, pnpm 10+, Rust stable com toolchain `x86_64-pc-windows-msvc`, Microsoft C++ Build Tools e WebView2 Runtime.
 
 ```bash
-# Execução dos testes de interface e componentes (Vitest)
+# 1. Instalar dependências do frontend
+pnpm install
+
+# 2. Executar testes automatizados do frontend (34 testes Vitest em 9 suítes)
 pnpm test
-# Resultado: 34/34 testes aprovados (100% de sucesso em 9 suítes)
 
-# Verificação estrita de tipagem TypeScript e empacotamento Vite
+# 3. Compilar frontend de forma estrita (TypeScript + Vite)
 pnpm build
-# Resultado: 0 erros, compilação estrita limpa (319 ms)
 
-# Execução dos testes unitários de backend nativo (Cargo MSVC)
-cargo test --lib
-# Resultado: 29/29 testes aprovados (100% de sucesso)
+# 4. Executar testes automatizados do backend Rust (29 testes nativos MSVC)
+cargo test --manifest-path src-tauri/Cargo.toml
 
-# Verificação de linter e estilo Rust
-cargo clippy --lib -- -D warnings
-# Resultado: 0 warnings, aprovado
+# 5. Compilar o executável de produção release
+cargo build --release --manifest-path src-tauri/Cargo.toml
+
+# 6. Gerar o instalador oficial Windows (NSIS)
+cargo tauri build --bundles nsis
+```
+
+### Estrutura de Diretórios
+
+```text
+.
+├── public/                 # Identidade visual, logos SVG e fontes Geist/Geist Mono
+├── src/                    # Interface React 19, telas, componentes e serviços
+│   ├── components/         # Shell, Poster Studio, Creative Studio, Setup Center, Migração
+│   ├── services/           # Camada de comunicação IPC tipada com o Tauri
+│   ├── styles/             # Tokens CSS oficiais (cores, tipografia, elevações)
+│   └── types/              # Interfaces estritas TypeScript
+├── src-tauri/              # Backend nativo em Rust
+│   ├── icons/              # Conjunto completo de ícones (ICO, ICNS, PNG)
+│   └── src/
+│       ├── commands/       # Handlers de comandos IPC (mídia, tarefas, IA, migração)
+│       ├── engines/        # Motores: Poster, Imagem, Motion, Skills, DependencyManager
+│       ├── storage/        # Banco de dados SQLite, migrações e auditoria
+│       └── utils/          # PathManager, DPAPI Vault, Sanitizer e identificação
+├── docs/                   # Documentação técnica e registros de engenharia
+└── README.md
 ```
 
 ---
 
-## 🏗️ Como Gerar os Binários e o Instalador
+## Documentação Técnica do Projeto
 
-### 1. Build do Executável Simples (`.exe`):
-```bash
-pnpm build
-cargo build --release
-```
-O executável de produção é gerado em `src-tauri/target/release/toolsondesk.exe`.
+| Documento | Descrição |
+|---|---|
+| [Arquitetura do Sistema](./docs/ARCHITECTURE.md) | Especificação de IPC, subsistemas Rust e ciclo de vida |
+| [Decisões de Arquitetura (ADRs)](./docs/DECISIONS.md) | Registros formais de decisões técnicas de ADR 001 a ADR 026 |
+| [Plano de Rebranding e Migração](./docs/REBRANDING-MIGRATION-PLAN.md) | Estratégia completa da transição Arce Tools $\to$ ToolsOnDesk |
+| [Migração de Dados](./docs/DATA-MIGRATION.md) | Detalhes da máquina de estados e SQLite Online Backup |
+| [Cofre de Credenciais e DPAPI](./docs/CREDENTIAL-MIGRATION.md) | Arquitetura criptográfica da Windows Data Protection API |
+| [Estratégia de Upgrade Windows (NSIS)](./docs/WINDOWS-UPGRADE-STRATEGY.md) | Comportamento de coexistência, atalhos e desinstalação |
+| [Relatório de Testes de Migração](./docs/MIGRATION-TEST-REPORT.md) | Matriz completa cobrindo os 21 cenários de teste |
+| [Creative Studio](./docs/CREATIVE-STUDIO.md) | Guia do estúdio criativo, motion design e IA generativa |
+| [Biblioteca de Skills Criativas](./docs/CREATIVE-SKILLS.md) | Especificação das 16 skills no padrão `SKILL.md` |
+| [Gerenciador de Dependências](./docs/DEPENDENCY-MANAGER.md) | Descoberta, integridade SHA-256 e Zip Slip protection |
+| [Central de Erros e Diagnósticos](./docs/ERROR-DIAGNOSTICS.md) | Persistência SQLite, sanitização em 7 camadas e filtros |
+| [Validação do Instalador Windows](./docs/INSTALLER-VALIDATION.md) | Medições do pacote gerado pelo empacotador NSIS |
+| [Critérios de Prontidão (M07)](./docs/RELEASE-READINESS-M07.md) | Checklist de conformidade técnica e homologação |
 
-### 2. Build do Instalador Oficial NSIS (`.exe` com assistente de instalação):
-```powershell
-pnpm build
-cargo tauri build
-```
-O instalador é gerado em:
-`src-tauri/target/release/bundle/nsis/ToolsOnDesk_0.1.0_x64-setup.exe`
+---
+
+## Roadmap
+
+- [x] Fundação desktop com Tauri 2, React 19 e Rust MSVC.
+- [x] Conversores reais de mídia, downloads (yt-dlp), Document Engine e Poster Studio avançado.
+- [x] Central de Erros persistente, histórico relacional e Setup Center interativo.
+- [x] Creative Studio com geração visual por IA, Motion Engine Canvas 60 FPS e 16 skills `SKILL.md`.
+- [x] Rebranding para ToolsOnDesk com `PathManager`, cofre Windows DPAPI e migração transacional.
+- [x] Geração e validação do instalador oficial Windows NSIS (`currentUser`).
+- [ ] Homologação formal em máquina Windows limpa com usuário convidado.
+- [ ] Depósito de registro da marca ToolsOnDesk no INPI (Classes 09 e 42) e domínio web.
+- [ ] Aquisição de certificado digital comercial EV/OV para assinatura Authenticode do Windows.
+- [ ] **Portabilidade e builds nativos para Linux**, com pacotes `.AppImage` e `.deb`.
+- [ ] **Portabilidade e builds nativos para macOS**, com binários Apple Silicon/Intel e `.dmg`.
+- [ ] Pipeline de CI/CD automatizado para builds multiplataforma com testes integrados.
+- [ ] Integração do projeto MOTION quando suas especificações e licenças estiverem concluídas.
+- [ ] Sistema de atualização silenciosa assinada (`@tauri-apps/plugin-updater`).
+- [ ] Explorar **versão mobile adaptada para Android**.
+
+---
+
+## Status do Projeto e Governança
+
+**`v0.1.0` · Homologação Interna · Desenvolvimento Ativo**
+
+Os resultados de testes automatizados e builds reportados representam validações técnicas de desenvolvimento. O aplicativo **não deve ser publicado externamente** até a conclusão do processo marcário junto ao INPI, compra do domínio corporativo e obtenção de certificado comercial de assinatura de código.
+
+## Segurança, Serviços e Licenças
+
+- **Isolamento Local vs Nuvem:** Processamento local (áudio, vídeo, documentos, pôsteres e motion) opera 100% offline; integrações em nuvem (NVIDIA NIM) exigem configuração consciente de chave e acesso de rede.
+- **Proteção de Dados:** Credenciais são cifradas nativamente via Windows DPAPI e buffers de memória são higienizados com `zeroize_bytes`.
+- **Softwares de Terceiros:** FFmpeg (LGPL/GPL), yt-dlp (The Unlicense), LibreOffice (MPL v2.0) e outros utilitários são invocados como subprocessos externos isolados em estrita conformidade com suas respectivas licenças.
+- **Propriedade e Direitos:** A marca ToolsOnDesk e o código da aplicação são de uso e distribuição restritos até definição formal de licença de lançamento.
+
+---
+
+<div align="center">
+
+**ToolsOnDesk**
+
+*Menos aplicativos abertos. Mais ideias realizadas.*
+
+**Create · Convert · Make**
+
+</div>
