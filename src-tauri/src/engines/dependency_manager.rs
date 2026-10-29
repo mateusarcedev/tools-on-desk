@@ -31,56 +31,12 @@ impl DependencyManager {
 
     /// Checks write permissions in a directory by creating and deleting a temporary file.
     pub fn check_directory_write_permission(dir: &Path) -> bool {
-        let test_file = dir.join(format!(".write_test_{}", Uuid::new_v4()));
-        match File::create(&test_file) {
-            Ok(mut f) => {
-                let _ = f.write_all(b"test");
-                drop(f);
-                let _ = fs::remove_file(&test_file);
-                true
-            }
-            Err(_) => false,
-        }
+        crate::platform::PlatformSystem::check_directory_write_permission(dir)
     }
 
     /// Retrieves available free disk space on the drive in megabytes.
     pub fn get_available_disk_space_mb(dir: &Path) -> u64 {
-        #[cfg(windows)]
-        {
-            use std::ffi::OsStr;
-            use std::os::windows::ffi::OsStrExt;
-
-            let path_str = dir.to_string_lossy().to_string();
-            let wide: Vec<u16> = OsStr::new(&path_str).encode_wide().chain(Some(0)).collect();
-
-            let mut free_bytes_available: u64 = 0;
-            let mut total_number_of_bytes: u64 = 0;
-            let mut total_number_of_free_bytes: u64 = 0;
-
-            unsafe {
-                unsafe extern "system" {
-                    fn GetDiskFreeSpaceExW(
-                        lpDirectoryName: *const u16,
-                        lpFreeBytesAvailableToCaller: *mut u64,
-                        lpTotalNumberOfBytes: *mut u64,
-                        lpTotalNumberOfFreeBytes: *mut u64,
-                    ) -> i32;
-                }
-
-                if GetDiskFreeSpaceExW(
-                    wide.as_ptr(),
-                    &mut free_bytes_available,
-                    &mut total_number_of_bytes,
-                    &mut total_number_of_free_bytes,
-                ) != 0
-                {
-                    return free_bytes_available / (1024 * 1024);
-                }
-            }
-        }
-
-        // Heuristic default for non-windows / fallback: 50,000 MB (50 GB)
-        50_000
+        crate::platform::PlatformSystem::get_available_disk_space_mb(dir)
     }
 
     /// Tests internet connectivity with a fast timeout (2.5 seconds).
@@ -112,27 +68,19 @@ impl DependencyManager {
         let disk_space_mb = Self::get_available_disk_space_mb(&binaries_dir);
         let internet = Self::check_internet_connection().await;
 
-        let os_version = if cfg!(windows) {
-            "Windows 11 (x64)".to_string()
-        } else {
-            format!("{} ({})", env::consts::OS, env::consts::ARCH)
-        };
-
-        let arch = env::consts::ARCH.to_string();
+        let os_info = crate::platform::PlatformSystem::get_os_info();
+        let wv_info = crate::platform::PlatformSystem::get_webview_info();
 
         let dependencies = Self::check_all_dependencies(db).await;
+        let app_data = crate::platform::PathManager::app_root_dir().to_string_lossy().to_string();
 
-        let app_data = if let Ok(local) = env::var("LOCALAPPDATA") {
-            format!("{}\\ArceTools", local)
-        } else {
-            "./data".to_string()
-        };
+        let wv_ver_str = wv_info.version.unwrap_or_else(|| "Embedded".to_string());
 
         SystemDiagnostics {
-            os_version,
-            arch,
-            webview2_available: true,
-            webview2_version: Some("Evergreen Chromium Embedded".to_string()),
+            os_version: os_info.formatted_version,
+            arch: os_info.arch,
+            webview2_available: wv_info.available,
+            webview2_version: Some(format!("{} ({})", wv_info.backend, wv_ver_str)),
             app_data_path: app_data,
             binaries_path: binaries_dir.to_string_lossy().to_string(),
             has_write_permission: has_write_perm,
@@ -148,16 +96,18 @@ impl DependencyManager {
         let ffprobe = Self::inspect_tool("ffprobe", "ffprobe Inspector", "Inspeção técnica de metadados, codecs e durações de mídia", "audio_video").await;
         let ytdlp = Self::inspect_tool("yt-dlp", "yt-dlp Downloader", "Motor de download de fontes permitidas sem quebra de DRM", "download").await;
         let libreoffice = Self::inspect_libreoffice(db).await;
+        let wv_info = crate::platform::PlatformSystem::get_webview_info();
+        let webview_desc = format!("Ambiente de renderização visual da interface de usuário ({})", wv_info.backend);
         let webview2 = DependencyInfo {
             id: "webview2".to_string(),
-            name: "WebView2 Runtime".to_string(),
-            description: "Ambiente de renderização visual da interface de usuário".to_string(),
+            name: format!("{} Runtime", wv_info.backend),
+            description: webview_desc,
             category: "system".to_string(),
             status: DependencyStatus::Ready,
-            version: Some("Sistema Windows".to_string()),
+            version: wv_info.version,
             latest_version: None,
             origin: DependencyOrigin::SystemPath,
-            path: Some("C:\\Windows\\System32\\WebView2Loader.dll".to_string()),
+            path: None,
             is_managed: false,
             can_install: false,
             can_update: false,
@@ -211,10 +161,7 @@ impl DependencyManager {
             let arg = if binary_name == "yt-dlp" { "--version" } else { "-version" };
             let mut cmd = Command::new(&path);
             cmd.arg(arg);
-            #[cfg(windows)]
-            {
-                cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-            }
+            crate::platform::ProcessManager::configure_command(&mut cmd);
 
             match tokio::time::timeout(Duration::from_secs(4), cmd.output()).await {
                 Ok(Ok(output)) if output.status.success() => {
@@ -347,10 +294,7 @@ impl DependencyManager {
                 if p.is_file() {
                     let mut cmd = Command::new(&p);
                     cmd.arg("--version");
-                    #[cfg(windows)]
-                    {
-                        cmd.creation_flags(0x08000000);
-                    }
+                    crate::platform::ProcessManager::configure_command(&mut cmd);
                     if let Ok(Ok(output)) = tokio::time::timeout(Duration::from_secs(3), cmd.output()).await {
                         if output.status.success() {
                             let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -1015,11 +959,7 @@ impl DependencyManager {
         // Test execution
         let mut cmd = std::process::Command::new(p);
         cmd.arg("--version");
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000);
-        }
+        crate::platform::ProcessManager::configure_std_command(&mut cmd);
 
         match cmd.output() {
             Ok(output) if output.status.success() => {

@@ -51,25 +51,25 @@ impl ExternalToolManager {
             }
         }
 
-        // 2. Check current working directory and src-tauri/binaries
+        // 2. Check current working directory and application managed binaries
         let cwd_candidate = PathBuf::from("binaries").join(&exe_name);
         if cwd_candidate.is_file() {
             return Some(cwd_candidate);
         }
 
+        let tod_bin = crate::platform::PathManager::binaries_dir().join(&exe_name);
+        if tod_bin.is_file() {
+            return Some(tod_bin);
+        }
+
         // 3. Check Windows specific directories (WinGet packages, links, AppData)
-        if cfg!(windows) {
+        #[cfg(target_os = "windows")]
+        {
             if let Ok(local_app_data) = env::var("LOCALAPPDATA") {
                 let local_path = Path::new(&local_app_data);
 
-                // Check ToolsOnDesk managed binaries
-                let tod_bin = crate::utils::PathManager::binaries_dir().join(&exe_name);
-                if tod_bin.is_file() {
-                    return Some(tod_bin);
-                }
-
                 // Check legacy ArceTools binaries cache for seamless transition
-                let legacy_bin = crate::utils::PathManager::legacy_binaries_dir().join(&exe_name);
+                let legacy_bin = crate::platform::PathManager::legacy_binaries_dir().join(&exe_name);
                 if legacy_bin.is_file() {
                     return Some(legacy_bin);
                 }
@@ -98,7 +98,6 @@ impl ExternalToolManager {
                                 if direct.is_file() {
                                     return Some(direct);
                                 }
-                                // Search 1 level down
                                 if let Ok(sub_entries) = std::fs::read_dir(&path) {
                                     for sub in sub_entries.flatten() {
                                         let sub_bin = sub.path().join("bin").join(&exe_name);
@@ -126,6 +125,28 @@ impl ExternalToolManager {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // 4. Check macOS specific binary directories (Homebrew, MacPorts, etc.)
+        #[cfg(target_os = "macos")]
+        {
+            for dir in crate::platform::macos::MacOSPlatform::get_system_binary_dirs() {
+                let candidate = dir.join(&exe_name);
+                if candidate.is_file() {
+                    return Some(candidate);
+                }
+            }
+        }
+
+        // 5. Check Linux specific system binary directories
+        #[cfg(target_os = "linux")]
+        {
+            for dir in crate::platform::linux::LinuxPlatform::get_system_binary_dirs() {
+                let candidate = dir.join(&exe_name);
+                if candidate.is_file() {
+                    return Some(candidate);
                 }
             }
         }
@@ -178,11 +199,7 @@ impl ExternalToolManager {
             Some(path) => {
                 let mut cmd = Command::new(&path);
                 cmd.args(args);
-                #[cfg(windows)]
-                {
-                    // CREATE_NO_WINDOW = 0x08000000
-                    cmd.creation_flags(0x08000000);
-                }
+                crate::platform::ProcessManager::configure_command(&mut cmd);
                 match cmd.output().await {
                     Ok(output) if output.status.success() => {
                         let text = String::from_utf8_lossy(&output.stdout).to_string();
@@ -249,12 +266,7 @@ impl ExternalToolManager {
         cmd.args(args);
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
-
-        #[cfg(windows)]
-        {
-            // CREATE_NO_WINDOW = 0x08000000
-            cmd.creation_flags(0x08000000);
-        }
+        crate::platform::ProcessManager::configure_command(&mut cmd);
 
         let mut child = cmd.spawn().map_err(|e| {
             AppError::Internal(format!("Falha ao iniciar processo {}: {}", cmd_path.display(), e))
@@ -269,18 +281,7 @@ impl ExternalToolManager {
         loop {
             // Check cancellation
             if cancel_token.load(Ordering::SeqCst) {
-                #[cfg(windows)]
-                if let Some(pid) = child.id() {
-                    let mut kill_cmd = std::process::Command::new("taskkill");
-                    kill_cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
-                    #[cfg(windows)]
-                    {
-                        use std::os::windows::process::CommandExt;
-                        kill_cmd.creation_flags(0x08000000);
-                    }
-                    let _ = kill_cmd.output();
-                }
-                let _ = child.kill().await;
+                let _ = crate::platform::ProcessManager::terminate_process_tree(&mut child).await;
                 return Err(AppError::Canceled);
             }
 

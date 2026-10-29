@@ -4,6 +4,7 @@ pub mod commands;
 pub mod domain;
 pub mod engines;
 pub mod error;
+pub mod platform;
 pub mod storage;
 pub mod tasks;
 pub mod utils;

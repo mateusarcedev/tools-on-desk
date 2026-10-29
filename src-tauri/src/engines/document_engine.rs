@@ -595,15 +595,34 @@ impl DocumentEngine {
     // ==========================================
 
     pub fn check_libreoffice() -> LibreOfficeStatus {
-        let candidates = [
-            r"C:\Program Files\LibreOffice\program\soffice.exe",
-            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-            "soffice",
-            "libreoffice",
-        ];
+        let mut candidates: Vec<&str> = Vec::new();
+        #[cfg(target_os = "windows")]
+        {
+            candidates.push(r"C:\Program Files\LibreOffice\program\soffice.exe");
+            candidates.push(r"C:\Program Files (x86)\LibreOffice\program\soffice.exe");
+        }
+        #[cfg(target_os = "macos")]
+        {
+            candidates.push("/Applications/LibreOffice.app/Contents/MacOS/soffice");
+            candidates.push("/opt/homebrew/bin/soffice");
+            candidates.push("/usr/local/bin/soffice");
+        }
+        #[cfg(target_os = "linux")]
+        {
+            candidates.push("/usr/bin/soffice");
+            candidates.push("/usr/bin/libreoffice");
+            candidates.push("/usr/local/bin/soffice");
+            candidates.push("/usr/local/bin/libreoffice");
+            candidates.push("/snap/bin/libreoffice");
+        }
+        candidates.push("soffice");
+        candidates.push("libreoffice");
 
         for &cmd in &candidates {
-            if let Ok(output) = Command::new(cmd).arg("--version").output() {
+            let mut process = Command::new(cmd);
+            process.arg("--version");
+            crate::platform::ProcessManager::configure_std_command(&mut process);
+            if let Ok(output) = process.output() {
                 if output.status.success() {
                     let ver = String::from_utf8_lossy(&output.stdout).trim().to_string();
                     return LibreOfficeStatus {
@@ -620,7 +639,7 @@ impl DocumentEngine {
             is_available: false,
             path: None,
             version: None,
-            notes: "LibreOffice não detectado. Conversões Word para PDF requerem o LibreOffice headless instalado no sistema (winget install TheDocumentFoundation.LibreOffice).".to_string(),
+            notes: "LibreOffice não detectado. Conversões Word para PDF requerem o LibreOffice headless instalado no sistema.".to_string(),
         }
     }
 
@@ -657,7 +676,8 @@ impl DocumentEngine {
             profile_dir.to_string_lossy().replace('\\', "/")
         );
 
-        let output = Command::new(&lo_binary)
+        let mut lo_cmd = Command::new(&lo_binary);
+        lo_cmd
             .arg(&profile_url)
             .arg("--headless")
             .arg("--convert-to")
@@ -667,11 +687,12 @@ impl DocumentEngine {
             .arg(source_path)
             .arg("--norestore")
             .arg("--nofirststartwizard")
-            .arg("--nologo")
-            .output()
-            .map_err(|e| {
-                AppError::Document(format!("Falha ao invocar executável do LibreOffice: {}", e))
-            })?;
+            .arg("--nologo");
+        crate::platform::ProcessManager::configure_std_command(&mut lo_cmd);
+
+        let output = lo_cmd.output().map_err(|e| {
+            AppError::Document(format!("Falha ao invocar executável do LibreOffice: {}", e))
+        })?;
 
         // Cleanup temp profile
         let _ = fs::remove_dir_all(&profile_dir);

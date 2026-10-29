@@ -4741,6 +4741,7 @@ dependencies = [
  "futures-util",
  "hex",
  "image",
+ "libc",
  "lopdf",
  "parking_lot",
  "regex",

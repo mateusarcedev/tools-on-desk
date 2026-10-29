@@ -239,13 +239,22 @@ mod tests {
     #[tokio::test]
     async fn test_external_tools_discovery() {
         let status = ExternalToolManager::check_all_tools().await;
-        assert!(status.ffmpeg.available, "FFmpeg deve estar instalado no Windows de desenvolvimento");
-        assert!(status.ffprobe.available, "ffprobe deve estar instalado no Windows de desenvolvimento");
-        assert!(status.yt_dlp.available, "yt-dlp deve estar instalado no Windows de desenvolvimento");
+        #[cfg(windows)]
+        {
+            assert!(status.ffmpeg.available, "FFmpeg deve estar instalado no Windows de desenvolvimento");
+            assert!(status.ffprobe.available, "ffprobe deve estar instalado no Windows de desenvolvimento");
+            assert!(status.yt_dlp.available, "yt-dlp deve estar instalado no Windows de desenvolvimento");
 
-        let ffmpeg_ver = status.ffmpeg.version.as_deref().unwrap_or("");
-        assert!(ffmpeg_ver.contains("8.") || ffmpeg_ver.contains("7.") || ffmpeg_ver.contains("ffmpeg"));
-        assert!(status.yt_dlp.version.as_deref().unwrap_or("").contains("202"));
+            let ffmpeg_ver = status.ffmpeg.version.as_deref().unwrap_or("");
+            assert!(ffmpeg_ver.contains("8.") || ffmpeg_ver.contains("7.") || ffmpeg_ver.contains("ffmpeg"));
+            assert!(status.yt_dlp.version.as_deref().unwrap_or("").contains("202"));
+        }
+        #[cfg(not(windows))]
+        {
+            assert_eq!(status.ffmpeg.name, "ffmpeg");
+            assert_eq!(status.ffprobe.name, "ffprobe");
+            assert_eq!(status.yt_dlp.name, "yt-dlp");
+        }
     }
 
     #[tokio::test]
@@ -953,7 +962,10 @@ mod tests {
         assert!(bin_dir.to_string_lossy().ends_with("binaries"));
 
         let vault_file = crate::utils::PathManager::vault_file();
+        #[cfg(target_os = "windows")]
         assert!(vault_file.to_string_lossy().ends_with(".vault_dpapi.enc"));
+        #[cfg(not(target_os = "windows"))]
+        assert!(vault_file.to_string_lossy().ends_with(".vault_secure.enc"));
     }
 
     #[test]
@@ -1058,5 +1070,74 @@ mod tests {
         assert_eq!(projects_after.len(), 1, "Idempotência violada: registros duplicados");
 
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_platform_system_diagnostics() {
+        let os_info = crate::platform::PlatformSystem::get_os_info();
+        assert!(!os_info.formatted_version.is_empty(), "OS version não deve ser vazio");
+        assert!(!os_info.arch.is_empty(), "Arch não deve ser vazio");
+
+        let wv_info = crate::platform::PlatformSystem::get_webview_info();
+        assert!(!wv_info.backend.is_empty(), "WebView backend não deve ser vazio");
+
+        let temp_dir = std::env::temp_dir();
+        let has_perm = crate::platform::PlatformSystem::check_directory_write_permission(&temp_dir);
+        assert!(has_perm, "Diretório temp deve permitir escrita");
+
+        let space_mb = crate::platform::PlatformSystem::get_available_disk_space_mb(&temp_dir);
+        assert!(space_mb > 0, "Espaço livre em disco deve ser maior que 0 MB");
+    }
+
+    #[test]
+    fn test_process_manager_command_configuration() {
+        let mut std_cmd = std::process::Command::new("echo");
+        crate::platform::ProcessManager::configure_std_command(&mut std_cmd);
+
+        let mut tokio_cmd = tokio::process::Command::new("echo");
+        crate::platform::ProcessManager::configure_command(&mut tokio_cmd);
+    }
+
+    #[test]
+    fn test_credential_store_cross_platform_mock() {
+        // Test key masking
+        let raw_key = "nvapi-1234567890abcdef1234567890abcdef1234567890";
+        let masked = crate::platform::credentials::CredentialStore::mask_key(raw_key);
+        assert!(masked.contains("••••••••"));
+
+        let short_key = "abc";
+        assert_eq!(crate::platform::credentials::CredentialStore::mask_key(short_key), "••••••••");
+
+        // Test save and read in temp vault
+        let temp_dir = std::env::temp_dir().join(format!("tod_vault_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // Store secret
+        let save_res = crate::platform::credentials::CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-test-secret-key-999");
+        assert!(save_res.is_ok(), "Falha ao salvar credencial no cofre: {:?}", save_res.err());
+
+        // Read secret
+        let read_res = crate::platform::credentials::CredentialStore::get_secret(&temp_dir, "nvidia_api_key");
+        assert!(read_res.is_ok(), "Falha ao ler credencial do cofre: {:?}", read_res.err());
+        assert_eq!(read_res.unwrap(), Some("nvapi-test-secret-key-999".to_string()));
+
+        // Delete secret
+        let del_res = crate::platform::credentials::CredentialStore::delete_secret(&temp_dir, "nvidia_api_key");
+        assert!(del_res.is_ok());
+        let read_after = crate::platform::credentials::CredentialStore::get_secret(&temp_dir, "nvidia_api_key").unwrap();
+        assert_eq!(read_after, None);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_cross_platform_binary_paths() {
+        let linux_dirs = crate::platform::linux::LinuxPlatform::get_system_binary_dirs();
+        assert!(!linux_dirs.is_empty());
+        assert!(linux_dirs.contains(&std::path::PathBuf::from("/usr/bin")));
+
+        let macos_dirs = crate::platform::macos::MacOSPlatform::get_system_binary_dirs();
+        assert!(!macos_dirs.is_empty());
+        assert!(macos_dirs.contains(&std::path::PathBuf::from("/opt/homebrew/bin")));
     }
 }
