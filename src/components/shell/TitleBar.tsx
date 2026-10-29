@@ -94,58 +94,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         WebkitUserSelect: 'none',
       }}
     >
-      {/* macOS Traffic Lights */}
+      {/* macOS Native Traffic Lights Clearance: macOS paints native controls directly via titleBarStyle: "Overlay" */}
       {isMacOS && (
         <div
           data-tauri-drag-region
+          aria-hidden="true"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            paddingLeft: 2,
-            paddingRight: 6,
+            width: 78,
+            height: 44,
+            flexShrink: 0,
           }}
-        >
-          <button
-            onClick={handleClose}
-            title="Fechar"
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: '#FF5F56',
-              border: '1px solid #E0443E',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          />
-          <button
-            onClick={handleMinimize}
-            title="Minimizar"
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: '#FFBD2E',
-              border: '1px solid #DEA123',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          />
-          <button
-            onClick={() => handleToggleMaximize()}
-            title={isMaximized ? 'Restaurar' : 'Maximizar'}
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: '#27C93F',
-              border: '1px solid #1AAB29',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          />
-        </div>
+        />
       )}
 
       {/* Brand */}

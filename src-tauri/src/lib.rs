@@ -38,6 +38,15 @@ pub fn run() {
             app.manage(db);
             app.manage(task_mgr);
 
+            #[cfg(target_os = "macos")]
+            {
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_decorations(true);
+                    let _ = win.set_title_bar_style(tauri::TitleBarStyle::Overlay);
+                    let _ = win.set_title("");
+                }
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
