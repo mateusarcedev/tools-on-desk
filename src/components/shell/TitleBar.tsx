@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Icon } from '../common/Icon';
 import { Task } from '../../types/task';
 import { TauriService } from '../../services/tauri';
+import { isMacOS, formatShortcut, formatTitleShortcut } from '../../services/platform';
 
 interface TitleBarProps {
   tasks: Task[];
@@ -93,6 +94,60 @@ export const TitleBar: React.FC<TitleBarProps> = ({
         WebkitUserSelect: 'none',
       }}
     >
+      {/* macOS Traffic Lights */}
+      {isMacOS && (
+        <div
+          data-tauri-drag-region
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 7,
+            paddingLeft: 2,
+            paddingRight: 6,
+          }}
+        >
+          <button
+            onClick={handleClose}
+            title="Fechar"
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#FF5F56',
+              border: '1px solid #E0443E',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          />
+          <button
+            onClick={handleMinimize}
+            title="Minimizar"
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#FFBD2E',
+              border: '1px solid #DEA123',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          />
+          <button
+            onClick={() => handleToggleMaximize()}
+            title={isMaximized ? 'Restaurar' : 'Maximizar'}
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              background: '#27C93F',
+              border: '1px solid #1AAB29',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          />
+        </div>
+      )}
+
       {/* Brand */}
       <div
         data-tauri-drag-region
@@ -147,7 +202,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
       >
         <button
           onClick={onOpenPalette}
-          title="Pesquisar (Ctrl+K)"
+          title={`Pesquisar (${formatTitleShortcut('K')})`}
           style={{
             width: '100%',
             maxWidth: 460,
@@ -195,7 +250,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
               color: 'var(--fg-dim)',
             }}
           >
-            Ctrl K
+            {formatShortcut('K')}
           </span>
         </button>
       </div>
@@ -293,129 +348,133 @@ export const TitleBar: React.FC<TitleBarProps> = ({
           <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={15} />
         </button>
 
-        <div
-          style={{
-            width: 1,
-            height: 20,
-            background: 'var(--line)',
-            margin: '0 4px',
-          }}
-        />
+        {!isMacOS && (
+          <>
+            <div
+              style={{
+                width: 1,
+                height: 20,
+                background: 'var(--line)',
+                margin: '0 4px',
+              }}
+            />
 
-        {/* Window controls */}
-        <div style={{ display: 'flex', height: 44 }}>
-          <button
-            onClick={handleMinimize}
-            title="Minimizar"
-            style={{
-              width: 46,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--fg-dim)',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease, color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface)';
-              e.currentTarget.style.color = 'var(--fg)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--fg-dim)';
-            }}
-          >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path d="M1 6h10" />
-            </svg>
-          </button>
-          <button
-            onClick={handleToggleMaximize}
-            title={isMaximized ? 'Restaurar' : 'Maximizar'}
-            style={{
-              width: 46,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--fg-dim)',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease, color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--surface)';
-              e.currentTarget.style.color = 'var(--fg)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--fg-dim)';
-            }}
-          >
-            {isMaximized ? (
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
+            {/* Window controls */}
+            <div style={{ display: 'flex', height: 44 }}>
+              <button
+                onClick={handleMinimize}
+                title="Minimizar"
+                style={{
+                  width: 46,
+                  height: 44,
+                  display: 'grid',
+                  placeItems: 'center',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--fg-dim)',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease, color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--surface)';
+                  e.currentTarget.style.color = 'var(--fg)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--fg-dim)';
+                }}
               >
-                <path d="M3.5 3.5V1.5h7v7H8.5M1.5 3.5h7v7h-7z" />
-              </svg>
-            ) : (
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path d="M1 6h10" />
+                </svg>
+              </button>
+              <button
+                onClick={handleToggleMaximize}
+                title={isMaximized ? 'Restaurar' : 'Maximizar'}
+                style={{
+                  width: 46,
+                  height: 44,
+                  display: 'grid',
+                  placeItems: 'center',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--fg-dim)',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease, color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--surface)';
+                  e.currentTarget.style.color = 'var(--fg)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--fg-dim)';
+                }}
               >
-                <path d="M1.5 1.5h9v9h-9z" />
-              </svg>
-            )}
-          </button>
-          <button
-            onClick={handleClose}
-            title="Fechar"
-            style={{
-              width: 46,
-              height: 44,
-              display: 'grid',
-              placeItems: 'center',
-              border: 'none',
-              background: 'transparent',
-              color: 'var(--fg-dim)',
-              cursor: 'pointer',
-              transition: 'background 0.15s ease, color 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#c42b1c';
-              e.currentTarget.style.color = '#fff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--fg-dim)';
-            }}
-          >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" />
-            </svg>
-          </button>
-        </div>
+                {isMaximized ? (
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M3.5 3.5V1.5h7v7H8.5M1.5 3.5h7v7h-7z" />
+                  </svg>
+                ) : (
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path d="M1.5 1.5h9v9h-9z" />
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={handleClose}
+                title="Fechar"
+                style={{
+                  width: 46,
+                  height: 44,
+                  display: 'grid',
+                  placeItems: 'center',
+                  border: 'none',
+                  background: 'transparent',
+                  color: 'var(--fg-dim)',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease, color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#c42b1c';
+                  e.currentTarget.style.color = '#fff';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'var(--fg-dim)';
+                }}
+              >
+                <svg
+                  width="11"
+                  height="11"
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" />
+                </svg>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

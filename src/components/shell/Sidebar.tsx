@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NAV_ITEMS, ScreenId } from '../../types/navigation';
 import { Icon } from '../common/Icon';
+import { formatShortcut, formatTitleShortcut } from '../../services/platform';
 
 interface SidebarProps {
   currentScreen: ScreenId;
@@ -39,7 +40,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const rect = e.currentTarget.getBoundingClientRect();
           setHoveredTip({
             label: item.label,
-            kbd: `Ctrl ${item.key}`,
+            kbd: formatShortcut(String(item.key)),
             top: rect.top + rect.height / 2,
           });
         }}
@@ -83,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 opacity: 0.7,
               }}
             >
-              Ctrl {item.key}
+              {formatShortcut(String(item.key))}
             </span>
           </>
         )}
@@ -130,12 +131,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
           const rect = e.currentTarget.getBoundingClientRect();
           setHoveredTip({
             label: 'Expandir menu',
-            kbd: 'Ctrl B',
+            kbd: formatShortcut('B'),
             top: rect.top + rect.height / 2,
           });
         }}
         onMouseLeave={() => setHoveredTip(null)}
-        title={collapsed ? 'Expandir menu (Ctrl+B)' : 'Recolher menu (Ctrl+B)'}
+        title={collapsed ? `Expandir menu (${formatTitleShortcut('B')})` : `Recolher menu (${formatTitleShortcut('B')})`}
         style={{
           height: 36,
           flexShrink: 0,
@@ -173,7 +174,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 opacity: 0.7,
               }}
             >
-              Ctrl B
+              {formatShortcut('B')}
             </span>
           </>
         )}
