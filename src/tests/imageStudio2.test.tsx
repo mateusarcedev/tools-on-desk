@@ -5,7 +5,10 @@ import { PromptEnhancerWidget } from '../components/creative/image/PromptEnhance
 import { ImageEditorModal } from '../components/creative/image/ImageEditorModal';
 import { ProposalComparator } from '../components/creative/generative/ProposalComparator';
 import { AiAgentsSettings } from '../components/screens/settings/AiAgentsSettings';
+import { ReferenceFilesManager } from '../components/creative/image/ReferenceFilesManager';
+import { GenerationMetadataModal } from '../components/creative/image/GenerationMetadataModal';
 import { TauriService } from '../services/tauri';
+import { ProcessedReference } from '../types/creative';
 
 describe('AI Image Studio 2.0 & Subscription Agents Tests', () => {
   it('renders PromptEnhancerWidget and enhances prompt with selected agent', async () => {
@@ -138,5 +141,164 @@ describe('AI Image Studio 2.0 & Subscription Agents Tests', () => {
       expect(execSpy).toHaveBeenCalled();
       expect(screen.getByText(/RESPOSTA DO AGENTE/i)).toBeInTheDocument();
     });
+  });
+
+  it('renders ReferenceFilesManager, handles purpose selection, text preview toggle, and removal', () => {
+    const handleChange = vi.fn();
+    const handleToast = vi.fn();
+
+    const sampleRefs: ProcessedReference[] = [
+      {
+        id: 'ref-1',
+        file_path: '/tmp/product_photo.png',
+        file_name: 'product_photo.png',
+        file_type: 'image',
+        mime_type: 'image/png',
+        file_size_bytes: 2048000,
+        purpose: 'product',
+        preview_data_url: null,
+        width: 1920,
+        height: 1080,
+        page_count: null,
+        extracted_text: null,
+        extraction_status: 'ready',
+        compatibility: {
+          agent_compatible: true,
+          diffusion_compatible: false,
+          mode: 'multimodal_vision',
+          notes: 'Analisado diretamente pelo agente.',
+        },
+      },
+      {
+        id: 'ref-2',
+        file_path: '/tmp/brand_guidelines.pdf',
+        file_name: 'brand_guidelines.pdf',
+        file_type: 'pdf',
+        mime_type: 'application/pdf',
+        file_size_bytes: 512000,
+        purpose: 'brand_identity',
+        preview_data_url: null,
+        width: null,
+        height: null,
+        page_count: 5,
+        extracted_text: 'Use sempre as cores preto #0B0F10 e verde menta #15F5BA.',
+        extraction_status: 'ready',
+        compatibility: {
+          agent_compatible: true,
+          diffusion_compatible: false,
+          mode: 'text_extraction',
+          notes: 'Texto extraído e injetado no contexto.',
+        },
+      },
+    ];
+
+    render(
+      <ReferenceFilesManager
+        references={sampleRefs}
+        onChangeReferences={handleChange}
+        agentId="codex"
+        modelId="black-forest-labs/flux.1-schnell"
+        onShowToast={handleToast}
+      />
+    );
+
+    // Verify header and count
+    expect(screen.getByText(/Arquivos de referência \(2\)/i)).toBeInTheDocument();
+
+    // Verify file cards exist
+    expect(screen.getByText('product_photo.png')).toBeInTheDocument();
+    expect(screen.getByText('brand_guidelines.pdf')).toBeInTheDocument();
+
+    // Verify metadata shown
+    expect(screen.getByText(/1920x1080px/i)).toBeInTheDocument();
+    expect(screen.getByText(/5 página\(s\)/i)).toBeInTheDocument();
+
+    // Verify extracted text snippet button exists and toggle it
+    const toggleTextBtn = screen.getByRole('button', { name: /Ver Texto/i });
+    expect(toggleTextBtn).toBeInTheDocument();
+    fireEvent.click(toggleTextBtn);
+    expect(screen.getByText(/Use sempre as cores preto #0B0F10/i)).toBeInTheDocument();
+
+    // Change purpose of first reference
+    const purposeSelects = screen.getAllByRole('combobox');
+    fireEvent.change(purposeSelects[0], { target: { value: 'style' } });
+    expect(handleChange).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ file_name: 'product_photo.png', purpose: 'style' }),
+      ])
+    );
+
+    // Click remove on second item
+    const removeBtns = screen.getAllByTitle(/Remover anexo/i);
+    fireEvent.click(removeBtns[1]);
+    expect(handleChange).toHaveBeenCalledWith([sampleRefs[0]]);
+  });
+
+  it('renders GenerationMetadataModal and displays audit trail, original prompt, and references', async () => {
+    const handleClose = vi.fn();
+    const handleSendToMotion = vi.fn();
+
+    vi.spyOn(TauriService, 'getGenerationMetadataByOutput').mockResolvedValueOnce({
+      id: 'gen-meta-1',
+      project_id: null,
+      provider: 'nvidia',
+      model: 'black-forest-labs/flux.1-schnell',
+      modality: 'image',
+      prompt: 'Perfume minimalista com neon mint',
+      enhanced_prompt: 'A sleek minimal perfume bottle bathed in emerald neon mint backlight, 8k resolution, product photography',
+      agent_used: 'OpenAI Codex (gpt-4o)',
+      negative_prompt: null,
+      operation: 'text_to_image',
+      parameters_json: JSON.stringify({ steps: 4, cfg_scale: 1.0, aspect_ratio: '1:1' }),
+      output_path: '/tmp/generated_output.png',
+      references: [
+        {
+          id: 'ref-meta-1',
+          file_path: '/tmp/fragrance_bottle.png',
+          file_name: 'fragrance_bottle.png',
+          file_type: 'image',
+          mime_type: 'image/png',
+          file_size_bytes: 1200000,
+          purpose: 'product',
+          preview_data_url: null,
+          width: 800,
+          height: 1200,
+          page_count: null,
+          extracted_text: null,
+          extraction_status: 'success',
+          compatibility: {
+            agent_compatible: true,
+            diffusion_compatible: false,
+            mode: 'multimodal_vision',
+            notes: 'Percepção visual multimodal ativa',
+          },
+        },
+      ],
+      duration_ms: 2450,
+      status: 'completed',
+      created_at: '2026-10-29T17:30:00Z',
+    });
+
+    render(
+      <GenerationMetadataModal
+        imagePath="/tmp/generated_output.png"
+        onClose={handleClose}
+        onSendToMotion={handleSendToMotion}
+      />
+    );
+
+    // Check loading and then resolved content
+    await waitFor(() => {
+      expect(screen.getByText(/Rastreabilidade & Metadados da Geração/i)).toBeInTheDocument();
+      expect(screen.getByText(/"Perfume minimalista com neon mint"/i)).toBeInTheDocument();
+      expect(screen.getByText(/A sleek minimal perfume bottle/i)).toBeInTheDocument();
+      expect(screen.getByText('fragrance_bottle.png')).toBeInTheDocument();
+      expect(screen.getByText(/product · image/i)).toBeInTheDocument();
+    });
+
+    // Check action buttons
+    const sendMotionBtn = screen.getByText(/Enviar ao Motion Studio →/i);
+    fireEvent.click(sendMotionBtn);
+    expect(handleSendToMotion).toHaveBeenCalledWith('/tmp/generated_output.png');
   });
 });

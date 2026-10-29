@@ -11,6 +11,7 @@ import {
   NvidiaKeyStatus,
   NvidiaModelInfo,
   ImageModelCapabilities,
+  ProcessedReference,
 } from '../../../types/creative';
 import { TauriService } from '../../../services/tauri';
 import { Button } from '../../common/Button';
@@ -23,6 +24,8 @@ import { StoryboardApprover, StoryboardScene } from '../../creative/generative/S
 import { ProposalComparator, ProposalItem } from '../../creative/generative/ProposalComparator';
 import { PromptEnhancerWidget } from '../../creative/image/PromptEnhancerWidget';
 import { ImageEditorModal } from '../../creative/image/ImageEditorModal';
+import { ReferenceFilesManager } from '../../creative/image/ReferenceFilesManager';
+import { GenerationMetadataModal } from '../../creative/image/GenerationMetadataModal';
 
 export const CreativeStudioScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CreativeStudioTab>('overview');
@@ -61,6 +64,8 @@ export const CreativeStudioScreen: React.FC = () => {
   const [editingAsset, setEditingAsset] = useState<CreativeAsset | null>(null);
   const [comparingProposals, setComparingProposals] = useState<ProposalItem[] | null>(null);
   const [galleryFilter, setGalleryFilter] = useState<'all' | 'ai' | 'edited' | 'imported'>('all');
+  const [referenceFiles, setReferenceFiles] = useState<ProcessedReference[]>([]);
+  const [metadataModalPath, setMetadataModalPath] = useState<string | null>(null);
 
   // Motion Studio State
   const [motionPrompt, setMotionPrompt] = useState<string>('');
@@ -317,6 +322,7 @@ export const CreativeStudioScreen: React.FC = () => {
         cfg_scale: cfgScale,
         samples: 1,
         model_id: selectedModel,
+        references: referenceFiles.length > 0 ? referenceFiles : undefined,
       };
 
       const res = await TauriService.generateAiImage(options);
@@ -754,6 +760,16 @@ export const CreativeStudioScreen: React.FC = () => {
                 </div>
               )}
 
+              {/* Multimodal Reference Files Manager */}
+              <ReferenceFilesManager
+                references={referenceFiles}
+                onChangeReferences={setReferenceFiles}
+                availableAssets={assets}
+                agentId="codex"
+                modelId={selectedModel}
+                onShowToast={(msg) => alert(msg)}
+              />
+
               {/* Prompt Box */}
               <div
                 style={{
@@ -819,6 +835,7 @@ export const CreativeStudioScreen: React.FC = () => {
                 {/* Subscription Agent Art Direction Harness */}
                 <PromptEnhancerWidget
                   currentPrompt={imagePrompt}
+                  references={referenceFiles}
                   onApplyPrompt={(newP, recStyle, recRatio) => {
                     setImagePrompt(newP);
                     if (recStyle) setSelectedStyle(recStyle);
@@ -930,6 +947,14 @@ export const CreativeStudioScreen: React.FC = () => {
                             {p.split('/').pop()}
                           </span>
                           <div style={{ display: 'flex', gap: 8 }}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setMetadataModalPath(p)}
+                              title="Ver Metadados e Rastreabilidade"
+                            >
+                              <Icon name="info" size={12} /> Metadados
+                            </Button>
                             <Button
                               variant="secondary"
                               size="sm"
@@ -1161,6 +1186,21 @@ export const CreativeStudioScreen: React.FC = () => {
                             alignItems: 'center',
                           }}
                         >
+                          <button
+                            type="button"
+                            onClick={() => setMetadataModalPath(img.file_path)}
+                            title="Ver Metadados"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--muted)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontSize: 10,
+                            }}
+                          >
+                            Info
+                          </button>
                           <button
                             type="button"
                             onClick={() => setEditingAsset(img)}
@@ -1861,6 +1901,19 @@ export const CreativeStudioScreen: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Generation Metadata & Audit Trail Modal */}
+      {metadataModalPath && (
+        <GenerationMetadataModal
+          imagePath={metadataModalPath}
+          onClose={() => setMetadataModalPath(null)}
+          onSendToMotion={(path) => {
+            setMetadataModalPath(null);
+            handleSendToMotionStudio(path);
+          }}
+          onShowToast={(msg) => alert(msg)}
+        />
       )}
     </div>
   );

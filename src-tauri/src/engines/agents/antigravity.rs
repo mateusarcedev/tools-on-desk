@@ -110,6 +110,15 @@ impl AntigravityDriver {
         model: Option<&str>,
         system_instruction: Option<&str>,
     ) -> AppResult<String> {
+        Self::execute_prompt_with_images(prompt, model, system_instruction, &[]).await
+    }
+
+    pub async fn execute_prompt_with_images(
+        prompt: &str,
+        model: Option<&str>,
+        system_instruction: Option<&str>,
+        image_paths: &[String],
+    ) -> AppResult<String> {
         let bin = Self::find_binary()
             .ok_or_else(|| AppError::Internal("Binário do Google Antigravity (agy) não encontrado".into()))?;
 
@@ -118,6 +127,15 @@ impl AntigravityDriver {
             full_prompt.push_str(sys);
             full_prompt.push_str("\n\n---\n\n");
         }
+
+        if !image_paths.is_empty() {
+            full_prompt.push_str("[ARQUIVOS DE IMAGEM PARA ANÁLISE MULTIMODAL]:\n");
+            for p in image_paths {
+                full_prompt.push_str(&format!("- {}\n", p));
+            }
+            full_prompt.push_str("Por favor, examine visualmente as imagens acima para orientar as decisões criativas.\n\n");
+        }
+
         full_prompt.push_str(prompt);
 
         let mut cmd = Command::new(bin);

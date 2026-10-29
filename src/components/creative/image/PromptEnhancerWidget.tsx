@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { AgentInfo, EnhancePromptResult } from '../../../types/creative';
+import { AgentInfo, EnhancePromptResult, ProcessedReference } from '../../../types/creative';
 import { TauriService } from '../../../services/tauri';
 import { Button } from '../../common/Button';
 import { Icon } from '../../common/Icon';
 
 interface PromptEnhancerWidgetProps {
   currentPrompt: string;
+  references?: ProcessedReference[];
   onApplyPrompt: (enhancedPrompt: string, recommendedStyle?: string, recommendedRatio?: string) => void;
   onShowToast?: (msg: string, kind?: 'ok' | 'err' | 'warn') => void;
 }
 
 export const PromptEnhancerWidget: React.FC<PromptEnhancerWidgetProps> = ({
   currentPrompt,
+  references = [],
   onApplyPrompt,
   onShowToast,
 }) => {
@@ -68,7 +70,8 @@ export const PromptEnhancerWidget: React.FC<PromptEnhancerWidgetProps> = ({
       const res = await TauriService.enhanceImagePrompt(
         currentPrompt,
         selectedAgentId,
-        selectedModel || undefined
+        selectedModel || undefined,
+        references
       );
       setResult(res);
       setIsExpanded(true);
@@ -143,6 +146,22 @@ export const PromptEnhancerWidget: React.FC<PromptEnhancerWidgetProps> = ({
                 </option>
               ))}
             </select>
+          )}
+
+          {references.length > 0 && (
+            <span
+              style={{
+                fontSize: 11,
+                padding: '2px 8px',
+                borderRadius: 4,
+                backgroundColor: 'rgba(21, 245, 186, 0.1)',
+                border: '1px solid rgba(21, 245, 186, 0.3)',
+                color: 'var(--mint)',
+                fontFamily: 'var(--mono, monospace)',
+              }}
+            >
+              📎 {references.length} ref{references.length > 1 ? 's' : ''} vinculada{references.length > 1 ? 's' : ''}
+            </span>
           )}
         </div>
 

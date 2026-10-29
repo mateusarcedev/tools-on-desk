@@ -1,15 +1,15 @@
 use crate::domain::{
     CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
-    CreativeSkill, CreativeTemplate, ImageEditOptions, ImageEditResult,
+    CreativeSkill, CreativeTemplate, GenerationMetadata, ImageEditOptions, ImageEditResult,
     ImageModelCapabilities, MotionAnimation, MotionComposition, MotionLayer, MotionScene,
     NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus, NvidiaModelInfo,
-    NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus, RenderMotionOptions,
-    TemplateParameter,
+    NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus, ProcessedReference,
+    ReferencePurpose, RenderMotionOptions, TemplateParameter,
 };
 use crate::engines::agents::ExecuteAgentPromptPayload;
 use crate::engines::{
     AgentInfo, AgentManager, EnhancePromptResult, ImageEngine, MotionEngine, NvidiaAIProvider,
-    NvidiaValidationResult, OpenCodeManager, SkillManager,
+    NvidiaValidationResult, OpenCodeManager, ReferenceEngine, SkillManager,
 };
 use crate::error::AppError;
 use crate::storage::Db;
@@ -660,14 +660,126 @@ pub async fn enhance_image_prompt(
     prompt: String,
     style: Option<String>,
     aspect_ratio: Option<String>,
+    references: Option<Vec<ProcessedReference>>,
 ) -> Result<EnhancePromptResult, AppError> {
+    let refs = references.unwrap_or_default();
     AgentManager::enhance_image_prompt(
         &agent_id,
         &prompt,
         style.as_deref(),
         aspect_ratio.as_deref(),
+        &refs,
     )
     .await
+}
+
+#[tauri::command]
+pub fn inspect_reference_file(
+    file_path: String,
+    purpose: Option<String>,
+    agent_id: Option<String>,
+    model_id: Option<String>,
+) -> Result<ProcessedReference, AppError> {
+    let path = Path::new(&file_path);
+    let purp = match purpose.as_deref() {
+        Some("style") => ReferencePurpose::Style,
+        Some("composition") => ReferencePurpose::Composition,
+        Some("lighting") => ReferencePurpose::Lighting,
+        Some("character") => ReferencePurpose::Character,
+        Some("brand_identity") => ReferencePurpose::BrandIdentity,
+        Some("instructions") => ReferencePurpose::Instructions,
+        Some("additional_context") => ReferencePurpose::AdditionalContext,
+        _ => ReferencePurpose::Product,
+    };
+
+    let agent = agent_id.as_deref().unwrap_or("codex");
+    let model = model_id.as_deref().unwrap_or("black-forest-labs/flux.1-schnell");
+
+    ReferenceEngine::inspect_reference_file(path, purp, agent, model)
+}
+
+#[tauri::command]
+pub fn inspect_reference_files_batch(
+    items: Vec<(String, Option<String>)>,
+    agent_id: Option<String>,
+    model_id: Option<String>,
+) -> Result<Vec<ProcessedReference>, AppError> {
+    let agent = agent_id.as_deref().unwrap_or("codex");
+    let model = model_id.as_deref().unwrap_or("black-forest-labs/flux.1-schnell");
+
+    let mapped: Vec<(String, ReferencePurpose)> = items
+        .into_iter()
+        .map(|(p, purp_str)| {
+            let purp = match purp_str.as_deref() {
+                Some("style") => ReferencePurpose::Style,
+                Some("composition") => ReferencePurpose::Composition,
+                Some("lighting") => ReferencePurpose::Lighting,
+                Some("character") => ReferencePurpose::Character,
+                Some("brand_identity") => ReferencePurpose::BrandIdentity,
+                Some("instructions") => ReferencePurpose::Instructions,
+                Some("additional_context") => ReferencePurpose::AdditionalContext,
+                _ => ReferencePurpose::Product,
+            };
+            (p, purp)
+        })
+        .collect();
+
+    ReferenceEngine::inspect_multiple(&mapped, agent, model)
+}
+
+#[tauri::command]
+pub fn get_generation_metadata_by_output(
+    db: State<'_, Db>,
+    output_path: String,
+) -> Result<Option<GenerationMetadata>, AppError> {
+    let history = db.list_generation_history(Some("image"), Some(100))?;
+    for entry in history {
+        if entry.output_path.as_deref() == Some(&output_path) {
+            let mut enhanced_prompt = None;
+            let mut agent_used = None;
+            let mut references = Vec::new();
+            let mut operation = "Síntese Text-to-Image".to_string();
+
+            if let Some(param_str) = &entry.parameters_json {
+                if let Ok(opts) = serde_json::from_str::<NvidiaImageGenOptions>(param_str) {
+                    if let Some(refs) = opts.references {
+                        if !refs.is_empty() {
+                            operation = "Síntese Visual Guiada por Referências Multimodais".to_string();
+                        }
+                        references = refs;
+                    }
+                }
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(param_str) {
+                    if let Some(agent) = val.get("agent_id").and_then(|v| v.as_str()) {
+                        agent_used = Some(agent.to_string());
+                    }
+                    if let Some(enh) = val.get("enhanced_prompt").and_then(|v| v.as_str()) {
+                        enhanced_prompt = Some(enh.to_string());
+                    }
+                }
+            }
+
+            return Ok(Some(GenerationMetadata {
+                id: entry.id,
+                project_id: entry.project_id,
+                provider: entry.provider,
+                model: entry.model,
+                modality: entry.modality,
+                prompt: entry.prompt,
+                enhanced_prompt,
+                agent_used,
+                negative_prompt: entry.negative_prompt,
+                operation,
+                parameters_json: entry.parameters_json,
+                output_path: entry.output_path,
+                references,
+                duration_ms: entry.duration_ms,
+                status: entry.status,
+                created_at: entry.created_at,
+            }));
+        }
+    }
+    Ok(None)
 }
 
 #[tauri::command]

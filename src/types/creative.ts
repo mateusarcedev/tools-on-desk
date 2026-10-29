@@ -34,6 +34,7 @@ export interface NvidiaImageGenOptions {
   seed?: number;
   samples: number;
   model_id?: string;
+  references?: ProcessedReference[];
 }
 
 export interface NvidiaImageGenResult {
@@ -294,6 +295,69 @@ export interface ImageEditResult {
   width: number;
   height: number;
   file_size_bytes: number;
+}
+
+export type ReferenceFileType =
+  | 'image'
+  | 'pdf'
+  | 'docx'
+  | 'text'
+  | 'markdown'
+  | 'data'
+  | 'svg'
+  | 'other';
+
+export type ReferencePurpose =
+  | 'product'
+  | 'style'
+  | 'composition'
+  | 'lighting'
+  | 'character'
+  | 'brand_identity'
+  | 'instructions'
+  | 'additional_context';
+
+export interface ReferenceCompatibility {
+  agent_compatible: boolean;
+  image_model_compatible: boolean;
+  mode: string;
+  notes: string;
+}
+
+export interface ProcessedReference {
+  id: string;
+  file_path: string;
+  file_name: string;
+  file_size_bytes: number;
+  file_type: ReferenceFileType;
+  mime_type: string;
+  purpose: ReferencePurpose;
+  preview_data_url: string | null;
+  width: number | null;
+  height: number | null;
+  page_count: number | null;
+  extracted_text: string | null;
+  extraction_status: string;
+  compatibility: ReferenceCompatibility;
+}
+
+export interface GenerationMetadata {
+  id: string;
+  project_id: string | null;
+  provider: string;
+  model: string;
+  modality: string;
+  prompt: string;
+  enhanced_prompt: string | null;
+  agent_used: string | null;
+  negative_prompt: string | null;
+  operation: string;
+  parameters_json: string | null;
+  output_path: string | null;
+  references: ProcessedReference[];
+  duration_ms: number;
+  status: string;
+  created_at: string;
 }
 
 export type CreativeStudioTab =

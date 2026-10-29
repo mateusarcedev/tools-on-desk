@@ -107,6 +107,15 @@ impl CodexDriver {
         model: Option<&str>,
         system_instruction: Option<&str>,
     ) -> AppResult<String> {
+        Self::execute_prompt_with_images(prompt, model, system_instruction, &[]).await
+    }
+
+    pub async fn execute_prompt_with_images(
+        prompt: &str,
+        model: Option<&str>,
+        system_instruction: Option<&str>,
+        image_paths: &[String],
+    ) -> AppResult<String> {
         let bin = Self::find_binary()
             .ok_or_else(|| AppError::Internal("Binário do Codex não encontrado no sistema".into()))?;
 
@@ -124,6 +133,12 @@ impl CodexDriver {
         if let Some(m) = model {
             cmd.arg("-m");
             cmd.arg(m);
+        }
+        for img in image_paths {
+            if std::path::Path::new(img).exists() {
+                cmd.arg("-i");
+                cmd.arg(img);
+            }
         }
         cmd.arg(&full_prompt);
 

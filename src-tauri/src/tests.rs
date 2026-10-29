@@ -1429,4 +1429,139 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
+
+    #[tokio::test]
+    async fn test_reference_engine_multimodal_inspection() {
+        let temp_dir = std::env::temp_dir().join(format!("arce_test_refs_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // 1. Synthetic image reference
+        let img_path = temp_dir.join("sample_product.png");
+        let mut img = image::RgbaImage::new(128, 128);
+        for p in img.pixels_mut() {
+            *p = image::Rgba([15, 245, 186, 255]);
+        }
+        img.save(&img_path).expect("Falha ao salvar sample_product.png");
+
+        let img_ref = crate::engines::ReferenceEngine::inspect_reference_file(
+            &img_path,
+            crate::domain::ReferencePurpose::Product,
+            "codex",
+            "black-forest-labs/flux.1-schnell",
+        )
+        .expect("Falha ao inspecionar imagem");
+
+        assert_eq!(img_ref.file_type, crate::domain::ReferenceFileType::Image);
+        assert_eq!(img_ref.width, Some(128));
+        assert_eq!(img_ref.height, Some(128));
+        assert!(img_ref.preview_data_url.is_some(), "Thumbnail base64 deve ser gerado");
+        assert!(img_ref.compatibility.agent_compatible);
+        assert_eq!(img_ref.compatibility.mode, "multimodal_vision");
+
+        // 2. Synthetic text document reference
+        let txt_path = temp_dir.join("brand_guidelines.txt");
+        let doc_text = "DIRETRIZES DA MARCA: Usar iluminação minimalista, tons neon mint (#15F5BA) e fundo preto fosco.";
+        std::fs::write(&txt_path, doc_text).expect("Falha ao salvar txt");
+
+        let txt_ref = crate::engines::ReferenceEngine::inspect_reference_file(
+            &txt_path,
+            crate::domain::ReferencePurpose::BrandIdentity,
+            "codex",
+            "black-forest-labs/flux.1-schnell",
+        )
+        .expect("Falha ao inspecionar documento txt");
+
+        assert_eq!(txt_ref.file_type, crate::domain::ReferenceFileType::Text);
+        assert_eq!(txt_ref.extraction_status, "ready");
+        assert_eq!(txt_ref.extracted_text.as_deref(), Some(doc_text));
+        assert!(txt_ref.compatibility.agent_compatible);
+
+        // 3. Batch inspection
+        let batch_items = vec![
+            (img_path.to_string_lossy().to_string(), crate::domain::ReferencePurpose::Product),
+            (txt_path.to_string_lossy().to_string(), crate::domain::ReferencePurpose::Instructions),
+        ];
+
+        let batch_results = crate::engines::ReferenceEngine::inspect_multiple(
+            &batch_items,
+            "antigravity",
+            "stabilityai/stable-diffusion-3.5-large",
+        )
+        .expect("Falha ao inspecionar lote de referências");
+
+        assert_eq!(batch_results.len(), 2);
+        assert_eq!(batch_results[0].file_type, crate::domain::ReferenceFileType::Image);
+        assert_eq!(batch_results[1].file_type, crate::domain::ReferenceFileType::Text);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_generation_history_metadata_and_references() {
+        let db = crate::storage::Db::new_in_memory().expect("Falha ao abrir db in-memory");
+
+        let sample_ref = crate::domain::ProcessedReference {
+            id: "ref-1".into(),
+            file_path: "/tmp/sample.png".into(),
+            file_name: "sample.png".into(),
+            file_size_bytes: 4096,
+            file_type: crate::domain::ReferenceFileType::Image,
+            mime_type: "image/png".into(),
+            purpose: crate::domain::ReferencePurpose::Product,
+            preview_data_url: None,
+            width: Some(512),
+            height: Some(512),
+            page_count: None,
+            extracted_text: None,
+            extraction_status: "ready".into(),
+            compatibility: crate::domain::ReferenceCompatibility {
+                agent_compatible: true,
+                image_model_compatible: false,
+                mode: "multimodal_vision".into(),
+                notes: "Visual multimodal".into(),
+            },
+        };
+
+        let gen_opts = crate::domain::NvidiaImageGenOptions {
+            prompt: "Foto de perfume".into(),
+            negative_prompt: None,
+            style_preset: Some("Publicitário".into()),
+            aspect_ratio: "1:1".into(),
+            width: 1024,
+            height: 1024,
+            steps: Some(4),
+            cfg_scale: Some(1.0),
+            seed: Some(42),
+            samples: 1,
+            model_id: Some("black-forest-labs/flux.1-schnell".into()),
+            references: Some(vec![sample_ref]),
+        };
+
+        let entry = crate::domain::CreativeGenerationHistoryEntry {
+            id: "hist-1".into(),
+            project_id: None,
+            provider: "nvidia".into(),
+            model: "black-forest-labs/flux.1-schnell".into(),
+            modality: "image".into(),
+            prompt: "Foto de perfume".into(),
+            negative_prompt: None,
+            parameters_json: Some(serde_json::to_string(&gen_opts).unwrap()),
+            output_path: Some("/tmp/out.png".into()),
+            duration_ms: 850,
+            status: "success".into(),
+            error: None,
+            created_at: "2026-10-29T12:00:00Z".into(),
+        };
+
+        db.insert_generation_history(&entry).expect("Falha ao inserir histórico");
+
+        let list = db.list_generation_history(Some("image"), Some(10)).expect("Falha ao listar");
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].output_path.as_deref(), Some("/tmp/out.png"));
+
+        // Verify deserialization of stored parameters with references
+        let parsed: crate::domain::NvidiaImageGenOptions =
+            serde_json::from_str(&list[0].parameters_json.clone().unwrap()).expect("Falha ao desserializar");
+        assert_eq!(parsed.references.unwrap().len(), 1);
+    }
 }

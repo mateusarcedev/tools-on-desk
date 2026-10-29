@@ -56,27 +56,66 @@ impl AgentManager {
         raw_prompt: &str,
         style_hint: Option<&str>,
         aspect_ratio: Option<&str>,
+        references: &[crate::domain::ProcessedReference],
     ) -> AppResult<EnhancePromptResult> {
         let sys_prompt = r#"Você é um Diretor de Arte Sênior e Especialista em Engenharia de Prompt para IA Generativa Visual (FLUX.1 e Stable Diffusion 3.5).
-Sua tarefa é pegar uma ideia simples do usuário e refiná-la para gerar uma imagem publicitária ou cinematográfica de impacto.
+Sua tarefa é analisar o briefing do usuário, considerando rigorosamente os documentos e imagens de referência fornecidos, para gerar uma direção de arte cinematográfica e publicitária de alto nível.
 
 Regras Obrigatórias:
 1. Responda em formato estruturado claro com:
-[ENHANCED_PROMPT]: Um prompt descritivo em inglês otimizado para o modelo visual (iluminação, texturas 8k, lente fotográfica, ângulo, composição, atmosfera).
-[REASONING]: Uma explicação concisa (em português) de 2 frases sobre suas escolhas estéticas e de iluminação.
+[ENHANCED_PROMPT]: Um prompt descritivo em inglês otimizado para o modelo visual (iluminação, texturas 8k, lente fotográfica, ângulo, composição, atmosfera, integrando elementos das referências).
+[REASONING]: Uma explicação concisa (em português) de 2 frases sobre suas escolhas estéticas, fidelidade aos documentos de instrução e detalhes visuais das imagens de referência.
 [RECOMMENDED_STYLE]: O estilo ideal (ex: Publicitário, Fotográfico, Cinematográfico, 3D, Minimalista).
 [RECOMMENDED_RATIO]: A proporção recomendada (ex: 1:1, 16:9, 9:16, 4:3).
 
 Não inclua textos fora dessa estrutura."#;
 
-        let user_prompt = format!(
+        let mut user_prompt = format!(
             "Ideia de imagem: \"{}\"\nEstilo desejado: {}\nProporção pretendida: {}",
             raw_prompt,
             style_hint.unwrap_or("Não especificado"),
             aspect_ratio.unwrap_or("1:1")
         );
 
-        let response = Self::execute_prompt(agent_id, &user_prompt, None, Some(sys_prompt)).await?;
+        let mut image_paths = Vec::new();
+
+        if !references.is_empty() {
+            user_prompt.push_str("\n\n=== ARQUIVOS DE REFERÊNCIA FORNECIDOS PELO USUÁRIO ===\n");
+            for ref_item in references {
+                user_prompt.push_str(&format!(
+                    "\n[Arquivo: {} | Finalidade declarada: {} | Tipo: {:?}]\n",
+                    ref_item.file_name,
+                    ref_item.purpose.display_label(),
+                    ref_item.file_type
+                ));
+
+                if let Some(text) = &ref_item.extracted_text {
+                    user_prompt.push_str(&format!(
+                        "--- Conteúdo extraído do documento ---\n{}\n--------------------------------------\n",
+                        text
+                    ));
+                }
+
+                if ref_item.file_type == crate::domain::ReferenceFileType::Image {
+                    if std::path::Path::new(&ref_item.file_path).exists() {
+                        image_paths.push(ref_item.file_path.clone());
+                    }
+                    user_prompt.push_str(&format!(
+                        "Dimensões: {}x{}px | Status visual: {}\n",
+                        ref_item.width.unwrap_or(0),
+                        ref_item.height.unwrap_or(0),
+                        ref_item.compatibility.notes
+                    ));
+                }
+            }
+            user_prompt.push_str("\nDiretriz: Integre as características de produto, estilo ou texto dos documentos e imagens acima no prompt de geração visual.\n");
+        }
+
+        let response = match agent_id {
+            "codex" => CodexDriver::execute_prompt_with_images(&user_prompt, None, Some(sys_prompt), &image_paths).await?,
+            "antigravity" => AntigravityDriver::execute_prompt_with_images(&user_prompt, None, Some(sys_prompt), &image_paths).await?,
+            _ => Self::execute_prompt(agent_id, &user_prompt, None, Some(sys_prompt)).await?,
+        };
 
         // Parse structured tags
         let mut enhanced_prompt = raw_prompt.to_string();

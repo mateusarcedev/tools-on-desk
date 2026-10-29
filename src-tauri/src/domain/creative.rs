@@ -67,6 +67,99 @@ pub struct ImageEditResult {
     pub file_size_bytes: u64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ReferenceFileType {
+    Image,
+    Pdf,
+    Docx,
+    Text,
+    Markdown,
+    Data,
+    Svg,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ReferencePurpose {
+    Product,
+    Style,
+    Composition,
+    Lighting,
+    Character,
+    BrandIdentity,
+    Instructions,
+    AdditionalContext,
+}
+
+impl Default for ReferencePurpose {
+    fn default() -> Self {
+        ReferencePurpose::Product
+    }
+}
+
+impl ReferencePurpose {
+    pub fn display_label(&self) -> &'static str {
+        match self {
+            ReferencePurpose::Product => "Referência de produto",
+            ReferencePurpose::Style => "Referência de estilo",
+            ReferencePurpose::Composition => "Referência de composição",
+            ReferencePurpose::Lighting => "Referência de iluminação",
+            ReferencePurpose::Character => "Referência de personagem",
+            ReferencePurpose::BrandIdentity => "Identidade visual",
+            ReferencePurpose::Instructions => "Documento de instruções",
+            ReferencePurpose::AdditionalContext => "Contexto adicional",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReferenceCompatibility {
+    pub agent_compatible: bool,
+    pub image_model_compatible: bool,
+    pub mode: String, // "multimodal_vision", "text_extraction", "metadata_only", "unsupported"
+    pub notes: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessedReference {
+    pub id: String,
+    pub file_path: String,
+    pub file_name: String,
+    pub file_size_bytes: u64,
+    pub file_type: ReferenceFileType,
+    pub mime_type: String,
+    pub purpose: ReferencePurpose,
+    pub preview_data_url: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub page_count: Option<u32>,
+    pub extracted_text: Option<String>,
+    pub extraction_status: String, // "ready", "no_text_layer", "scanned_pdf_ocr_unavailable", "read_error"
+    pub compatibility: ReferenceCompatibility,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenerationMetadata {
+    pub id: String,
+    pub project_id: Option<String>,
+    pub provider: String,
+    pub model: String,
+    pub modality: String,
+    pub prompt: String,
+    pub enhanced_prompt: Option<String>,
+    pub agent_used: Option<String>,
+    pub negative_prompt: Option<String>,
+    pub operation: String,
+    pub parameters_json: Option<String>,
+    pub output_path: Option<String>,
+    pub references: Vec<ProcessedReference>,
+    pub duration_ms: u64,
+    pub status: String,
+    pub created_at: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NvidiaImageGenOptions {
     pub prompt: String,
@@ -80,6 +173,7 @@ pub struct NvidiaImageGenOptions {
     pub seed: Option<u64>,
     pub samples: u32,
     pub model_id: Option<String>,
+    pub references: Option<Vec<ProcessedReference>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

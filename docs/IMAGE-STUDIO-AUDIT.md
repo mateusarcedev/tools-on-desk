@@ -116,3 +116,12 @@ O motor `ImageEngine` nativo em Rust (`src-tauri/src/engines/image_engine.rs`) e
 | Galeria Reativa com Filtros e Miniaturas | PARCIAL | **IMPLEMENTADO & TESTADO LOCALMENTE** | Filtros, busca, favoritos e metadados detalhados. |
 | Comparador de Propostas Lado a Lado | PARCIAL | **IMPLEMENTADO & TESTADO LOCALMENTE** | Zoom, metadados e seleção para composição. |
 | Envio Real de Imagem ao Motion Studio + MP4 | PARCIAL | **IMPLEMENTADO & TESTADO LOCALMENTE** | Renderização com FFmpeg validada em arquivo de mídia real. |
+| Ingestão Multimodal de Arquivos de Referência | NÃO IMPLEMENTADO | **DISPONÍVEL PARA A CONTA & VALIDADO** | Ingestão de imagens, PDFs (lopdf), DOCX, TXT/MD, SVG seguro com finalidades e inspeção completa. |
+| Visão Multimodal com Codex CLI (`-i`) e Antigravity | NÃO IMPLEMENTADO | **DISPONÍVEL PARA A CONTA & VALIDADO** | Testado e verificado ao vivo com imagem real na máquina. |
+| Rastreabilidade Completa de Metadados da Geração | NÃO IMPLEMENTADO | **IMPLEMENTADO & TESTADO LOCALMENTE** | Persistência em SQLite WAL (`creative_generation_history`) e modal de auditoria. |
+
+---
+
+## 8. Relatório de Homologação Final
+
+Consulte o documento completo de homologação em [`docs/IMAGE-STUDIO-HOMOLOGATION.md`](file:///home/mateusarcedev/projetos/arce-tools/docs/IMAGE-STUDIO-HOMOLOGATION.md) para detalhes dos testes unitários, matriz de status funcional e matriz de compatibilidade com modelos reais.

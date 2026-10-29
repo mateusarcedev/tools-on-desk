@@ -15,10 +15,11 @@ pub mod video;
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
 pub use creative::{
     CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
-    CreativeSkill, CreativeTemplate, CropArea, ImageEditOptions, ImageEditResult,
-    ImageModelCapabilities, MotionAnimation, MotionAudioTrack, MotionComposition,
+    CreativeSkill, CreativeTemplate, CropArea, GenerationMetadata, ImageEditOptions,
+    ImageEditResult, ImageModelCapabilities, MotionAnimation, MotionAudioTrack, MotionComposition,
     MotionLayer, MotionScene, NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus,
     NvidiaModelInfo, NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus,
+    ProcessedReference, ReferenceCompatibility, ReferenceFileType, ReferencePurpose,
     RenderCompositeVideoOptions, RenderMotionOptions, TemplateParameter,
 };
 pub use dependency::{

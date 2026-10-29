@@ -44,9 +44,12 @@ import {
   CreativeTemplate,
   AgentInfo,
   EnhancePromptResult,
+  GenerationMetadata,
   ImageModelCapabilities,
   ImageEditOptions,
   ImageEditResult,
+  ProcessedReference,
+  ReferencePurpose,
   NvidiaImageGenOptions,
   NvidiaImageGenResult,
   NvidiaKeyStatus,
@@ -277,12 +280,13 @@ export const TauriService = {
     multiple?: boolean;
     extensions?: string[];
     title?: string;
+    filters?: { name: string; extensions: string[] }[];
   }): Promise<string[]> {
     if (!isTauri()) return [];
 
-    const filters = options?.extensions
+    const filters = options?.filters ?? (options?.extensions
       ? [{ name: 'Arquivos suportados', extensions: options.extensions }]
-      : undefined;
+      : undefined);
 
     const selected = await openDialog({
       multiple: options?.multiple ?? true,
@@ -1006,7 +1010,12 @@ export const TauriService = {
     return await invoke<string>('execute_agent_prompt', { agentId, prompt, model });
   },
 
-  async enhanceImagePrompt(prompt: string, agentId?: string, model?: string): Promise<EnhancePromptResult> {
+  async enhanceImagePrompt(
+    prompt: string,
+    agentId?: string,
+    model?: string,
+    references?: ProcessedReference[]
+  ): Promise<EnhancePromptResult> {
     if (!isTauri()) {
       return {
         original_prompt: prompt,
@@ -1018,7 +1027,85 @@ export const TauriService = {
         recommended_ratio: '16:9',
       };
     }
-    return await invoke<EnhancePromptResult>('enhance_image_prompt', { prompt, agentId, model });
+    return await invoke<EnhancePromptResult>('enhance_image_prompt', {
+      prompt,
+      agentId,
+      model,
+      references,
+    });
+  },
+
+  // ==========================================
+  // MULTIMODAL REFERENCE FILES ENGINE (M09)
+  // ==========================================
+
+  async inspectReferenceFile(
+    filePath: string,
+    purpose?: ReferencePurpose,
+    agentId?: string,
+    modelId?: string
+  ): Promise<ProcessedReference> {
+    if (!isTauri()) {
+      const isImg = filePath.endsWith('.png') || filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || filePath.endsWith('.webp');
+      const isPdf = filePath.endsWith('.pdf');
+      const isDocx = filePath.endsWith('.docx');
+      const isTxt = filePath.endsWith('.txt') || filePath.endsWith('.md');
+
+      return {
+        id: 'ref-' + Date.now(),
+        file_path: filePath,
+        file_name: filePath.split('/').pop() || 'referencia',
+        file_size_bytes: 102400,
+        file_type: isImg ? 'image' : isPdf ? 'pdf' : isDocx ? 'docx' : isTxt ? 'text' : 'other',
+        mime_type: isImg ? 'image/png' : isPdf ? 'application/pdf' : 'text/plain',
+        purpose: purpose || 'product',
+        preview_data_url: null,
+        width: isImg ? 1024 : null,
+        height: isImg ? 1024 : null,
+        page_count: isPdf ? 3 : null,
+        extracted_text: isPdf || isDocx || isTxt ? 'Mock texto extraído do documento de referência.' : null,
+        extraction_status: 'ready',
+        compatibility: {
+          agent_compatible: true,
+          image_model_compatible: false,
+          mode: isImg ? 'multimodal_vision' : 'text_extraction',
+          notes: isImg
+            ? 'OpenAI Codex / Google Antigravity aceita a imagem diretamente para análise visual.'
+            : 'Texto extraído pronto para o briefing do agente.',
+        },
+      };
+    }
+    return await invoke<ProcessedReference>('inspect_reference_file', {
+      filePath,
+      purpose,
+      agentId,
+      modelId,
+    });
+  },
+
+  async inspectReferenceFilesBatch(
+    items: { filePath: string; purpose?: ReferencePurpose }[],
+    agentId?: string,
+    modelId?: string
+  ): Promise<ProcessedReference[]> {
+    if (!isTauri()) {
+      return Promise.all(items.map((i) => this.inspectReferenceFile(i.filePath, i.purpose, agentId, modelId)));
+    }
+    const tupleItems = items.map((i) => [i.filePath, i.purpose || null]);
+    return await invoke<ProcessedReference[]>('inspect_reference_files_batch', {
+      items: tupleItems,
+      agentId,
+      modelId,
+    });
+  },
+
+  async getGenerationMetadataByOutput(outputPath: string): Promise<GenerationMetadata | null> {
+    if (!isTauri()) {
+      return null;
+    }
+    return await invoke<GenerationMetadata | null>('get_generation_metadata_by_output', {
+      outputPath,
+    });
   },
 
   // ==========================================
