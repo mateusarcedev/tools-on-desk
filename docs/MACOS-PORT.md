@@ -1,4 +1,4 @@
-# Porte Nativo macOS — ToolsOnDesk (Missão 08)
+# Porte Nativo macOS — ToolsOnDesk (Missão 08.1)
 
 O porte nativo do **ToolsOnDesk** para **macOS** oferece suporte para as duas arquiteturas do ecossistema Apple: **Apple Silicon** (`aarch64-apple-darwin`, Macs M1/M2/M3/M4) e **Intel** (`x86_64-apple-darwin`), utilizando o motor nativo **WKWebView** e o cofre de chaves **Apple Keychain Services**.
 
@@ -19,7 +19,7 @@ O `PathManager` segue rigorosamente as convenções da Apple:
 
 1. **Dados Persistentes**:
    - `~/Library/Application Support/ToolsOnDesk/`
-   - Contém: banco de dados SQLite `toolsondesk.db`, diretório `binaries/`, e cofre `.vault_secure.enc`.
+   - Contém: banco de dados SQLite `toolsondesk.db` e diretório de ferramentas `binaries/`.
 2. **Caches Temporários**:
    - `~/Library/Caches/ToolsOnDesk/`
 3. **Downloads e Exportações**:
@@ -28,25 +28,24 @@ O `PathManager` segue rigorosamente as convenções da Apple:
 
 ---
 
-## 3. Integração com Apple Keychain Services
+## 3. Integração com Apple Keychain Services (`security -i`)
 
 Diferente do Linux e do Windows, o macOS possui um subsistema criptográfico centralizado de alta segurança:
 
-- O `CredentialStore` invoca a API nativa do Keychain através do utilitário de segurança `/usr/bin/security`.
-- Chaves armazenadas:
-  - Serviço: `ToolsOnDesk`
-  - Conta: `ToolsOnDesk`
-  - Tipo: Senha genérica (Generic Password)
-- Comando de Gravação:
+- O `CredentialStore` invoca o utilitário nativo `/usr/bin/security`.
+- **Prevenção de Vazamento em Linha de Comando**:
+  Em vez de passar `-w <secret>` como argumento direto em `argv` (o que exporia a credencial para `ps aux` ou `/proc`), a aplicação executa o modo interativo:
   ```bash
-  /usr/bin/security add-generic-password -a ToolsOnDesk -s nvidia_api_key -w "<SECRET>" -U
+  /usr/bin/security -i
   ```
-- Comando de Leitura:
+  O comando `add-generic-password -a "ToolsOnDesk" -s "<key>" -w "<secret>" -U\n` é injetado via **`stdin` (pipe)**.
+- **Limpeza Volátil**: O buffer em memória contendo o comando e a chave é sobrescrito com zeros (`zeroize_bytes`) imediatamente após ser transmitido pelo pipe.
+- **Leitura Segura**:
   ```bash
   /usr/bin/security find-generic-password -a ToolsOnDesk -s nvidia_api_key -w
   ```
-- A chave é protegida pelo Secure Enclave da Apple nos Macs com Apple Silicon e T2 Security Chip.
-- Buffers de memória contendo a chave descriptografada em Rust são sobrescritos com zeros (`zeroize_bytes`) imediatamente após o envio da requisição HTTPS para o NVIDIA NIM.
+  O segredo é retornado exclusivamente via `stdout`, sem nunca constar em `argv`.
+- A chave é protegida pelo Secure Enclave da Apple nos Macs modernos.
 
 ---
 
@@ -64,19 +63,17 @@ O usuário não é obrigado a ter o Homebrew instalado para utilizar as ferramen
 
 ---
 
-## 5. Adaptações de Interface e Experiência do Usuário (macOS HIG)
+## 5. Barra de Título Nativa do macOS (Overlay TitleBar)
 
-1. **Traffic Lights Nativos**:
-   - O aplicativo opera no modo frameless (`decorations: false`).
-   - No macOS, a `TitleBar` renderiza à esquerda os botões de controle de janela nativos com as cores canônicas da Apple:
-     - Fechar: `#FF5F56`
-     - Minimizar: `#FFBD2E`
-     - Maximizar/Restaurar: `#27C93F`
-   - Os controles de janela do lado direito (típicos de Windows e Linux) são ocultados no macOS.
-2. **Tipografia de Atalhos**:
-   - O modificador principal exibe o caractere Command `⌘` (ex: `⌘K` na busca, `⌘J` na gaveta de tarefas, `⌘B` para recolher menu, `⌘1..9` para navegação direta).
-3. **Canvas HTML5 e WebGL**:
-   - O WKWebView provê aceleração nativa via Apple Metal, garantindo 60 FPS fluidos no Canvas do Creative Studio e Poster Studio.
+1. **Traffic Lights Nativos Reais**:
+   - No macOS, a janela Tauri é configurada com:
+     - `decorations: true`
+     - `titleBarStyle: "Overlay"`
+     - `hiddenTitle: true`
+   - O próprio sistema operacional macOS desenha os controles nativos de janela (*Traffic Lights*) no canto superior esquerdo da barra com física de clique, estados hover/active, animação nativa de minimizar para o Dock e zoom/fullscreen nativo com tecla Option.
+   - **Eliminação de Mocks**: Todos os botões simulados em HTML/React (`#FF5F56`, `#FFBD2E`, `#27C93F`) foram **removidos**.
+   - **Espaçamento e Drag Region**: A `TitleBar.tsx` reserva um espaçador de 78px com `data-tauri-drag-region` à esquerda no macOS. A logo e o título do ToolsOnDesk iniciam logo após os controles nativos da Apple, permitindo arrasto fluido da janela.
+   - Os controles do lado direito (Windows/Linux) continuam sendo exibidos normalmente quando a plataforma não for macOS.
 
 ---
 
@@ -87,6 +84,7 @@ Para distribuição pública de executáveis no macOS sem alertas de "desenvolve
 1. **Certificado**: Requer uma credencial de desenvolvedor `Developer ID Application` emitida pela Apple.
 2. **Assinatura**: O binário e o `.app` devem ser assinados com `codesign --deep --force --options runtime`.
 3. **Notarização**: O arquivo `.dmg` ou `.zip` deve ser submetido à Apple via `xcrun notarytool submit` e carimbado via `xcrun stapler staple`.
-4. **Estado Atual (Missão 08)**:
-   - Os binários e instaladores `.dmg` são gerados nativamente nos runners macOS (`macos-latest` e `macos-13`) no GitHub Actions.
-   - Em máquinas locais de teste antes da notarização oficial, o usuário pode aprovar o binário clicando com o botão direito e escolhendo "Abrir" no Finder.
+4. **Runners GitHub Actions**:
+   - Apple Silicon: runner `macos-latest` (`aarch64-apple-darwin`).
+   - Intel: runner `macos-15-intel` (`x86_64-apple-darwin`), substituindo o aposentado `macos-13`.
+5. **Classificação**: O macOS permanece classificado com status rigoroso de **"Implementado & Pronto para CI"**, sendo promovido a **"Homologado"** somente após a primeira execução bem-sucedida da esteira remota com logs oficiais e validação de notarização.

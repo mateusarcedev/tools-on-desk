@@ -11,7 +11,7 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-15F5BA?style=flat-square&labelColor=141A1C)](./LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-native-15F5BA?style=flat-square&labelColor=141A1C)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-15F5BA?style=flat-square&labelColor=141A1C)](https://react.dev/)
-[![Testes](https://img.shields.io/badge/testes-65%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
+[![Testes](https://img.shields.io/badge/testes-72%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
 [![Windows](https://img.shields.io/badge/Windows-validado%20em%20sistema%20real-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
 [![Linux](https://img.shields.io/badge/Linux-compilado%20%26%20testado-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
 [![macOS](https://img.shields.io/badge/macOS-implementado%20(CI)-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
@@ -101,10 +101,10 @@ O objetivo do ToolsOnDesk é oferecer uma experiência **desktop nativa em Windo
 
 | Sistema Operacional | Distribuição Pretendida | Estado Atual |
 | :-- | :-- | :-- |
-| **Windows 11 / x64** | Instalador `.exe` via NSIS (`currentUser`) | **Build interno gerado e testado; homologação concluída** |
-| **Linux / x64** | Pacotes `.AppImage`, `.deb` e `.rpm` | **Portabilidade e builds nativos planejados** |
-| **macOS / Apple Silicon e Intel** | Aplicativo `.app` e instalador `.dmg` | **Portabilidade, assinatura e notarização planejadas** |
-| **Android** | Aplicativo móvel adaptado | **Roadmap futuro; não disponível** |
+| **Windows 11 / x64** | Instalador `.exe` via NSIS (`currentUser`) | **Build interno gerado e testado; homologação concluída (Referência)** |
+| **Linux / x64** | Pacotes `.AppImage`, `.deb` e `.rpm` | **Compilado e testado (WebKitGTK 4.1 + Secret Service fail-closed)** |
+| **macOS / Apple Silicon e Intel** | Aplicativo `.app` e instalador `.dmg` | **Implementado para CI (`macos-latest` e `macos-15-intel`, Keychain `security -i`, Native Overlay)** |
+| **Android** | Aplicativo móvel adaptado | **Contratos e serviços desacoplados para futuro porte** |
 
 ### O que significa “nativo” aqui?
 
