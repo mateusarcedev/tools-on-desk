@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ToolsOnDesk — Seu espaço de criação. Suas ferramentas. Um só lugar.</title>
   <meta name="description" content="A suíte desktop definitiva para edição de mídias, conversão de documentos, pôsteres e estúdio criativo com IA. 100% offline-first, seguro e sem assinaturas.">
   <link rel="icon" type="image/svg+xml" href="./toolsondesk-icon.svg">
@@ -86,7 +86,8 @@
       top: 0;
       left: 0;
       width: 100%;
-      height: 1200px;
+      height: 100%;
+      min-height: 1200px;
       background-image: linear-gradient(to right, rgba(31, 41, 43, 0.35) 1px, transparent 1px),
                         linear-gradient(to bottom, rgba(31, 41, 43, 0.35) 1px, transparent 1px);
       background-size: 64px 64px;
@@ -192,6 +193,44 @@
       display: flex;
       align-items: center;
       gap: 12px;
+    }
+
+    /* Mobile Menu Button */
+    .mobile-menu-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 10px;
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 150ms var(--ease-out);
+    }
+
+    .mobile-menu-btn:hover {
+      background: var(--surface-hover);
+    }
+
+    .mobile-menu-btn svg {
+      width: 22px;
+      height: 22px;
+      stroke: currentColor;
+      stroke-width: 2.5;
+    }
+
+    .mobile-menu-btn[aria-expanded="true"] .menu-open {
+      display: block;
+    }
+
+    .mobile-menu-btn[aria-expanded="true"] .menu-close {
+      display: none;
+    }
+
+    .mobile-menu-btn .menu-close {
+      display: none;
     }
 
     /* Buttons with Emil Kowalski active spring */
@@ -664,6 +703,7 @@
       border-collapse: collapse;
       text-align: left;
       font-size: 14px;
+      min-width: 600px;
     }
 
     th, td {
@@ -678,12 +718,27 @@
       letter-spacing: 0.05em;
       color: var(--text-muted);
       background: #0E1315;
+      position: sticky;
+      top: 0;
+      z-index: 1;
     }
 
     th.highlight, td.highlight {
       background: rgba(21, 245, 186, 0.03);
       color: var(--mint);
       font-weight: 600;
+    }
+
+    td:first-child {
+      position: sticky;
+      left: 0;
+      background: var(--surface);
+      z-index: 2;
+      font-weight: 600;
+    }
+
+    th:first-child {
+      z-index: 3;
     }
 
     tr:last-child td {
@@ -893,6 +948,44 @@
 
       .nav-links { 
         display: none; 
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 10px;
+        right: 10px;
+        background: rgba(20, 26, 28, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+        z-index: 99;
+      }
+
+      .nav-links.open {
+        display: flex;
+      }
+
+      .nav-link {
+        padding: 12px 16px;
+        border-radius: 10px;
+        text-align: center;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        transition: all 150ms var(--ease-out);
+      }
+
+      .nav-link:hover {
+        background: var(--surface-hover);
+        border-color: var(--mint);
+        color: var(--mint);
+      }
+
+      .mobile-menu-btn {
+        display: flex;
       }
 
       .brand-name {
@@ -1123,6 +1216,32 @@
         padding: 12px 14px;
         font-size: 13px;
       }
+      
+      /* Poster preview grid - stack on very small screens */
+      .tab-poster-preview > div:first-child {
+        grid-template-columns: repeat(2, 28px) !important;
+        grid-template-rows: repeat(6, 36px) !important;
+      }
+      
+      /* Table container - allow horizontal scroll with visual indicator */
+      .table-wrapper {
+        position: relative;
+      }
+      .table-wrapper::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 30px;
+        background: linear-gradient(to top, var(--surface), transparent);
+        pointer-events: none;
+      }
+      
+      /* Reduce grid density on very small screens */
+      .bg-grid {
+        background-size: 32px 32px;
+      }
     }
   </style>
 </head>
@@ -1139,7 +1258,7 @@
         <div class="brand-name">Tools<span>On</span>Desk</div>
       </a>
       
-      <ul class="nav-links">
+      <ul class="nav-links" id="navLinks">
         <li><a href="#recursos" class="nav-link">Recursos</a></li>
         <li><a href="#studio" class="nav-link">Creative Studio</a></li>
         <li><a href="#comparativo" class="nav-link">Comparativo</a></li>
@@ -1147,6 +1266,10 @@
       </ul>
 
       <div class="nav-actions">
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-expanded="false" aria-controls="navLinks" aria-label="Abrir menu">
+          <svg class="menu-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          <svg class="menu-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <a href="#download" class="btn btn-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Baixar .exe
@@ -1285,19 +1408,19 @@
                 <span class="pill-badge" style="margin:0;">12 Folhas (4x3 A4)</span>
               </div>
               <div class="tab-poster-preview">
-                <div style="display:grid; grid-template-columns: repeat(4, 28px); grid-template-rows: repeat(3, 36px); gap:3px; background:#0E1315; padding:8px; border-radius:6px; border:1px solid var(--border); flex-shrink:0;">
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint);"></div>
+                <div class="poster-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap:3px; background:#0E1315; padding:8px; border-radius:6px; border:1px solid var(--border); flex-shrink:0; min-width:0;">
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
                 </div>
                 <div>
                   <div style="font-size:15px; font-weight:700;">Pôster Montado: 840 × 891 mm</div>
@@ -1602,6 +1725,33 @@
 
   <!-- Scripts Interativos (Emil Kowalski Physics & Micro-interactions) -->
   <script>
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const navLinks = document.getElementById('navLinks');
+    
+    if (mobileMenuBtn && navLinks) {
+      mobileMenuBtn.addEventListener('click', () => {
+        const isOpen = navLinks.classList.toggle('open');
+        mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+      });
+      
+      // Close menu when clicking a link
+      navLinks.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', () => {
+          navLinks.classList.remove('open');
+          mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        });
+      });
+      
+      // Close menu when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!mobileMenuBtn.contains(e.target) && !navLinks.contains(e.target)) {
+          navLinks.classList.remove('open');
+          mobileMenuBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
     // Tab Switcher com transição fluida
     function switchTab(tabId) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
