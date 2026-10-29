@@ -1,3 +1,8 @@
+# Desktop Multiplatform Release Build
+# Compiles native distributable bundles for Windows, Linux, and macOS (Apple Silicon + Intel).
+# NOTE: Artifacts are uploaded strictly as private GitHub Actions workflow artifacts.
+# This workflow DOES NOT publish public GitHub Releases or distribute unnotarized binaries.
+# macOS Intel uses 'macos-15-intel' (replaces retired macos-13). macOS ARM uses 'macos-latest' (Apple Silicon).
 name: Desktop Multiplatform Release Build
 
 on:
@@ -33,7 +38,7 @@ jobs:
             arch: arm64
             target: aarch64-apple-darwin
             artifact_name: ToolsOnDesk-macos-arm64
-          - os: macos-13
+          - os: macos-15-intel
             platform: macos
             arch: x86_64
             target: x86_64-apple-darwin
@@ -78,6 +83,7 @@ jobs:
             libssl-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
+            libsecret-tools \
             squashfs-tools
 
       - name: Install Node dependencies

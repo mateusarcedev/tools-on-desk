@@ -1,3 +1,6 @@
+# Desktop Multiplatform CI
+# Validates frontend and backend on Windows, Linux, and macOS (Apple Silicon + Intel).
+# Note: macos-latest resolves to Apple Silicon (ARM64). macos-15-intel provides x86_64 Intel execution.
 name: Desktop Multiplatform CI
 
 on:
@@ -28,7 +31,7 @@ jobs:
           - os: macos-latest
             platform: macOS
             arch: aarch64 (Apple Silicon)
-          - os: macos-13
+          - os: macos-15-intel
             platform: macOS
             arch: x86_64 (Intel)
 
@@ -68,7 +71,8 @@ jobs:
             libxdo-dev \
             libssl-dev \
             libayatana-appindicator3-dev \
-            librsvg2-dev
+            librsvg2-dev \
+            libsecret-tools
 
       - name: Install Node dependencies
         run: pnpm install
