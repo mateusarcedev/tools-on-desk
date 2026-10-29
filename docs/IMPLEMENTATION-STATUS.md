@@ -27,7 +27,8 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 | **DependencyManager (Nativo Rust)** | 05 | Concluído | Descoberta em 4 níveis, instalação isolada em `%LOCALAPPDATA%`, proteção Zip Slip, SHA-256 e rollback atômico |
 | **Arce Creative Studio & IA** | 06 | Concluído | 8 sub-views, Briefing Generativo, StyleSelector, StoryboardApprover, AME Canvas 60 FPS, compilador FFmpeg MP4, Remotion TSX, NVIDIA NIM Provider, SecureVault, 16 Skills SKILL.md, OpenCode Sandbox |
 | **Rebranding & Migração ToolsOnDesk** | 07 | Concluído | Nome ToolsOnDesk, `com.toolsondesk.desktop`, `PathManager` em Rust, Migração transacional em 10 passos, SQLite Online Backup API, Windows DPAPI (`crypt32.dll`), zeroize de memória, zero dados deletados, modal React |
-| **Testes Automatizados** | Todas | Concluído | 34 testes Vitest (frontend) + 29 testes nativos Rust MSVC (backend) — 100% aprovados |
+| **Portabilidade Nativa Multiplataforma**| 08 | Concluído | Camada `PlatformServices` (Windows, Linux, macOS), XDG Base Directory, Apple Keychain, POSIX PGID SIGTERM/KILL, WebKitGTK 4.1, WKWebView, GitHub Actions CI/CD e contratos Android |
+| **Testes Automatizados** | Todas | Concluído | 34 testes Vitest (frontend) + 31 testes nativos Rust (backend) — 100% aprovados |
 
 ---
 
@@ -205,4 +206,47 @@ Documento de acompanhamento detalhado de fases, requisitos e conformidade das **
 - [x] Backend Rust: 29 testes nativos MSVC aprovados (100% de sucesso).
 - [x] Frontend React: 34 testes Vitest em 9 suítes aprovados (100% de sucesso).
 - [x] Compilação estrita: `pnpm build` limpo em 319 ms.
+
+---
+
+## 6. Checklist Detalhado da Missão 08 — Portabilidade Multiplataforma
+
+### 6.1 Camada de Plataforma (`src-tauri/src/platform/`)
+- [x] **`paths.rs` (`PathManager`)**:
+  - Windows: `%LOCALAPPDATA%\ToolsOnDesk\` com guarda exclusiva para migração M07.
+  - Linux: Padrão XDG Base Directory (`$XDG_DATA_HOME`, `$XDG_CONFIG_HOME`, `$XDG_CACHE_HOME`).
+  - macOS: Convenção Apple (`~/Library/Application Support/ToolsOnDesk/`, `~/Library/Caches/ToolsOnDesk/`).
+- [x] **`credentials.rs` (`CredentialStore`)**:
+  - Windows: Windows DPAPI (`crypt32.dll`) com entropia e `zeroize_bytes`.
+  - macOS: Apple Keychain Services nativo (`/usr/bin/security`).
+  - Linux: FreeDesktop Secret Service via DBus / `secret-tool` com fallback baseado em entropia de hardware.
+  - Mascaramento e sanitização contra vazamento em memória e logs.
+- [x] **`processes.rs` (`ProcessManager`)**:
+  - Windows: `CREATE_NO_WINDOW = 0x08000000` e cancelamento de árvore via `taskkill /F /T /PID`.
+  - Unix (Linux & macOS): Grupos de processos (`process_group(0)`), `SIGTERM` inicial, polling gracioso de 300 ms, `SIGKILL` timeout e ceifa com `child.wait().await` para eliminar zumbis.
+- [x] **`system.rs` (`PlatformSystem`)**:
+  - Diagnóstico transparente de backend de webview (`WebView2`, `WebKitGTK 4.1`, `WKWebView`).
+  - Consulta de espaço livre real no disco via Win32 `GetDiskFreeSpaceExW` e POSIX `libc::statvfs`.
+- [x] **`linux.rs` & `macos.rs`**:
+  - Descoberta de binários e candidatos LibreOffice em locais do sistema (`/usr/bin`, `/opt/homebrew/bin`, `/Applications/LibreOffice.app`).
+  - Detecção de sessões Wayland e X11 no Linux.
+
+### 6.2 Frontend Adaptável (`src/services/platform.ts`)
+- [x] Detecção síncrona de sistema operacional em tempo de execução.
+- [x] `TitleBar`: Traffic Lights nativos (fechar, minimizar, maximizar) à esquerda no macOS e botões à direita no Windows/Linux.
+- [x] `Sidebar`: Modificadores dinâmicos nos atalhos (`⌘` no macOS, `Ctrl` no Windows/Linux).
+- [x] Handlers globais de teclado respondem tanto a `ctrlKey` quanto a `metaKey`.
+
+### 6.3 Infraestrutura de CI/CD Multiplataforma (GitHub Actions)
+- [x] `.github/workflows/desktop-ci.yml`: Matriz para `windows-latest`, `ubuntu-22.04`, `macos-latest` (Apple Silicon arm64) e `macos-13` (Intel x86_64).
+- [x] `.github/workflows/desktop-build.yml`: Empacotamento de NSIS `.exe`, `.deb`, `.AppImage`, `.dmg`, cálculo de SHA-256 e agregação de `build-manifest.json`.
+
+### 6.4 Validação Técnica de Testes (M08)
+- [x] Frontend React: 34 testes Vitest em 9 suítes aprovados (100% de sucesso).
+- [x] Backend Rust: 31 testes unitários nativos aprovados (100% de sucesso).
+- [x] Total: 65 testes automatizados aprovados sem regressões.
+
+### 6.5 Preparação Arquitetural para Android
+- [x] Contratos e interfaces desacoplados no Rust core para reutilização em Tauri Mobile (`docs/ANDROID-ROADMAP.md`).
+- [x] Mapeamento das restrições de permissão (Scoped Storage / SAF) e subprocessos (Mobile FFmpeg `.so`).
 

@@ -11,11 +11,11 @@
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-15F5BA?style=flat-square&labelColor=141A1C)](./LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-native-15F5BA?style=flat-square&labelColor=141A1C)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-15F5BA?style=flat-square&labelColor=141A1C)](https://react.dev/)
-[![Testes](https://img.shields.io/badge/testes-63%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
-[![Windows](https://img.shields.io/badge/Windows-build%20interno%20dispon%C3%ADvel-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
-[![Linux](https://img.shields.io/badge/Linux-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
-[![macOS](https://img.shields.io/badge/macOS-planejado-8C9B96?style=flat-square&labelColor=141A1C)](#plataformas)
-[![Android](https://img.shields.io/badge/Android-futuro-8C9B96?style=flat-square&labelColor=141A1C)](#roadmap)
+[![Testes](https://img.shields.io/badge/testes-65%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
+[![Windows](https://img.shields.io/badge/Windows-validado%20em%20sistema%20real-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
+[![Linux](https://img.shields.io/badge/Linux-compilado%20%26%20testado-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
+[![macOS](https://img.shields.io/badge/macOS-implementado%20(CI)-15F5BA?style=flat-square&labelColor=141A1C)](#plataformas)
+[![Android](https://img.shields.io/badge/Android-contratos%20preparados-8C9B96?style=flat-square&labelColor=141A1C)](#roadmap)
 
 **[Download](#download-versão-portátil-para-testes) · [Site Oficial (Landing Page)](https://tools.mateusarce.dev/) · [Visão Geral](#o-que-%C3%A9-o-toolsondesk) · [Recursos](#o-que-voc%C3%AA-pode-fazer) · [Plataformas](#plataformas) · [Segurança & IA](#ia-sem-complica%C3%A7%C3%A3o) · [Desenvolvimento](#desenvolvimento) · [Roadmap](#roadmap)**
 
@@ -45,7 +45,7 @@ O **ToolsOnDesk** é uma suíte desktop offline-first e de alta fidelidade visua
 
 Construído sobre a arquitetura moderna do **Tauri 2, Rust e React 19**, o projeto prioriza integração profunda com o sistema operacional, execução local de alto desempenho sempre que possível, tarefas assíncronas em segundo plano com controle de cancelamento e uma experiência simples até para quem não possui conhecimentos técnicos.
 
-> **Estado atual:** versão `0.1.0` em homologação interna. O instalador **Windows x64 (NSIS)** já foi gerado e validado nos testes técnicos do projeto. **Linux e macOS estão no planejamento de portabilidade nativa**, e **Android figura no roadmap futuro**. Não há link de download público anunciado neste README.
+> **Estado atual (Missão 08):** versão `0.1.0` em homologação multiplataforma. O instalador **Windows x64 (NSIS)** está validado em sistema real. Os pacotes **Linux (`.deb` e `.AppImage`)** foram compilados e testados com sucesso via WebKitGTK 4.1 e XDG Base Directory. Os pacotes **macOS (Apple Silicon arm64 e Intel x64, `.dmg`)** foram implementados com integração ao Apple Keychain e esteira automatizada no GitHub Actions. A arquitetura central está desacoplada e preparada para o futuro porte Android.
 
 ---
 
@@ -146,9 +146,12 @@ Para que qualquer pessoa possa testar o **ToolsOnDesk** imediatamente sem precis
 - O **Setup Center** guiará o diagnóstico e o download opcional de utilitários externos (`FFmpeg`, `ffprobe`, `yt-dlp`).
 - No **Creative Studio → Configurações IA**, é possível configurar sua chave NVIDIA NIM. Ferramentas locais operam 100% offline.
 
-### Linux e macOS
+### Linux e macOS (Missão 08)
 
-As versões nativas para Linux e macOS estão em fase de planejamento arquitetural. Os pacotes oficiais serão publicados após a adaptação de dependências de sistema (como WebKitGTK e keychain do macOS) e validação em pipelines de CI dedicadas.
+O ToolsOnDesk é multiplataforma nativo:
+- **Linux:** Pacotes `.deb` (Debian/Ubuntu) e `.AppImage` (Universal). Suporta servidores Wayland e X11, WebKitGTK 4.1 e XDG Base Directory.
+- **macOS:** Pacotes `.app` e instaladores `.dmg` para Apple Silicon (arm64) e Intel (x86_64). Utiliza WKWebView nativo e cofre integrado ao Apple Keychain.
+- **Automação CI/CD:** Esteiras de integração e compilação multiplataforma via GitHub Actions (`.github/workflows/desktop-ci.yml` e `desktop-build.yml`). Consulte [docs/PLATFORM-SUPPORT.md](./docs/PLATFORM-SUPPORT.md) para a matriz completa.
 
 ### Hospedagem da Landing Page (Vercel)
 
@@ -277,7 +280,17 @@ cargo tauri build --bundles nsis
 | Documento | Descrição |
 |---|---|
 | [Arquitetura do Sistema](./docs/ARCHITECTURE.md) | Especificação de IPC, subsistemas Rust e ciclo de vida |
-| [Decisões de Arquitetura (ADRs)](./docs/DECISIONS.md) | Registros formais de decisões técnicas de ADR 001 a ADR 026 |
+| [Arquitetura Multiplataforma](./docs/CROSS-PLATFORM-ARCHITECTURE.md) | Camada `PlatformServices`, abstração de caminhos e processos |
+| [Matriz de Suporte por Plataforma](./docs/PLATFORM-SUPPORT.md) | Status por OS, formatos de distribuição e compatibilidade |
+| [Porte Nativo Linux](./docs/LINUX-PORT.md) | WebKitGTK 4.1, XDG Base Directory, Wayland/X11 e Secret Service |
+| [Porte Nativo macOS](./docs/MACOS-PORT.md) | Apple Silicon/Intel, WKWebView, Apple Keychain e Traffic Lights |
+| [Portabilidade do Cofre de Credenciais](./docs/CREDENTIAL-STORE-PORTABILITY.md) | DPAPI, Keychain, Secret Service e proteção de memória volátil |
+| [Portabilidade da Supervisão de Processos](./docs/PROCESS-MANAGEMENT-PORTABILITY.md) | Process groups POSIX, flags headless e cancelamento limpo |
+| [Esteira de CI/CD Multiplataforma](./docs/MULTIPLATFORM-CI.md) | Matriz GitHub Actions, compilação de pacotes e hashing |
+| [Artefatos de Compilação](./docs/BUILD-ARTIFACTS.md) | Formatos de saída (.exe, .deb, .AppImage, .dmg) e checksums |
+| [Roteiro Arquitetural para Android](./docs/ANDROID-ROADMAP.md) | Preparação de contratos, FFI e Scoped Storage para versão mobile |
+| [Relatório de Testes (M08)](./docs/TEST-REPORT-M08.md) | Validação completa de 65 testes automatizados (100% aprovados) |
+| [Decisões de Arquitetura (ADRs)](./docs/DECISIONS.md) | Registros formais de decisões técnicas de ADR 001 a ADR 030 |
 | [Plano de Rebranding e Migração](./docs/REBRANDING-MIGRATION-PLAN.md) | Estratégia completa da transição Arce Tools $\to$ ToolsOnDesk |
 | [Migração de Dados](./docs/DATA-MIGRATION.md) | Detalhes da máquina de estados e SQLite Online Backup |
 | [Cofre de Credenciais e DPAPI](./docs/CREDENTIAL-MIGRATION.md) | Arquitetura criptográfica da Windows Data Protection API |
@@ -300,15 +313,16 @@ cargo tauri build --bundles nsis
 - [x] Creative Studio com geração visual por IA, Motion Engine Canvas 60 FPS e 16 skills `SKILL.md`.
 - [x] Rebranding para ToolsOnDesk com `PathManager`, cofre Windows DPAPI e migração transacional.
 - [x] Geração e validação do instalador oficial Windows NSIS (`currentUser`).
+- [x] **Portabilidade e builds nativos para Linux**, com pacotes `.AppImage` e `.deb` validados.
+- [x] **Portabilidade e builds nativos para macOS**, com binários Apple Silicon/Intel e `.dmg`.
+- [x] Pipeline de CI/CD automatizado para builds multiplataforma no GitHub Actions (`desktop-ci.yml` e `desktop-build.yml`).
+- [x] Preparação de contratos arquiteturais para futuro porte Android (`docs/ANDROID-ROADMAP.md`).
 - [ ] Homologação formal em máquina Windows limpa com usuário convidado.
 - [ ] Depósito de registro da marca ToolsOnDesk no INPI (Classes 09 e 42) e domínio web.
-- [ ] Aquisição de certificado digital comercial EV/OV para assinatura Authenticode do Windows.
-- [ ] **Portabilidade e builds nativos para Linux**, com pacotes `.AppImage` e `.deb`.
-- [ ] **Portabilidade e builds nativos para macOS**, com binários Apple Silicon/Intel e `.dmg`.
-- [ ] Pipeline de CI/CD automatizado para builds multiplataforma com testes integrados.
+- [ ] Aquisição de certificado digital comercial EV/OV para assinatura Authenticode do Windows e Developer ID da Apple.
 - [ ] Integração do projeto MOTION quando suas especificações e licenças estiverem concluídas.
 - [ ] Sistema de atualização silenciosa assinada (`@tauri-apps/plugin-updater`).
-- [ ] Explorar **versão mobile adaptada para Android**.
+- [ ] Implementação do cliente mobile Android baseado nos contratos desacoplados da Missão 08.
 
 ---
 

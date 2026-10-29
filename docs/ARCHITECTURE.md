@@ -389,3 +389,49 @@ flowchart TD
 ### 7.3 SQLite Online Backup API
 - Migração do banco transacional via `rusqlite::backup::Backup`, permitindo cópia de alta fidelidade sem corrupção mesmo que conexões legadas estejam em modo WAL.
 - Preservação perpétua dos dados legados originais (nenhuma deleção é executada na pasta antiga).
+
+---
+
+## 8. Arquitetura Multiplataforma (Missão 08)
+
+A partir da Missão 08, o ToolsOnDesk atua como uma aplicação verdadeiramente multiplataforma com suporte nativo a **Windows**, **Linux** e **macOS**.
+
+```mermaid
+flowchart TD
+    subgraph AppCore ["Core Invariante (Rust)"]
+        TaskManager["TaskManager (Fila Única SQLite WAL)"]
+        ExtTools["ExternalToolManager"]
+        CreativeEngine["Creative Studio & DocumentEngine"]
+    end
+
+    subgraph PlatformLayer ["Camada PlatformServices (src-tauri/src/platform/)"]
+        Paths["paths.rs (PathManager)"]
+        Creds["credentials.rs (CredentialStore)"]
+        Procs["processes.rs (ProcessManager)"]
+        System["system.rs (PlatformSystem)"]
+    end
+
+    subgraph OSBackends ["Adaptadores Nativos de Sistema Operacional"]
+        Win["Windows 11\n(%LOCALAPPDATA%, DPAPI, taskkill)"]
+        Lin["Linux (Ubuntu 22.04+)\n(XDG Data/Config/Cache, WebKitGTK 4.1, Secret Service, PGID SIGTERM)"]
+        Mac["macOS (arm64/x64)\n(Application Support, WKWebView, Apple Keychain, PGID SIGTERM)"]
+    end
+
+    AppCore --> PlatformLayer
+    PlatformLayer --> OSBackends
+```
+
+### 8.1 Componentes da Camada de Plataforma (`src-tauri/src/platform/`)
+- `paths.rs`: Diretórios nativos sem strings codificadas. Windows `%LOCALAPPDATA%`, Linux `$XDG_DATA_HOME` / `$XDG_CONFIG_HOME` / `$XDG_CACHE_HOME`, macOS `~/Library/Application Support/` e `~/Library/Caches/`.
+- `credentials.rs`: Abstração `CredentialStore` com Windows DPAPI (`crypt32.dll`), macOS Apple Keychain (`/usr/bin/security`), e Linux FreeDesktop Secret Service com fallback baseado em entropia de hardware e zeroize de memória.
+- `processes.rs`: Abstração `ProcessManager` com `CREATE_NO_WINDOW` e `taskkill` no Windows, e grupos de processos POSIX (`process_group(0)`), `SIGTERM` gracioso, `SIGKILL` timeout e ceifa com `child.wait().await` no Linux/macOS.
+- `system.rs`: Diagnósticos do sistema (WebView2, WebKitGTK 4.1, WKWebView) e cálculo de espaço em disco real via POSIX `statvfs` e Win32 `GetDiskFreeSpaceExW`.
+
+### 8.2 Frontend Adaptável (`src/services/platform.ts`)
+- Detecção síncrona do sistema operacional em tempo de montagem.
+- No macOS: exibe atalhos no formato `⌘K`, `⌘J`, `⌘B`, `⌘1..9` e renderiza os botões nativos de controle de janela (*Traffic Lights*) à esquerda da `TitleBar`.
+- No Windows/Linux: exibe atalhos no formato `Ctrl K`, `Ctrl J`, etc. e renderiza botões de controle de janela à direita.
+- Suporte unificado no manipulador global de teclado tanto para `e.ctrlKey` quanto para `e.metaKey`.
+
+### 8.3 Preparação para Android
+- Desacoplamento completo do núcleo Rust (`domain`, `storage`, `engines`) para reaproveitamento direto via JNI e Tauri Mobile sem alteração nas regras de negócio.

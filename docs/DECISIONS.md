@@ -261,3 +261,50 @@ Este documento registra as principais decisões de arquitetura de software adota
   1. Utilizar a **Windows DPAPI** nativa (`CryptProtectData`/`CryptUnprotectData` via `crypt32.dll`) combinada com entropia estendida e zeroize de memória.
   2. Utilizar a **SQLite Online Backup API** (`rusqlite::backup::Backup`) para criar snapshots atômicos e consistentes mesmo com o banco legado aberto em modo WAL.
 - **Consequências**: Segurança criptográfica nativa sem introduzir dependências pesadas externas e garantia de integridade estrutural no banco de dados.
+
+---
+
+## ADR 027: Camada de Abstração Multiplataforma (`PlatformServices`)
+- **Status**: Aprovado e Implementado (Missão 08)
+- **Contexto**: O aplicativo dependia de APIs Win32 e caminhos restritos ao Windows. Para suportar Windows, Linux e macOS sem duplicar código ou espalhar condicionais `#[cfg(...)]` por dezenas de arquivos, era necessária uma camada unificada de abstração de plataforma.
+- **Decisão**:
+  1. Criar o módulo `crate::platform` em Rust com subcomponentes especializados: `paths`, `credentials`, `processes`, `system`, `windows`, `linux`, `macos`.
+  2. Implementar `PathManager` compatível com Windows `%LOCALAPPDATA%`, Linux XDG Base Directory e macOS Application Support/Caches.
+  3. Desacoplar diagnósticos de hardware e motores web (`WebView2`, `WebKitGTK 4.1`, `WKWebView`).
+- **Consequências**:
+  - Código limpo, testável e desacoplado.
+  - Comandos IPC e serviços front-end consomem uma interface única independente do sistema operacional.
+
+---
+
+## ADR 028: Cofre de Credenciais Multiplataforma (`CredentialStore`)
+- **Status**: Aprovado e Implementado (Missão 08)
+- **Contexto**: A proteção de credenciais (chave NVIDIA NIM API) necessita de segurança equivalente à Windows DPAPI nos sistemas Linux e macOS, sem armazenamento em texto puro.
+- **Decisão**:
+  1. Preservar o Windows DPAPI (`crypt32.dll`) no Windows com entropia do usuário.
+  2. Implementar integração com Apple Keychain Services (`/usr/bin/security`) no macOS.
+  3. Implementar integração com FreeDesktop Secret Service via DBus/`secret-tool` no Linux, com fallback criptografado derivado do hardware `/etc/machine-id`.
+  4. Aplicar sobrescrita forçada em memória volátil (`zeroize_bytes`) em todos os backends.
+- **Consequências**: Chaves de API mantidas sob proteção nativa do sistema operacional em todas as plataformas com proteção contra vazamento em memória e logs.
+
+---
+
+## ADR 029: Isolamento de Grupos de Processos POSIX e Cancelamento com Ceifa
+- **Status**: Aprovado e Implementado (Missão 08)
+- **Contexto**: Subprocessos multimídia (FFmpeg, yt-dlp) geram processos filhos e netos. O cancelamento inadequado deixa processos zumbis ou encoders órfãos consumindo CPU no Linux e macOS.
+- **Decisão**:
+  1. Preservar `CREATE_NO_WINDOW` e `taskkill /F /T /PID` no Windows.
+  2. Configurar `process_group(0)` no Unix para isolar subprocessos em novos grupos de processos (PGID).
+  3. No cancelamento, disparar `SIGTERM` para o grupo `-pgid`, aguardar até 300 ms em polling, recorrer a `SIGKILL` se necessário e obrigatoriamente chamar `child.wait().await` para ceifar o processo filho.
+- **Consequências**: Cancelamento imediato e limpo sem processos órfãos ou zumbis em nenhuma plataforma.
+
+---
+
+## ADR 030: Esteira de CI/CD e Empacotamento Multiplataforma no GitHub Actions
+- **Status**: Aprovado e Implementado (Missão 08)
+- **Contexto**: Necessidade de validar compilação, executar suítes de testes e produzir pacotes nativos para Windows, Linux e macOS sem exigir hardware físico variado no ambiente local do desenvolvedor.
+- **Decisão**:
+  1. Criar `.github/workflows/desktop-ci.yml` com matriz para `windows-latest`, `ubuntu-22.04`, `macos-latest` (Apple Silicon) e `macos-13` (Intel), rodando `pnpm test` e `cargo test`.
+  2. Criar `.github/workflows/desktop-build.yml` para empacotar NSIS `.exe`, `.deb`, `.AppImage` e `.dmg`, gerando checksums SHA-256 e o manifesto `build-manifest.json`.
+  3. Manter o princípio de nunca publicar releases públicas não autorizadas automaticamente.
+- **Consequências**: Garantia contínua de compatibilidade com artefatos auditáveis em cada commit.

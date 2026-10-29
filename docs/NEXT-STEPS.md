@@ -1,6 +1,6 @@
-# ToolsOnDesk (ex-Arce Tools) — Próximos Passos (Pós-Missão 07)
+# ToolsOnDesk — Próximos Passos (Pós-Missão 08)
 
-Com a **Missão 07 totalmente concluída** (ToolsOnDesk: Rebranding completo, migração transacional de identidade e dados, cofre Windows DPAPI e instalador Windows NSIS), este documento consolida o estado do produto e traça o roteiro para os ciclos subsequentes.
+Com a **Missão 08 totalmente concluída** (ToolsOnDesk: Portabilidade Nativa para Windows, Linux e macOS + Esteiras Multiplataforma no GitHub Actions + Preparação Arquitetural para Android), este documento consolida o estado do produto e traça o roteiro para os ciclos subsequentes.
 
 > [!NOTE]
 > **Registro Histórico:** O aplicativo foi fundado e amadurecido até a Missão 06 sob o nome **Arce Tools**. A partir da **Missão 07**, a identidade foi unificada sob a marca de trabalho **ToolsOnDesk** (`com.toolsondesk.desktop`).
@@ -33,10 +33,20 @@ Com a **Missão 07 totalmente concluída** (ToolsOnDesk: Rebranding completo, mi
     - Cofre de credenciais atualizado com Windows DPAPI (`crypt32.dll`), entropia e zeroize de buffers em memória.
     - Preservação perpétua de dados legados do usuário e manifesto auditável (`manifest.json`).
     - Modal visual de onboarding no React informando etapas e KPIs da migração.
+12. **Portabilidade Nativa Multiplataforma (Missão 08)**:
+    - Camada `crate::platform` em Rust com subcomponentes `paths`, `credentials`, `processes`, `system`, `windows`, `linux` e `macos`.
+    - Diretórios nativos com padrão XDG Base Directory no Linux e Application Support no macOS.
+    - Cofre multiplataforma `CredentialStore` com Windows DPAPI, Apple Keychain (`/usr/bin/security`) e FreeDesktop Secret Service.
+    - Supervisão de processos POSIX com grupos de processos isolados (`process_group(0)`), SIGTERM gracioso, SIGKILL timeout e ceifa de zumbis.
+    - Suporte transparente a servidores de exibição Wayland e X11 no Linux com WebKitGTK 4.1 e WKWebView no macOS.
+    - Frontend adaptável (`platform.ts`) com Traffic Lights no macOS e atalhos dinâmicos `⌘` vs `Ctrl`.
+    - Esteiras GitHub Actions multi-OS (`desktop-ci.yml` e `desktop-build.yml`) gerando instaladores Windows NSIS, Linux (`.deb` e `.AppImage`) e macOS (`.dmg` arm64 e x86_64).
+    - Preparação de contratos arquiteturais para futuro porte Android (`docs/ANDROID-ROADMAP.md`).
+    - 65 testes automatizados (34 frontend + 31 backend) aprovados com 100% de sucesso.
 
 ---
 
-## 2. Roteiro Pós-Missão 07
+## 2. Roteiro Pós-Missão 08
 
 ### 2.1 Registro Marcário no INPI e Domínio Web
 - Formalizar busca prévia e protocolo de registro marcário no INPI na Classe NCL(12) 09 (Softwares utilitários e criativos) e Classe 42 (Serviços SaaS).

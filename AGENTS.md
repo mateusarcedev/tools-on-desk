@@ -76,6 +76,17 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
    - Credenciais de API são protegidas via Windows Data Protection API (`CryptProtectData`/`CryptUnprotectData` via `crypt32.dll`) com entropia suplementar (`TOOLSONDESK_DPAPI_ENTROPY_v1`).
    - Buffers de memória contendo segredos em texto puro devem ser sobrescritos (`zeroize_bytes`) imediatamente após o uso.
 
+12. **Portabilidade Nativa e Camada `ProcessManager` (Missão 08)**:
+   - Toda invocação e término de subprocessos DEVE passar por `ProcessManager` (`src-tauri/src/platform/processes.rs`).
+   - No Windows: utilizar `CREATE_NO_WINDOW = 0x08000000` e término de árvore via `taskkill /F /T /PID`.
+   - No Linux e macOS: utilizar grupos de processos POSIX (`cmd.process_group(0)`), sinal `SIGTERM` inicial para o grupo `-pgid`, polling gracioso de até 300 ms, `SIGKILL` timeout e ceifa com `child.wait().await` para eliminar zumbis.
+   - **NUNCA execute `taskkill` no Linux ou macOS**.
+
+13. **Resolução de Diretórios e Credenciais Multiplataforma (Missão 08)**:
+   - No Linux: seguir a especificação XDG Base Directory (`$XDG_DATA_HOME`, `$XDG_CONFIG_HOME`, `$XDG_CACHE_HOME`).
+   - No macOS: seguir convenções da Apple (`~/Library/Application Support/ToolsOnDesk/`, `~/Library/Caches/ToolsOnDesk/`).
+   - Credenciais: Windows (DPAPI), macOS (Apple Keychain via `/usr/bin/security`), Linux (FreeDesktop Secret Service com fallback baseado em entropia de hardware).
+
 ### 2.2 Frontend React (`src/`)
 1. **TypeScript Estrito**:
    - `strict: true` ativado no `tsconfig.json`.
@@ -85,6 +96,9 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
    - Metadados de mídia (duração, dimensões, codecs) devem ser obtidos pelo backend via `probeMedia` (`ffprobe`).
 3. **Sem Mocks Fictícios de Sucesso**:
    - A interface nunca deve simular operações fictícias ou fingir que um download ou conversão ocorreu sem o motor real ter processado.
+4. **Fidelidade de Plataforma no Frontend**:
+   - Utilizar `src/services/platform.ts` para formatação de atalhos (`⌘` no macOS, `Ctrl` no Windows/Linux).
+   - Manter controles de janela nativos (*Traffic Lights*) à esquerda no macOS e à direita no Windows/Linux.
 
 ---
 
@@ -97,6 +111,13 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
   - Microsoft C++ Build Tools (Visual Studio 2022).
   - Windows 11 SDK.
   - WebView2 Runtime.
+- **Ambiente Linux**:
+  - Ubuntu 22.04+ / Debian 12+.
+  - Dependências: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`.
+- **Ambiente macOS**:
+  - macOS 12+ (Apple Silicon `aarch64` e Intel `x86_64`).
+  - WKWebView embutido no sistema.
+  - Runners GitHub Actions: `macos-latest` (arm64) e `macos-13` (x86_64).
 - **Compilação e Assets Embutidos**:
   - O `Cargo.toml` possui `[features] default = ["custom-protocol"]` para garantir que `tauri-codegen` sempre incorpore os arquivos estáticos de `../dist` diretamente no executável binário final.
   - Para compilar no Windows host a partir do repositório compartilhado WSL2:
@@ -108,4 +129,4 @@ Este documento define regras obrigatórias de arquitetura, padrões de código, 
     ```
 - **Testes Automatizados Obrigatórios**:
   - Frontend: `pnpm test` (34 testes Vitest em 9 suítes)
-  - Backend: `cargo test` (29 testes nativos MSVC)
+  - Backend: `cargo test` (31 testes nativos)

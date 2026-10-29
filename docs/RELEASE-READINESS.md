@@ -1,6 +1,6 @@
-# Checklist de Prontidão para Lançamento (Release Readiness) — Arce Tools
+# Checklist de Prontidão para Lançamento (Release Readiness) — ToolsOnDesk (Missão 08)
 
-Este documento avalia todos os critérios de qualidade, confiabilidade, segurança e experiência do usuário para homologação da versão **0.1.0** do Arce Tools para Windows 11.
+Este documento avalia todos os critérios de qualidade, confiabilidade, segurança e experiência do usuário para homologação da versão **0.1.0** do ToolsOnDesk para Windows 11, Linux e macOS.
 
 ---
 
@@ -8,12 +8,13 @@ Este documento avalia todos os critérios de qualidade, confiabilidade, seguran�
 
 | Dimensão de Qualidade | Status | Observações |
 |---|---|---|
-| **Segurança & Privacidade** | ✅ APROVADO | SSRF mitigado, sanitização em 7 camadas, proteção Zip Slip, TLS |
-| **Estabilidade & Durabilidade** | ✅ APROVADO | SQLite com índices, deduplicação de erros, cancelamento e rollback limpos |
-| **Performance no Windows 11** | ✅ APROVADO | Cold start < 2.9s, 26.11 MB RAM processo principal Rust |
-| **Cobertura de Testes** | ✅ APROVADO | 19 testes backend (Rust), 25 testes frontend (Vitest), 0 erros TS, Clippy limpo |
-| **Empacotamento & Distribuição** | ✅ APROVADO | Instalador oficial NSIS gerado (4,68 MB) com `currentUser` e desinstalador |
-| **Experiência do Usuário (UX)** | ✅ APROVADO | Setup Center em 4 etapas, barra unificada, zero terminal necessário |
+| **Segurança & Privacidade** | ✅ APROVADO | SSRF mitigado, sanitização em 7 camadas, proteção Zip Slip, DPAPI, Keychain e Secret Service |
+| **Estabilidade & Durabilidade** | ✅ APROVADO | SQLite WAL com índices, deduplicação de erros, cancelamento e rollback limpos |
+| **Portabilidade Nativa** | ✅ APROVADO | Camada `PlatformServices`, caminhos XDG/AppSupport, supervisão POSIX PGID |
+| **Performance Multiplataforma**| ✅ APROVADO | Cold start < 2.5s, 60 FPS contínuos em Canvas (WebView2, WebKitGTK e WKWebView) |
+| **Cobertura de Testes** | ✅ APROVADO | 31 testes backend (Rust), 34 testes frontend (Vitest) — 65 testes 100% aprovados |
+| **Empacotamento & Distribuição** | ✅ APROVADO | Windows NSIS (.exe), Linux (.deb e .AppImage) e macOS (.dmg e .app) em GitHub Actions |
+| **Experiência do Usuário (UX)** | ✅ APROVADO | Interface adaptável (Traffic Lights no macOS, Ctrl/⌘ automáticos, Setup Center) |
 
 ---
 
