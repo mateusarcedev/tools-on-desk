@@ -100,7 +100,8 @@
     .container {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding-left: clamp(16px, 4vw, 24px);
+      padding-right: clamp(16px, 4vw, 24px);
       position: relative;
       z-index: 1;
       width: 100%;
@@ -131,6 +132,7 @@
       padding: 8px 16px 8px 24px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       transition: border-color 200ms var(--ease-out);
+      position: relative;
     }
 
     .navbar:hover {
@@ -143,6 +145,7 @@
       gap: 10px;
       text-decoration: none;
       color: var(--text);
+      flex-shrink: 0;
     }
 
     .brand-badge {
@@ -158,12 +161,14 @@
       font-family: var(--font-mono);
       font-size: 13px;
       font-weight: 700;
+      flex-shrink: 0;
     }
 
     .brand-name {
       font-size: 16px;
       font-weight: 700;
       letter-spacing: -0.02em;
+      white-space: nowrap;
     }
 
     .brand-name span {
@@ -183,6 +188,10 @@
       font-size: 14px;
       font-weight: 500;
       transition: color 150ms var(--ease-out);
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 4px;
     }
 
     .nav-link:hover {
@@ -192,22 +201,26 @@
     .nav-actions {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
 
-    /* Mobile Menu Button */
+    /* Mobile Menu Button - 44x44px Touch Target */
     .mobile-menu-btn {
       display: none;
       align-items: center;
       justify-content: center;
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
       border: none;
       background: transparent;
       border-radius: 10px;
       color: var(--text);
       cursor: pointer;
       transition: background-color 150ms var(--ease-out);
+      padding: 0;
+      flex-shrink: 0;
     }
 
     .mobile-menu-btn:hover {
@@ -221,16 +234,20 @@
       stroke-width: 2.5;
     }
 
-    .mobile-menu-btn[aria-expanded="true"] .menu-open {
+    .mobile-menu-btn .menu-open {
       display: block;
-    }
-
-    .mobile-menu-btn[aria-expanded="true"] .menu-close {
-      display: none;
     }
 
     .mobile-menu-btn .menu-close {
       display: none;
+    }
+
+    .mobile-menu-btn[aria-expanded="true"] .menu-open {
+      display: none;
+    }
+
+    .mobile-menu-btn[aria-expanded="true"] .menu-close {
+      display: block;
     }
 
     /* Buttons with Emil Kowalski active spring */
@@ -248,6 +265,8 @@
       border: 1px solid transparent;
       transition: transform 160ms var(--ease-out), background-color 160ms var(--ease-out), border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
       text-align: center;
+      min-height: 40px;
+      white-space: nowrap;
     }
 
     .btn:active {
@@ -277,18 +296,25 @@
     }
 
     .btn-lg {
-      padding: 14px 28px;
+      padding: 14px 24px;
       font-size: 15px;
       border-radius: 12px;
+      min-height: 48px;
+    }
+
+    .btn-text-short {
+      display: none;
     }
 
     /* ==========================================================================
        HERO SECTION
        ========================================================================== */
     .hero {
-      padding: 100px 0 60px;
+      padding-top: clamp(48px, 8vw, 100px);
+      padding-bottom: clamp(36px, 6vw, 60px);
       text-align: center;
       position: relative;
+      width: 100%;
     }
 
     .pill-badge {
@@ -306,6 +332,7 @@
       font-family: var(--font-mono);
       letter-spacing: -0.01em;
       max-width: 100%;
+      overflow-wrap: anywhere;
       word-break: break-word;
     }
 
@@ -325,9 +352,9 @@
     }
 
     .hero-title {
-      font-size: clamp(32px, 6vw, 68px);
+      font-size: clamp(28px, 6vw, 68px);
       font-weight: 800;
-      line-height: 1.1;
+      line-height: 1.15;
       letter-spacing: -0.03em;
       margin-bottom: 20px;
       color: var(--text);
@@ -341,11 +368,11 @@
     }
 
     .hero-desc {
-      font-size: clamp(15px, 2vw, 20px);
+      font-size: clamp(15px, 2.5vw, 19px);
       color: var(--text-muted);
-      max-width: 700px;
-      margin: 0 auto 36px;
-      line-height: 1.55;
+      max-width: 680px;
+      margin: 0 auto clamp(24px, 4vw, 36px);
+      line-height: 1.6;
       font-weight: 400;
     }
 
@@ -353,33 +380,36 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
       margin-bottom: 20px;
+      width: 100%;
     }
 
     .hero-meta {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      font-size: 13px;
+      gap: clamp(10px, 2.5vw, 18px);
+      font-size: clamp(12px, 2.2vw, 13px);
       color: var(--text-dim);
       font-family: var(--font-mono);
       flex-wrap: wrap;
+      line-height: 1.4;
     }
 
     .hero-meta span {
       display: flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
     }
 
     /* ==========================================================================
        APP SHOWCASE (Interactive Frame with Emil Kowalski Micro-Details)
        ========================================================================== */
     .showcase {
-      margin-top: 50px;
+      margin-top: clamp(32px, 5vw, 50px);
       position: relative;
       width: 100%;
     }
@@ -434,17 +464,36 @@
       background: var(--border);
     }
 
-    /* App Tab Switcher */
+    /* App Tab Switcher Container with Scroll Indicator */
+    .app-tabs-nav-container {
+      position: relative;
+      background: #0E1315;
+      border-bottom: 1px solid var(--border);
+      width: 100%;
+    }
+
+    .app-tabs-nav-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 32px;
+      background: linear-gradient(to right, transparent, rgba(14, 19, 21, 0.95));
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms var(--ease-out);
+    }
+
     .app-tabs-nav {
       display: flex;
       align-items: center;
       gap: 6px;
-      background: #0E1315;
-      padding: 8px 16px;
-      border-bottom: 1px solid var(--border);
+      padding: 8px 14px;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
+      width: 100%;
     }
 
     .app-tabs-nav::-webkit-scrollbar {
@@ -452,7 +501,7 @@
     }
 
     .tab-btn {
-      padding: 6px 14px;
+      padding: 8px 14px;
       border-radius: 8px;
       background: transparent;
       border: 1px solid transparent;
@@ -466,6 +515,7 @@
       transition: all 160ms var(--ease-out);
       white-space: nowrap;
       flex-shrink: 0;
+      min-height: 40px;
     }
 
     .tab-btn:hover {
@@ -485,11 +535,12 @@
 
     /* Tab Content Canvas */
     .app-viewport {
-      min-height: 440px;
-      padding: 24px;
+      min-height: 420px;
+      padding: clamp(16px, 3.5vw, 24px);
       background: #0B0F10;
       display: flex;
       flex-direction: column;
+      width: 100%;
     }
 
     .tab-content {
@@ -513,30 +564,52 @@
       align-items: center;
       margin-bottom: 20px;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .tab-doc-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
+      width: 100%;
     }
 
     .tab-poster-preview {
-      height: 240px;
+      min-height: 220px;
       background: #141A1C;
       border: 1px dashed var(--border-focus);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 24px;
+      gap: clamp(16px, 3vw, 24px);
       padding: 20px;
+      width: 100%;
+    }
+
+    .poster-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 34px);
+      grid-template-rows: repeat(3, 42px);
+      gap: 3px;
+      background: #0E1315;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .poster-cell {
+      background: var(--mint-subtle);
+      border: 1px solid var(--mint);
+      border-radius: 2px;
     }
 
     .tab-media-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
+      width: 100%;
     }
 
     .tab-download-row {
@@ -547,19 +620,32 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 10px 14px;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    .tab-download-url {
+      color: var(--text);
+      font-size: 13px;
+      flex: 1;
+      min-width: 140px;
+      overflow-wrap: anywhere;
+      word-break: break-all;
     }
 
     /* ==========================================================================
        VALUE PILLARS (Grid with 3D Tilt Hover)
        ========================================================================== */
     .section {
-      padding: 100px 0;
+      padding-top: clamp(48px, 8vw, 100px);
+      padding-bottom: clamp(48px, 8vw, 100px);
       position: relative;
+      width: 100%;
     }
 
     .section-header {
       text-align: center;
-      margin-bottom: 56px;
+      margin-bottom: clamp(32px, 5vw, 56px);
     }
 
     .section-tag {
@@ -574,7 +660,7 @@
     }
 
     .section-title {
-      font-size: clamp(28px, 4vw, 46px);
+      font-size: clamp(24px, 5vw, 46px);
       font-weight: 700;
       letter-spacing: -0.03em;
       line-height: 1.15;
@@ -582,7 +668,7 @@
     }
 
     .section-desc {
-      font-size: 17px;
+      font-size: clamp(15px, 2.5vw, 17px);
       color: var(--text-muted);
       max-width: 600px;
       margin: 0 auto;
@@ -591,17 +677,20 @@
 
     .grid-4 {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 20px;
+      width: 100%;
     }
 
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 28px;
+      padding: clamp(20px, 3.5vw, 28px);
       position: relative;
       transition: transform 220ms var(--ease-out), border-color 220ms var(--ease-out), box-shadow 220ms var(--ease-out);
+      display: flex;
+      flex-direction: column;
     }
 
     .card:hover {
@@ -622,6 +711,7 @@
       justify-content: center;
       font-size: 20px;
       margin-bottom: 20px;
+      flex-shrink: 0;
     }
 
     .card-title {
@@ -643,9 +733,10 @@
     .feature-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 48px;
+      gap: clamp(32px, 5vw, 48px);
       align-items: center;
-      margin-bottom: 80px;
+      margin-bottom: clamp(48px, 8vw, 80px);
+      width: 100%;
     }
 
     .feature-row.reverse {
@@ -660,8 +751,9 @@
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 24px;
+      padding: clamp(18px, 3.5vw, 24px);
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+      width: 100%;
     }
 
     .feature-list {
@@ -686,8 +778,24 @@
       margin-top: 3px;
     }
 
+    .skills-badge-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .skills-badge-list .pill-badge {
+      margin: 0;
+      padding: 6px 12px;
+      font-size: clamp(11px, 2.2vw, 12px);
+      min-height: 32px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
     /* ==========================================================================
-       COMPARISON TABLE
+       COMPARISON TABLE / MOBILE COMPARISON CARDS
        ========================================================================== */
     .table-wrapper {
       background: var(--surface);
@@ -696,6 +804,7 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      width: 100%;
     }
 
     table {
@@ -703,7 +812,6 @@
       border-collapse: collapse;
       text-align: left;
       font-size: 14px;
-      min-width: 600px;
     }
 
     th, td {
@@ -724,21 +832,13 @@
     }
 
     th.highlight, td.highlight {
-      background: rgba(21, 245, 186, 0.03);
+      background: rgba(21, 245, 186, 0.04);
       color: var(--mint);
       font-weight: 600;
     }
 
     td:first-child {
-      position: sticky;
-      left: 0;
-      background: var(--surface);
-      z-index: 2;
       font-weight: 600;
-    }
-
-    th:first-child {
-      z-index: 3;
     }
 
     tr:last-child td {
@@ -752,23 +852,26 @@
       background: linear-gradient(180deg, #162023 0%, var(--surface) 100%);
       border: 1px solid rgba(21, 245, 186, 0.3);
       border-radius: 20px;
-      padding: 48px;
+      padding: clamp(24px, 5vw, 48px);
       text-align: center;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 30px var(--mint-glow);
       position: relative;
       overflow: hidden;
+      width: 100%;
     }
 
     .download-actions {
       display: flex;
       justify-content: center;
-      gap: 16px;
+      gap: 14px;
       flex-wrap: wrap;
+      width: 100%;
     }
 
     .hash-box {
       margin: 28px auto 0;
       max-width: 680px;
+      width: 100%;
       background: #0B0F10;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -787,15 +890,16 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       color: var(--mint);
+      overflow-wrap: anywhere;
     }
 
     .copy-btn {
       background: var(--surface-elevated);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 6px 12px;
+      padding: 8px 16px;
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
@@ -803,6 +907,7 @@
       gap: 6px;
       transition: all 150ms var(--ease-out);
       flex-shrink: 0;
+      min-height: 44px;
     }
 
     .copy-btn:hover {
@@ -823,6 +928,7 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      width: 100%;
     }
 
     .faq-item {
@@ -831,6 +937,7 @@
       border-radius: 12px;
       overflow: hidden;
       transition: border-color 200ms var(--ease-out);
+      width: 100%;
     }
 
     .faq-item:hover {
@@ -841,10 +948,11 @@
       width: 100%;
       text-align: left;
       padding: 18px 24px;
+      min-height: 52px;
       background: transparent;
       border: none;
       color: var(--text);
-      font-size: 16px;
+      font-size: clamp(14px, 2.5vw, 16px);
       font-weight: 600;
       display: flex;
       align-items: center;
@@ -856,6 +964,7 @@
     .faq-icon {
       transition: transform 250ms var(--ease-out);
       color: var(--mint);
+      flex-shrink: 0;
     }
 
     .faq-item.open .faq-icon {
@@ -865,15 +974,15 @@
     .faq-answer {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 300ms var(--ease-out), padding 300ms var(--ease-out);
+      transition: max-height 350ms var(--ease-out), padding 300ms var(--ease-out);
       padding: 0 24px;
       color: var(--text-muted);
-      font-size: 15px;
+      font-size: clamp(13px, 2.5vw, 15px);
       line-height: 1.6;
     }
 
     .faq-item.open .faq-answer {
-      max-height: 350px;
+      max-height: 1000px;
       padding-bottom: 20px;
     }
 
@@ -882,10 +991,11 @@
        ========================================================================== */
     footer {
       border-top: 1px solid var(--border);
-      padding: 60px 0 40px;
-      margin-top: 80px;
+      padding: clamp(40px, 6vw, 60px) 0 40px;
+      margin-top: clamp(40px, 6vw, 80px);
       color: var(--text-dim);
       font-size: 14px;
+      width: 100%;
     }
 
     .footer-content {
@@ -893,20 +1003,26 @@
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 24px;
+      gap: 20px;
       margin-bottom: 30px;
+      width: 100%;
     }
 
     .footer-links {
       display: flex;
-      gap: 20px;
+      gap: 16px;
       list-style: none;
+      flex-wrap: wrap;
     }
 
     .footer-link {
       color: var(--text-muted);
       text-decoration: none;
       transition: color 150ms var(--ease-out);
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 8px;
     }
 
     .footer-link:hover {
@@ -914,59 +1030,63 @@
     }
 
     /* ==========================================================================
-       RESPONSIVE DESIGN (Full Mobile Support for 320px - 768px)
+       RESPONSIVE BREAKPOINTS (Desktop -> Tablet -> Mobile)
        ========================================================================== */
     @media (max-width: 1024px) {
       .grid-4 {
         grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
       }
     }
 
     @media (max-width: 900px) {
       .feature-row, .feature-row.reverse { 
         grid-template-columns: 1fr; 
-        gap: 36px; 
+        gap: 32px; 
+        margin-bottom: 48px;
       }
       .feature-row.reverse {
         direction: ltr;
       }
+      .tab-doc-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
     }
 
     @media (max-width: 768px) {
-      .container {
-        padding: 0 16px;
-      }
-
       .nav-wrapper {
         top: 10px;
-        padding: 0 10px;
+        padding: 0 12px;
       }
 
       .navbar {
-        padding: 6px 12px 6px 16px;
+        padding: 6px 10px 6px 14px;
+        border-radius: 16px;
       }
 
       .nav-links { 
         display: none; 
         position: absolute;
         top: calc(100% + 8px);
-        left: 10px;
-        right: 10px;
-        background: rgba(20, 26, 28, 0.95);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        left: 0;
+        right: 0;
+        background: rgba(20, 26, 28, 0.96);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
         border: 1px solid var(--border);
         border-radius: 16px;
         padding: 16px;
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
         z-index: 99;
       }
 
       .nav-links.open {
         display: flex;
+        animation: fadeIn 180ms var(--ease-out);
       }
 
       .nav-link {
@@ -975,6 +1095,7 @@
         text-align: center;
         background: var(--surface);
         border: 1px solid var(--border);
+        justify-content: center;
         transition: all 150ms var(--ease-out);
       }
 
@@ -985,49 +1106,7 @@
       }
 
       .mobile-menu-btn {
-        display: flex;
-      }
-
-      .brand-name {
-        font-size: 15px;
-      }
-
-      .hero {
-        padding: 50px 0 36px;
-      }
-
-      .pill-badge {
-        font-size: 11px;
-        padding: 5px 12px;
-        line-height: 1.4;
-      }
-
-      .hero-title { 
-        font-size: clamp(26px, 8vw, 38px);
-        margin-bottom: 14px;
-      }
-
-      .hero-desc {
-        font-size: 15px;
-        margin-bottom: 24px;
-      }
-
-      .hero-ctas {
-        flex-direction: column;
-        width: 100%;
-        gap: 12px;
-      }
-
-      .hero-ctas .btn {
-        width: 100%;
-        padding: 13px 20px;
-        font-size: 14px;
-      }
-
-      .hero-meta {
-        flex-direction: column;
-        gap: 6px;
-        font-size: 12px;
+        display: inline-flex;
       }
 
       .app-viewport {
@@ -1035,109 +1114,61 @@
         min-height: auto;
       }
 
-      .app-tabs-nav {
-        padding: 8px 12px;
-        gap: 4px;
+      .app-tabs-nav-container::after {
+        opacity: 1;
       }
 
-      .tab-btn {
-        padding: 6px 10px;
-        font-size: 12px;
-      }
-
-      /* Viewport Tabs on Mobile */
       .tab-header-flex {
         flex-direction: column;
-        align-items: flex-start !important;
+        align-items: flex-start;
         gap: 8px;
       }
 
-      .tab-doc-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
-      }
-
       .tab-poster-preview {
-        flex-direction: column !important;
-        height: auto !important;
-        padding: 18px 12px !important;
+        flex-direction: column;
+        min-height: auto;
+        padding: 18px 12px;
         text-align: center;
       }
 
       .tab-media-grid {
-        grid-template-columns: 1fr !important;
-        gap: 10px !important;
+        grid-template-columns: 1fr;
+        gap: 12px;
       }
 
       .tab-download-row {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 8px !important;
-      }
-
-      .tab-download-row span {
-        word-break: break-all;
-      }
-
-      .section {
-        padding: 50px 0;
-      }
-
-      .section-header {
-        margin-bottom: 32px;
-      }
-
-      .section-title {
-        font-size: clamp(22px, 6vw, 30px);
-      }
-
-      .section-desc {
-        font-size: 15px;
-      }
-
-      .grid-4 {
-        grid-template-columns: 1fr;
-        gap: 14px;
-      }
-
-      .card {
-        padding: 20px 16px;
-      }
-
-      .download-card { 
-        padding: 28px 16px; 
-      }
-
-      .download-card .section-title {
-        font-size: 22px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
       }
 
       .download-actions {
         flex-direction: column;
+        align-items: center;
         width: 100%;
         gap: 12px;
       }
 
       .download-actions .btn {
         width: 100%;
-        padding: 13px 18px;
+        max-width: 400px;
+        min-height: 48px;
+        padding: 12px 18px;
         font-size: 14px;
         justify-content: center;
-      }
-
-      .download-card .btn-lg {
-        width: 100%;
       }
 
       .hash-box {
         flex-direction: column;
         align-items: stretch;
-        padding: 12px;
+        padding: 14px;
         gap: 10px;
       }
 
       .hash-code {
         font-size: 11px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
         word-break: break-all;
         white-space: normal;
         text-align: center;
@@ -1146,28 +1177,99 @@
       .copy-btn {
         width: 100%;
         justify-content: center;
-        padding: 8px;
+        padding: 10px;
       }
 
+      /* ======================================================================
+         TRANSFORMAÇÃO DA TABELA EM CARDS COMPARATIVOS NO MOBILE
+         ====================================================================== */
       .table-wrapper {
-        margin: 0 -16px;
+        background: transparent;
+        border: none;
         border-radius: 0;
-        border-left: none;
-        border-right: none;
+        overflow: visible;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
       }
 
-      table {
-        min-width: 580px;
+      table, tbody, tr, td {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
       }
 
-      th, td {
-        padding: 14px 16px;
+      thead {
+        display: none;
+      }
+
+      tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      tr {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      td.compare-criteria {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        padding: 0 0 10px 0;
+        border-bottom: 1px solid var(--border);
+        background: transparent;
+        position: static;
+      }
+
+      td.compare-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: #0E1315;
         font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+
+      td.compare-cell::before {
+        content: attr(data-label);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-dim);
+      }
+
+      td.compare-cell.highlight {
+        background: rgba(21, 245, 186, 0.08);
+        border: 1px solid rgba(21, 245, 186, 0.28);
+        color: var(--mint);
+        box-shadow: 0 0 16px var(--mint-subtle);
+      }
+
+      td.compare-cell.highlight::before {
+        color: var(--mint);
+        font-weight: 700;
       }
 
       .faq-question {
         padding: 16px 18px;
         font-size: 15px;
+        min-height: 52px;
       }
 
       .faq-answer {
@@ -1192,9 +1294,33 @@
       }
 
       .footer-links {
-        flex-wrap: wrap;
         justify-content: center;
         gap: 16px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .br-desktop {
+        display: none;
+      }
+
+      .hero-ctas {
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+      }
+
+      .hero-ctas .btn {
+        width: 100%;
+        max-width: 380px;
+        min-height: 48px;
+        padding: 12px 18px;
+        font-size: 14px;
+      }
+
+      .grid-4 {
+        grid-template-columns: 1fr;
+        gap: 14px;
       }
     }
 
@@ -1202,45 +1328,47 @@
       .app-titlebar-title span {
         display: none;
       }
-      .navbar {
-        padding: 6px 10px;
-      }
-      .navbar .btn {
-        padding: 6px 10px;
-        font-size: 12px;
-      }
+
       .brand-name {
         font-size: 14px;
       }
-      .btn-lg {
-        padding: 12px 14px;
-        font-size: 13px;
+
+      .poster-grid {
+        grid-template-columns: repeat(4, 28px);
+        grid-template-rows: repeat(3, 36px);
       }
-      
-      /* Poster preview grid - stack on very small screens */
-      .tab-poster-preview > div:first-child {
-        grid-template-columns: repeat(2, 28px) !important;
-        grid-template-rows: repeat(6, 36px) !important;
-      }
-      
-      /* Table container - allow horizontal scroll with visual indicator */
-      .table-wrapper {
-        position: relative;
-      }
-      .table-wrapper::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 30px;
-        background: linear-gradient(to top, var(--surface), transparent);
-        pointer-events: none;
-      }
-      
-      /* Reduce grid density on very small screens */
+
       .bg-grid {
         background-size: 32px 32px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .navbar {
+        padding: 6px 8px 6px 12px;
+      }
+
+      .navbar .btn-primary {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .btn-text-full {
+        display: none;
+      }
+
+      .btn-text-short {
+        display: inline;
+      }
+    }
+
+    /* Redução de movimento para acessibilidade */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
       }
     }
   </style>
@@ -1272,7 +1400,8 @@
         </button>
         <a href="#download" class="btn btn-primary">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Baixar .exe
+          <span class="btn-text-full">Baixar .exe</span>
+          <span class="btn-text-short">Baixar</span>
         </a>
       </div>
     </nav>
@@ -1287,7 +1416,7 @@
       </div>
 
       <h1 class="hero-title">
-        Seu espaço de criação.<br>
+        Seu espaço de criação.<br class="br-desktop">
         Suas ferramentas. <span>Um só lugar.</span>
       </h1>
 
@@ -1328,12 +1457,14 @@
           </div>
 
           <!-- Tabs de Navegação da Demonstração -->
-          <div class="app-tabs-nav">
-            <button class="tab-btn active" onclick="switchTab('tab-creative')">✦ Creative Studio</button>
-            <button class="tab-btn" onclick="switchTab('tab-documents')">▧ Document Engine</button>
-            <button class="tab-btn" onclick="switchTab('tab-poster')">◫ Poster Studio</button>
-            <button class="tab-btn" onclick="switchTab('tab-media')">♫ Mídia & Conversão</button>
-            <button class="tab-btn" onclick="switchTab('tab-downloads')">↓ Downloader (yt-dlp)</button>
+          <div class="app-tabs-nav-container">
+            <div class="app-tabs-nav">
+              <button class="tab-btn active" onclick="switchTab('tab-creative')">✦ Creative Studio</button>
+              <button class="tab-btn" onclick="switchTab('tab-documents')">▧ Document Engine</button>
+              <button class="tab-btn" onclick="switchTab('tab-poster')">◫ Poster Studio</button>
+              <button class="tab-btn" onclick="switchTab('tab-media')">♫ Mídia & Conversão</button>
+              <button class="tab-btn" onclick="switchTab('tab-downloads')">↓ Downloader (yt-dlp)</button>
+            </div>
           </div>
 
           <!-- Viewports Interativos -->
@@ -1361,11 +1492,11 @@
 
                 <!-- Timeline Bar -->
                 <div style="background:#0E1315; border-radius:8px; padding:12px; display:flex; align-items:center; gap:12px; font-family:var(--font-mono); font-size:12px; flex-wrap:wrap;">
-                  <span style="color:var(--mint); font-weight:600;">00:04.12 / 00:10.00</span>
-                  <div style="flex:1; min-width:140px; height:6px; background:var(--border); border-radius:3px; position:relative;">
+                  <span style="color:var(--mint); font-weight:600; white-space:nowrap;">00:04.12 / 00:10.00</span>
+                  <div style="flex:1; min-width:100px; height:6px; background:var(--border); border-radius:3px; position:relative;">
                     <div style="width:42%; height:100%; background:var(--mint); border-radius:3px;"></div>
                   </div>
-                  <span style="color:var(--text-dim);">1080x1920 (9:16)</span>
+                  <span style="color:var(--text-dim); white-space:nowrap;">1080x1920 (9:16)</span>
                 </div>
               </div>
             </div>
@@ -1408,19 +1539,19 @@
                 <span class="pill-badge" style="margin:0;">12 Folhas (4x3 A4)</span>
               </div>
               <div class="tab-poster-preview">
-                <div class="poster-grid" style="display:grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(3, 1fr); gap:3px; background:#0E1315; padding:8px; border-radius:6px; border:1px solid var(--border); flex-shrink:0; min-width:0;">
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
-                  <div style="background:var(--mint-subtle); border:1px solid var(--mint); min-height:36px;"></div>
+                <div class="poster-grid">
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
+                  <div class="poster-cell"></div>
                 </div>
                 <div>
                   <div style="font-size:15px; font-weight:700;">Pôster Montado: 840 × 891 mm</div>
@@ -1465,8 +1596,8 @@
               <div style="background:#141A1C; border:1px solid var(--border); border-radius:10px; padding:18px;">
                 <div class="tab-download-row">
                   <span style="color:var(--mint); font-family:var(--font-mono); font-size:13px; font-weight:600;">URL:</span>
-                  <span style="color:var(--text); font-size:13px; flex:1;">https://youtube.com/watch?v=demo_video</span>
-                  <span style="font-family:var(--font-mono); font-size:11px; background:var(--surface-elevated); padding:3px 8px; border-radius:4px; color:var(--mint);">1080p 60fps</span>
+                  <span class="tab-download-url">https://youtube.com/watch?v=demo_video</span>
+                  <span style="font-family:var(--font-mono); font-size:11px; background:var(--surface-elevated); padding:3px 8px; border-radius:4px; color:var(--mint); white-space:nowrap;">1080p 60fps</span>
                 </div>
                 <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--text-muted);">
                   <span>✓ Limpeza automática de arquivos parciais (.part)</span>
@@ -1539,15 +1670,15 @@
         </div>
         <div class="feature-box">
           <div style="font-family:var(--font-mono); font-size:12px; color:var(--mint); margin-bottom:12px;">// 16 SKILLS NATIVAS (SKILL.md)</div>
-          <div style="display:flex; flex-wrap:wrap; gap:8px;">
-            <span class="pill-badge" style="margin:0;">art-direction</span>
-            <span class="pill-badge" style="margin:0;">kinetic-typography</span>
-            <span class="pill-badge" style="margin:0;">logo-animation</span>
-            <span class="pill-badge" style="margin:0;">product-lighting</span>
-            <span class="pill-badge" style="margin:0;">color-grading</span>
-            <span class="pill-badge" style="margin:0;">ad-copywriting</span>
-            <span class="pill-badge" style="margin:0;">social-reels</span>
-            <span class="pill-badge" style="margin:0;">render-quality</span>
+          <div class="skills-badge-list">
+            <span class="pill-badge">art-direction</span>
+            <span class="pill-badge">kinetic-typography</span>
+            <span class="pill-badge">logo-animation</span>
+            <span class="pill-badge">product-lighting</span>
+            <span class="pill-badge">color-grading</span>
+            <span class="pill-badge">ad-copywriting</span>
+            <span class="pill-badge">social-reels</span>
+            <span class="pill-badge">render-quality</span>
           </div>
           <p style="margin-top:16px; font-size:13px; color:var(--text-muted); line-height:1.5;">
             Instruções técnicas de direção de arte prontas que instruem os modelos de IA a produzir resultados de agência sem esforço.
@@ -1576,34 +1707,34 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>Privacidade dos Arquivos</strong></td>
-              <td class="highlight">✓ 100% no seu disco (Offline)</td>
-              <td>✗ Enviados para servidores de terceiros</td>
-              <td>✓ Varia por aplicativo</td>
+              <td class="compare-criteria">Privacidade dos Arquivos</td>
+              <td class="compare-cell highlight" data-label="ToolsOnDesk">✓ 100% no seu disco (Offline)</td>
+              <td class="compare-cell" data-label="SaaS na Nuvem">✗ Enviados para servidores de terceiros</td>
+              <td class="compare-cell" data-label="Softwares Electron">✓ Varia por aplicativo</td>
             </tr>
             <tr>
-              <td><strong>Custo e Mensalidade</strong></td>
-              <td class="highlight">✓ Gratuito e Código Aberto</td>
-              <td>✗ R$ 40 - R$ 120 / mês por limites</td>
-              <td>✗ Varia (Muitos exigem Pro)</td>
+              <td class="compare-criteria">Custo e Mensalidade</td>
+              <td class="compare-cell highlight" data-label="ToolsOnDesk">✓ Gratuito e Código Aberto</td>
+              <td class="compare-cell" data-label="SaaS na Nuvem">✗ R$ 40 - R$ 120 / mês por limites</td>
+              <td class="compare-cell" data-label="Softwares Electron">✗ Varia (Muitos exigem Pro)</td>
             </tr>
             <tr>
-              <td><strong>Consumo de Memória RAM</strong></td>
-              <td class="highlight">✓ ~28 MB (Rust Leve)</td>
-              <td>✗ 400 MB+ por aba aberta</td>
-              <td>✗ 350 MB - 1 GB de RAM</td>
+              <td class="compare-criteria">Consumo de Memória RAM</td>
+              <td class="compare-cell highlight" data-label="ToolsOnDesk">✓ ~28 MB (Rust Leve)</td>
+              <td class="compare-cell" data-label="SaaS na Nuvem">✗ 400 MB+ por aba aberta</td>
+              <td class="compare-cell" data-label="Softwares Electron">✗ 350 MB - 1 GB de RAM</td>
             </tr>
             <tr>
-              <td><strong>Funciona sem Internet</strong></td>
-              <td class="highlight">✓ Sim (Conversões, Posters, Mídia)</td>
-              <td>✗ Não (Impossível sem conexão)</td>
-              <td>✓ Sim</td>
+              <td class="compare-criteria">Funciona sem Internet</td>
+              <td class="compare-cell highlight" data-label="ToolsOnDesk">✓ Sim (Conversões, Posters, Mídia)</td>
+              <td class="compare-cell" data-label="SaaS na Nuvem">✗ Não (Impossível sem conexão)</td>
+              <td class="compare-cell" data-label="Softwares Electron">✓ Sim</td>
             </tr>
             <tr>
-              <td><strong>Segurança de Chaves de IA</strong></td>
-              <td class="highlight">✓ Windows DPAPI Nativo</td>
-              <td>✗ Chaves na nuvem do provedor</td>
-              <td>✗ Arquivo .env em texto puro</td>
+              <td class="compare-criteria">Segurança de Chaves de IA</td>
+              <td class="compare-cell highlight" data-label="ToolsOnDesk">✓ Windows DPAPI Nativo</td>
+              <td class="compare-cell" data-label="SaaS na Nuvem">✗ Chaves na nuvem do provedor</td>
+              <td class="compare-cell" data-label="Softwares Electron">✗ Arquivo .env em texto puro</td>
             </tr>
           </tbody>
         </table>
@@ -1648,7 +1779,7 @@
 
       <div class="faq-list">
         <div class="faq-item">
-          <button class="faq-question" onclick="toggleFaq(this)">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
             <span>Preciso instalar alguma dependência no Windows?</span>
             <span class="faq-icon">▼</span>
           </button>
@@ -1658,7 +1789,7 @@
         </div>
 
         <div class="faq-item">
-          <button class="faq-question" onclick="toggleFaq(this)">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
             <span>Meus arquivos de documentos ou vídeos são enviados para a internet?</span>
             <span class="faq-icon">▼</span>
           </button>
@@ -1668,7 +1799,7 @@
         </div>
 
         <div class="faq-item">
-          <button class="faq-question" onclick="toggleFaq(this)">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
             <span>Como funciona a inteligência artificial generativa?</span>
             <span class="faq-icon">▼</span>
           </button>
@@ -1678,7 +1809,7 @@
         </div>
 
         <div class="faq-item">
-          <button class="faq-question" onclick="toggleFaq(this)">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
             <span>E se eu já usava a versão de testes anterior (Arce Tools)?</span>
             <span class="faq-icon">▼</span>
           </button>
@@ -1688,7 +1819,7 @@
         </div>
 
         <div class="faq-item">
-          <button class="faq-question" onclick="toggleFaq(this)">
+          <button class="faq-question" onclick="toggleFaq(this)" aria-expanded="false">
             <span>Quando serão lançadas as versões para Linux e macOS?</span>
             <span class="faq-icon">▼</span>
           </button>
@@ -1732,7 +1863,7 @@
     if (mobileMenuBtn && navLinks) {
       mobileMenuBtn.addEventListener('click', () => {
         const isOpen = navLinks.classList.toggle('open');
-        mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+        mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
       });
       
       // Close menu when clicking a link
@@ -1753,42 +1884,83 @@
     }
 
     // Tab Switcher com transição fluida
-    function switchTab(tabId) {
+    function switchTab(tabId, clickedBtn) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-      event.currentTarget.classList.add('active');
+      const btn = clickedBtn || (typeof event !== 'undefined' && event ? event.currentTarget : null) || document.querySelector(`[onclick*="${tabId}"]`);
+      if (btn) btn.classList.add('active');
+
       const targetContent = document.getElementById(tabId);
       if (targetContent) {
         targetContent.classList.add('active');
       }
     }
 
-    // Copiar Hash com feedback tátil de 2 segundos
+    // Copiar Hash com feedback tátil e fallback seguro
     function copyHash() {
-      const hash = document.getElementById('hashCode').innerText;
-      navigator.clipboard.writeText(hash).then(() => {
-        const btn = document.getElementById('copyBtn');
+      const hashEl = document.getElementById('hashCode');
+      const hash = hashEl ? hashEl.innerText.trim() : '';
+      const btn = document.getElementById('copyBtn');
+      if (!btn || !hash) return;
+
+      const showFeedback = () => {
         const originalHtml = btn.innerHTML;
         btn.innerHTML = `<span style="color:var(--mint)">✓ Copiado!</span>`;
         btn.style.borderColor = 'var(--mint)';
+        btn.style.color = 'var(--mint)';
         setTimeout(() => {
           btn.innerHTML = originalHtml;
           btn.style.borderColor = 'var(--border)';
+          btn.style.color = 'var(--text)';
         }, 2000);
-      });
+      };
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(hash).then(showFeedback).catch(() => {
+          fallbackCopy(hash, showFeedback);
+        });
+      } else {
+        fallbackCopy(hash, showFeedback);
+      }
     }
 
-    // FAQ Accordion
+    function fallbackCopy(text, callback) {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        ta.style.top = '0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if (successful && callback) callback();
+      } catch (err) {
+        if (callback) callback();
+      }
+    }
+
+    // FAQ Accordion com controle de acessibilidade
     function toggleFaq(btn) {
-      const item = btn.parentElement;
+      const item = btn.closest('.faq-item');
+      if (!item) return;
       const isOpen = item.classList.contains('open');
 
       // Fechar outros
-      document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+      document.querySelectorAll('.faq-item').forEach(el => {
+        el.classList.remove('open');
+        const qBtn = el.querySelector('.faq-question');
+        if (qBtn) qBtn.setAttribute('aria-expanded', 'false');
+      });
 
       if (!isOpen) {
         item.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      } else {
+        btn.setAttribute('aria-expanded', 'false');
       }
     }
   </script>
