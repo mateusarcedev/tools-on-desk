@@ -1,0 +1,223 @@
+name: Desktop Multiplatform Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }} - ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            arch: x86_64
+            target: x86_64-pc-windows-msvc
+            artifact_name: ToolsOnDesk-windows-x64
+          - os: ubuntu-22.04
+            platform: linux
+            arch: x86_64
+            target: x86_64-unknown-linux-gnu
+            artifact_name: ToolsOnDesk-linux-x64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+            target: aarch64-apple-darwin
+            artifact_name: ToolsOnDesk-macos-arm64
+          - os: macos-13
+            platform: macos
+            arch: x86_64
+            target: x86_64-apple-darwin
+            artifact_name: ToolsOnDesk-macos-x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            squashfs-tools
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Build Frontend assets
+        run: pnpm build
+
+      - name: Build Tauri Desktop Bundle
+        run: pnpm tauri build --target ${{ matrix.target }}
+
+      - name: Prepare Artifacts & Calculate SHA-256 (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist-artifacts
+          $bundleDir = "src-tauri/target/${{ matrix.target }}/release/bundle/nsis"
+          if (Test-Path $bundleDir) {
+            Get-ChildItem -Path $bundleDir -Filter *.exe | ForEach-Object {
+              Copy-Item $_.FullName -Destination dist-artifacts/
+              $hash = (Get-FileHash -Path $_.FullName -Algorithm SHA256).Hash.ToLower()
+              "$hash  $($_.Name)" | Out-File -FilePath dist-artifacts/$($_.Name).sha256 -Encoding utf8
+            }
+          }
+          # Generate individual manifest fragment
+          $files = Get-ChildItem -Path dist-artifacts -Filter *.exe | Select-Object Name, Length
+          $manifest = @{
+            platform = "${{ matrix.platform }}"
+            arch = "${{ matrix.arch }}"
+            target = "${{ matrix.target }}"
+            buildTime = (Get-Date).ToString("yyyy-MM-ddTHH:mm:ssZ")
+            files = @()
+          }
+          foreach ($f in $files) {
+            $hash = (Get-FileHash -Path "dist-artifacts/$($f.Name)" -Algorithm SHA256).Hash.ToLower()
+            $manifest.files += @{
+              name = $f.Name
+              size = $f.Length
+              sha256 = $hash
+            }
+          }
+          $manifest | ConvertTo-Json -Depth 5 | Out-File -FilePath dist-artifacts/manifest-${{ matrix.platform }}-${{ matrix.arch }}.json -Encoding utf8
+
+      - name: Prepare Artifacts & Calculate SHA-256 (Unix - Linux/macOS)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          mkdir -p dist-artifacts
+          find src-tauri/target/${{ matrix.target }}/release/bundle -type f \( -name "*.deb" -o -name "*.AppImage" -o -name "*.dmg" -o -name "*.tar.gz" \) -exec cp {} dist-artifacts/ \;
+          cd dist-artifacts
+          for f in *; do
+            if [ -f "$f" ] && [[ "$f" != *.sha256 ]] && [[ "$f" != *.json ]]; then
+              if command -v sha256sum >/dev/null 2>&1; then
+                sha256sum "$f" > "$f.sha256"
+              elif command -v shasum >/dev/null 2>&1; then
+                shasum -a 256 "$f" > "$f.sha256"
+              fi
+            fi
+          done
+
+          # Generate JSON fragment
+          echo "{" > manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  \"platform\": \"${{ matrix.platform }}\"," >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  \"arch\": \"${{ matrix.arch }}\"," >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  \"target\": \"${{ matrix.target }}\"," >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  \"buildTime\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  \"files\": [" >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          first=true
+          for f in *; do
+            if [ -f "$f" ] && [[ "$f" != *.sha256 ]] && [[ "$f" != *.json ]]; then
+              if [ "$first" = false ]; then echo "," >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json; fi
+              first=false
+              size=$(wc -c < "$f" | tr -d ' ')
+              hash=$(cat "$f.sha256" | awk '{print $1}')
+              echo -n "    {\"name\": \"$f\", \"size\": $size, \"sha256\": \"$hash\"}" >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+            fi
+          done
+          echo "" >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "  ]" >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+          echo "}" >> manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist-artifacts/*
+          retention-days: 30
+
+  release-manifest:
+    name: Aggregate Release Manifest
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-artifacts
+
+      - name: Create unified build-manifest.json
+        run: |
+          mkdir -p release-manifest
+          node -e '
+            const fs = require("fs");
+            const path = require("path");
+            const allDir = "all-artifacts";
+            const builds = [];
+            if (fs.existsSync(allDir)) {
+              for (const sub of fs.readdirSync(allDir)) {
+                const subPath = path.join(allDir, sub);
+                if (fs.statSync(subPath).isDirectory()) {
+                  for (const f of fs.readdirSync(subPath)) {
+                    if (f.startsWith("manifest-") && f.endsWith(".json")) {
+                      try {
+                        const content = JSON.parse(fs.readFileSync(path.join(subPath, f), "utf8"));
+                        builds.push(content);
+                      } catch (e) {
+                        console.error(e);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            const fullManifest = {
+              app: "ToolsOnDesk",
+              identifier: "com.toolsondesk.desktop",
+              version: "0.1.0",
+              generatedAt: new Date().toISOString(),
+              builds: builds
+            };
+            fs.writeFileSync("release-manifest/build-manifest.json", JSON.stringify(fullManifest, null, 2));
+            console.log("Unified manifest created with " + builds.length + " targets.");
+          '
+
+      - name: Upload Unified Manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: ToolsOnDesk-build-manifest
+          path: release-manifest/build-manifest.json
+          retention-days: 30

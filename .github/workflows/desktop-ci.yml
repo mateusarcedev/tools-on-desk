@@ -1,0 +1,83 @@
+name: Desktop Multiplatform CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  RUST_BACKTRACE: 1
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  ci:
+    name: CI (${{ matrix.platform }} - ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+            arch: x86_64
+          - os: ubuntu-22.04
+            platform: Linux
+            arch: x86_64
+          - os: macos-latest
+            platform: macOS
+            arch: aarch64 (Apple Silicon)
+          - os: macos-13
+            platform: macOS
+            arch: x86_64 (Intel)
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Setup Rust stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: 'src-tauri -> target'
+
+      - name: Install Linux system dependencies (WebKitGTK, GTK3, AppIndicator)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: Install Node dependencies
+        run: pnpm install
+
+      - name: Run Frontend unit tests (Vitest)
+        run: pnpm test
+
+      - name: Build Frontend static assets (Vite)
+        run: pnpm build
+
+      - name: Run Backend Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --verbose
