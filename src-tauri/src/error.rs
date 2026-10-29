@@ -39,6 +39,9 @@ pub enum AppError {
     #[error("Erro no motor OpenCode: {0}")]
     OpenCode(String),
 
+    #[error("Erro de segurança ou cofre de credenciais: {0}")]
+    Security(String),
+
     #[error("Erro interno: {0}")]
     Internal(String),
 }
@@ -114,6 +117,7 @@ impl AppError {
                     "OPENCODE_EXEC_FAILED"
                 }
             }
+            AppError::Security(_) => "CREDENTIAL_SECURITY_ERROR",
             AppError::Internal(_) => "INTERNAL_ERROR",
         }
     }
@@ -132,6 +136,7 @@ impl AppError {
             AppError::Nvidia(e) => format!("Falha na integração com NVIDIA AI: {}", e),
             AppError::Creative(e) => format!("Creative Studio: {}", e),
             AppError::OpenCode(e) => format!("Motor OpenCode: {}", e),
+            AppError::Security(e) => format!("Segurança de credenciais: {}", e),
             AppError::Internal(e) => format!("Ocorreu um erro interno: {}", e),
         }
     }

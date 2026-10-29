@@ -1099,33 +1099,142 @@ mod tests {
     }
 
     #[test]
-    fn test_credential_store_cross_platform_mock() {
-        // Test key masking
+    fn test_credential_store_key_masking() {
         let raw_key = "nvapi-1234567890abcdef1234567890abcdef1234567890";
         let masked = crate::platform::credentials::CredentialStore::mask_key(raw_key);
         assert!(masked.contains("••••••••"));
+        assert!(masked.starts_with("nvapi-"));
+        assert!(masked.ends_with("7890"));
 
         let short_key = "abc";
         assert_eq!(crate::platform::credentials::CredentialStore::mask_key(short_key), "••••••••");
+    }
 
-        // Test save and read in temp vault
-        let temp_dir = std::env::temp_dir().join(format!("tod_vault_test_{}", uuid::Uuid::new_v4()));
+    #[test]
+    fn test_credential_store_zeroize_memory() {
+        let mut sensitive = b"SuperSecretPassword123".to_vec();
+        crate::platform::credentials::CredentialStore::zeroize_bytes(&mut sensitive);
+        for b in sensitive {
+            assert_eq!(b, 0, "Buffer de memória deve ser completamente zerado");
+        }
+    }
+
+    #[test]
+    fn test_credential_store_sanitization_avoids_leakage() {
+        let secret = "nvapi-super-confidential-token-999";
+        let raw_log = "Command failed: status 1, stderr='Invalid token nvapi-super-confidential-token-999'".to_string();
+        let sanitized = crate::platform::credentials::CredentialStore::sanitize_secret_in_message(&raw_log, secret);
+        assert!(!sanitized.contains(secret), "Segredo jamais deve vazar nos logs/mensagens");
+        assert!(sanitized.contains("[PROTECTED_KEY]"));
+    }
+
+    #[test]
+    fn test_credential_store_linux_keyring_present() {
+        use crate::platform::credentials::{CredentialStore, test_helpers};
+        let _lock = test_helpers::TEST_LOCK.lock().unwrap();
+        test_helpers::set_test_mode(1); // Present
+
+        let temp_dir = std::env::temp_dir().join(format!("tod_present_test_{}", uuid::Uuid::new_v4()));
         let _ = std::fs::create_dir_all(&temp_dir);
 
-        // Store secret
-        let save_res = crate::platform::credentials::CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-test-secret-key-999");
-        assert!(save_res.is_ok(), "Falha ao salvar credencial no cofre: {:?}", save_res.err());
+        let store_res = CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-secret-ok-123");
+        assert!(store_res.is_ok(), "Keyring presente deve salvar com sucesso");
 
-        // Read secret
-        let read_res = crate::platform::credentials::CredentialStore::get_secret(&temp_dir, "nvidia_api_key");
-        assert!(read_res.is_ok(), "Falha ao ler credencial do cofre: {:?}", read_res.err());
-        assert_eq!(read_res.unwrap(), Some("nvapi-test-secret-key-999".to_string()));
+        let read_res = CredentialStore::get_secret(&temp_dir, "nvidia_api_key");
+        assert_eq!(read_res.unwrap(), Some("nvapi-secret-ok-123".to_string()));
 
-        // Delete secret
-        let del_res = crate::platform::credentials::CredentialStore::delete_secret(&temp_dir, "nvidia_api_key");
+        let del_res = CredentialStore::delete_secret(&temp_dir, "nvidia_api_key");
         assert!(del_res.is_ok());
-        let read_after = crate::platform::credentials::CredentialStore::get_secret(&temp_dir, "nvidia_api_key").unwrap();
+
+        let read_after = CredentialStore::get_secret(&temp_dir, "nvidia_api_key").unwrap();
         assert_eq!(read_after, None);
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        test_helpers::reset_test_mode();
+    }
+
+    #[test]
+    fn test_credential_store_linux_keyring_absent_fails_closed() {
+        use crate::platform::credentials::{CredentialStore, test_helpers};
+        let _lock = test_helpers::TEST_LOCK.lock().unwrap();
+        test_helpers::set_test_mode(2); // Absent
+
+        let temp_dir = std::env::temp_dir().join(format!("tod_absent_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        let store_res = CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-secret-absent-123");
+        assert!(store_res.is_err(), "Keyring ausente DEVE falhar fechado (fail-closed)");
+        let err = store_res.err().unwrap();
+        assert_eq!(err.error_code(), "CREDENTIAL_SECURITY_ERROR");
+
+        // Verify that NO plaintext or insecure file was generated
+        let modern_vault = temp_dir.join(".vault_secure.enc");
+        assert!(!modern_vault.exists(), "Nenhum arquivo inseguro deve ser gerado no modo fail-closed");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        test_helpers::reset_test_mode();
+    }
+
+    #[test]
+    fn test_credential_store_linux_keyring_locked_fails_closed() {
+        use crate::platform::credentials::{CredentialStore, test_helpers};
+        let _lock = test_helpers::TEST_LOCK.lock().unwrap();
+        test_helpers::set_test_mode(3); // Locked
+
+        let temp_dir = std::env::temp_dir().join(format!("tod_locked_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        let store_res = CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-secret-locked-123");
+        assert!(store_res.is_err(), "Keyring bloqueado DEVE falhar fechado");
+        let err = store_res.err().unwrap();
+        assert_eq!(err.error_code(), "CREDENTIAL_SECURITY_ERROR");
+        assert!(err.to_string().contains("bloqueado"));
+
+        let modern_vault = temp_dir.join(".vault_secure.enc");
+        assert!(!modern_vault.exists(), "Nenhum arquivo inseguro deve ser gerado quando o cofre estiver bloqueado");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        test_helpers::reset_test_mode();
+    }
+
+    #[test]
+    fn test_credential_store_linux_keyring_unavailable_fails_closed() {
+        use crate::platform::credentials::{CredentialStore, test_helpers};
+        let _lock = test_helpers::TEST_LOCK.lock().unwrap();
+        test_helpers::set_test_mode(4); // Unavailable
+
+        let temp_dir = std::env::temp_dir().join(format!("tod_unavail_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        let store_res = CredentialStore::store_secret(&temp_dir, "nvidia_api_key", "nvapi-secret-unavail-123");
+        assert!(store_res.is_err(), "Keyring indisponível DEVE falhar fechado");
+        let err = store_res.err().unwrap();
+        assert_eq!(err.error_code(), "CREDENTIAL_SECURITY_ERROR");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+        test_helpers::reset_test_mode();
+    }
+
+    #[test]
+    fn test_credential_store_legacy_migration_recovery() {
+        use crate::platform::credentials::{CredentialStore, test_helpers};
+        let _lock = test_helpers::TEST_LOCK.lock().unwrap();
+        test_helpers::reset_test_mode();
+        let temp_dir = std::env::temp_dir().join(format!("tod_legacy_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // Simulate legacy .vault_secure.enc exists on disk with saved key
+        let mut mock_legacy = std::collections::HashMap::new();
+        mock_legacy.insert("nvidia_api_key".to_string(), "nvapi-legacy-migrated-key-456".to_string());
+
+        let legacy_file = temp_dir.join(".vault_secure.enc");
+        let write_res = CredentialStore::write_test_legacy_file(&legacy_file, &mock_legacy);
+        assert!(write_res.is_ok(), "Falha ao gravar arquivo legado de teste");
+
+        // get_secret should recover the key from legacy storage without data loss
+        let recovered = CredentialStore::get_secret(&temp_dir, "nvidia_api_key");
+        assert!(recovered.is_ok());
+        assert_eq!(recovered.unwrap(), Some("nvapi-legacy-migrated-key-456".to_string()));
 
         let _ = std::fs::remove_dir_all(&temp_dir);
     }
