@@ -1,6 +1,6 @@
-use crate::domain::{ImageConvertOptions, ImagesToPdfOptions};
+use crate::domain::{ImageConvertOptions, ImageEditOptions, ImageEditResult, ImagesToPdfOptions};
 use crate::error::{AppError, AppResult};
-use image::{imageops::FilterType, GenericImageView};
+use image::{imageops::FilterType, DynamicImage, GenericImageView, RgbaImage};
 use std::fs::File;
 use std::io::{BufWriter, Cursor, Write};
 use std::path::Path;
@@ -351,5 +351,139 @@ impl ImageEngine {
         progress_cb(1.0);
 
         Ok(options.output_pdf.clone())
+    }
+
+    pub fn edit_image(options: ImageEditOptions) -> AppResult<ImageEditResult> {
+        let src_p = Path::new(&options.source_path);
+        if !src_p.exists() {
+            return Err(AppError::InvalidInput(format!(
+                "Imagem de origem não encontrada: {}",
+                options.source_path
+            )));
+        }
+
+        let mut img = image::open(src_p)
+            .map_err(|e| AppError::Image(format!("Falha ao abrir imagem para edição: {}", e)))?;
+
+        // 1. Crop if specified
+        if let Some(crop) = &options.crop {
+            let (w, h) = img.dimensions();
+            if crop.x < w && crop.y < h {
+                let crop_w = crop.width.min(w - crop.x).max(1);
+                let crop_h = crop.height.min(h - crop.y).max(1);
+                img = img.crop_imm(crop.x, crop.y, crop_w, crop_h);
+            }
+        }
+
+        // 2. Rotate if specified
+        if let Some(deg) = options.rotate_deg {
+            let norm = ((deg % 360) + 360) % 360;
+            match norm {
+                90 => img = img.rotate90(),
+                180 => img = img.rotate180(),
+                270 => img = img.rotate270(),
+                _ => {}
+            }
+        }
+
+        // 3. Flips
+        if options.flip_horizontal {
+            img = img.fliph();
+        }
+        if options.flip_vertical {
+            img = img.flipv();
+        }
+
+        // 4. Brightness adjustment (-100 to 100)
+        if let Some(b) = options.brightness {
+            if b != 0 {
+                img = img.brighten(b);
+            }
+        }
+
+        // 5. Contrast adjustment (-100.0 to 100.0)
+        if let Some(c) = options.contrast {
+            if c != 0.0 {
+                img = img.adjust_contrast(c);
+            }
+        }
+
+        // 6. Saturation adjustment (0.0 to 2.0, 1.0 = normal)
+        if let Some(sat) = options.saturation {
+            if (sat - 1.0).abs() > 0.01 {
+                let mut rgba: RgbaImage = img.to_rgba8();
+                for pixel in rgba.pixels_mut() {
+                    let r = pixel[0] as f32;
+                    let g = pixel[1] as f32;
+                    let b = pixel[2] as f32;
+                    // SMPTE Rec. 601 luminance
+                    let l = 0.299 * r + 0.587 * g + 0.114 * b;
+                    let nr = (l + (r - l) * sat).clamp(0.0, 255.0) as u8;
+                    let ng = (l + (g - l) * sat).clamp(0.0, 255.0) as u8;
+                    let nb = (l + (b - l) * sat).clamp(0.0, 255.0) as u8;
+                    pixel[0] = nr;
+                    pixel[1] = ng;
+                    pixel[2] = nb;
+                }
+                img = DynamicImage::ImageRgba8(rgba);
+            }
+        }
+
+        // 7. Resize if specified
+        if options.resize_width.is_some() || options.resize_height.is_some() {
+            let (orig_w, orig_h) = img.dimensions();
+            let target_w = options.resize_width.unwrap_or(orig_w);
+            let target_h = options.resize_height.unwrap_or(orig_h);
+            img = img.resize_exact(target_w, target_h, FilterType::Lanczos3);
+        }
+
+        // 8. Output path resolution
+        let target_str = if let Some(out_p) = options.output_path {
+            out_p
+        } else {
+            let stem = src_p.file_stem().and_then(|s| s.to_str()).unwrap_or("edited");
+            let ext = options.output_format.as_deref().unwrap_or("png");
+            let parent = src_p.parent().unwrap_or_else(|| Path::new("."));
+            let filename = format!("{}_edited_{}.{}", stem, chrono::Utc::now().timestamp_millis(), ext);
+            parent.join(filename).to_string_lossy().to_string()
+        };
+
+        let target_path = Path::new(&target_str);
+        if let Some(p) = target_path.parent() {
+            let _ = std::fs::create_dir_all(p);
+        }
+
+        let mut out_file = File::create(target_path)
+            .map_err(|e| AppError::Io(e))?;
+
+        let fmt_lower = options.output_format.as_deref().unwrap_or("png").to_lowercase();
+        let (final_w, final_h) = img.dimensions();
+
+        if fmt_lower == "jpg" || fmt_lower == "jpeg" {
+            let rgb = img.to_rgb8();
+            let quality = options.quality.unwrap_or(90).clamp(1, 100);
+            let mut encoder = image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out_file, quality);
+            encoder
+                .encode(
+                    rgb.as_raw(),
+                    final_w,
+                    final_h,
+                    image::ExtendedColorType::Rgb8,
+                )
+                .map_err(|e| AppError::Image(format!("Falha ao salvar JPEG editado: {}", e)))?;
+        } else {
+            img.write_to(&mut out_file, image::ImageFormat::Png)
+                .map_err(|e| AppError::Image(format!("Falha ao salvar PNG editado: {}", e)))?;
+        }
+
+        out_file.flush()?;
+        let file_size_bytes = std::fs::metadata(target_path).map(|m| m.len()).unwrap_or(0);
+
+        Ok(ImageEditResult {
+            output_path: target_str,
+            width: final_w,
+            height: final_h,
+            file_size_bytes,
+        })
     }
 }

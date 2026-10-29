@@ -21,6 +21,53 @@ pub struct NvidiaModelInfo {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageModelCapabilities {
+    pub model_id: String,
+    pub name: String,
+    pub provider: String,
+    pub supported_aspect_ratios: Vec<String>,
+    pub min_steps: u32,
+    pub max_steps: u32,
+    pub default_steps: u32,
+    pub supports_negative_prompt: bool,
+    pub supports_reference_image: bool,
+    pub reference_mode: String, // "none", "example_id_only", "user_image"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CropArea {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageEditOptions {
+    pub source_path: String,
+    pub output_path: Option<String>,
+    pub crop: Option<CropArea>,
+    pub resize_width: Option<u32>,
+    pub resize_height: Option<u32>,
+    pub rotate_deg: Option<i32>,
+    pub flip_horizontal: bool,
+    pub flip_vertical: bool,
+    pub brightness: Option<i32>,
+    pub contrast: Option<f32>,
+    pub saturation: Option<f32>,
+    pub output_format: Option<String>,
+    pub quality: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageEditResult {
+    pub output_path: String,
+    pub width: u32,
+    pub height: u32,
+    pub file_size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NvidiaImageGenOptions {
     pub prompt: String,
     pub negative_prompt: Option<String>,

@@ -15,7 +15,8 @@ pub mod video;
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
 pub use creative::{
     CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
-    CreativeSkill, CreativeTemplate, MotionAnimation, MotionAudioTrack, MotionComposition,
+    CreativeSkill, CreativeTemplate, CropArea, ImageEditOptions, ImageEditResult,
+    ImageModelCapabilities, MotionAnimation, MotionAudioTrack, MotionComposition,
     MotionLayer, MotionScene, NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus,
     NvidiaModelInfo, NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus,
     RenderCompositeVideoOptions, RenderMotionOptions, TemplateParameter,

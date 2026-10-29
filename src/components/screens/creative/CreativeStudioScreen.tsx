@@ -10,6 +10,7 @@ import {
   NvidiaImageGenResult,
   NvidiaKeyStatus,
   NvidiaModelInfo,
+  ImageModelCapabilities,
 } from '../../../types/creative';
 import { TauriService } from '../../../services/tauri';
 import { Button } from '../../common/Button';
@@ -19,6 +20,9 @@ import { StyleSelector } from '../../creative/generative/StyleSelector';
 import { MotionPlayer } from '../../creative/motion/MotionPlayer';
 import { ParameterAdjuster } from '../../creative/generative/ParameterAdjuster';
 import { StoryboardApprover, StoryboardScene } from '../../creative/generative/StoryboardApprover';
+import { ProposalComparator, ProposalItem } from '../../creative/generative/ProposalComparator';
+import { PromptEnhancerWidget } from '../../creative/image/PromptEnhancerWidget';
+import { ImageEditorModal } from '../../creative/image/ImageEditorModal';
 
 export const CreativeStudioScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CreativeStudioTab>('overview');
@@ -50,6 +54,13 @@ export const CreativeStudioScreen: React.FC = () => {
   const [imageResult, setImageResult] = useState<NvidiaImageGenResult | null>(null);
   const [imageHistory, setImageHistory] = useState<CreativeAsset[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>('black-forest-labs/flux.1-schnell');
+  const [imageCapabilities, setImageCapabilities] = useState<ImageModelCapabilities[]>([]);
+  const [negativePrompt, setNegativePrompt] = useState<string>('');
+  const [steps, setSteps] = useState<number>(4);
+  const [cfgScale, setCfgScale] = useState<number>(1.0);
+  const [editingAsset, setEditingAsset] = useState<CreativeAsset | null>(null);
+  const [comparingProposals, setComparingProposals] = useState<ProposalItem[] | null>(null);
+  const [galleryFilter, setGalleryFilter] = useState<'all' | 'ai' | 'edited' | 'imported'>('all');
 
   // Motion Studio State
   const [motionPrompt, setMotionPrompt] = useState<string>('');
@@ -146,13 +157,14 @@ export const CreativeStudioScreen: React.FC = () => {
   // Load initial studio data
   const loadStudioData = async () => {
     try {
-      const [kStatus, mList, pList, aList, tList, sList] = await Promise.all([
+      const [kStatus, mList, pList, aList, tList, sList, cList] = await Promise.all([
         TauriService.getNvidiaKeyStatus(),
         TauriService.listNvidiaModels(),
         TauriService.listCreativeProjects(),
         TauriService.listCreativeAssets(),
         TauriService.listCreativeTemplates(),
         TauriService.getCreativeSkills(),
+        TauriService.listImageModelCapabilities(),
       ]);
 
       setKeyStatus(kStatus);
@@ -161,7 +173,15 @@ export const CreativeStudioScreen: React.FC = () => {
       setAssets(aList);
       setTemplates(tList);
       setSkills(sList);
+      setImageCapabilities(cList);
       setImageHistory(aList.filter((a) => a.asset_type === 'image'));
+
+      if (cList.length > 0) {
+        const defaultCap = cList[0];
+        setSelectedModel(defaultCap.id);
+        setSteps(defaultCap.default_steps);
+        setCfgScale(defaultCap.default_cfg);
+      }
 
       if (tList.length > 0) {
         setActiveTemplate(tList[0]);
@@ -194,6 +214,74 @@ export const CreativeStudioScreen: React.FC = () => {
     }
   };
 
+  const currentCapability = imageCapabilities.find((c) => c.id === selectedModel);
+
+  const handleModelChange = (modelId: string) => {
+    setSelectedModel(modelId);
+    const cap = imageCapabilities.find((c) => c.id === modelId);
+    if (cap) {
+      setSteps(cap.default_steps);
+      setCfgScale(cap.default_cfg);
+      if (!cap.supported_aspect_ratios.includes(selectedRatio)) {
+        setSelectedRatio(cap.supported_aspect_ratios[0] || '1:1');
+      }
+    }
+  };
+
+  const handleSendToMotionStudio = async (assetPath: string) => {
+    try {
+      const activeProject = projects.find((p) => p.project_type === 'motion') || projects[0];
+      if (activeProject) {
+        await TauriService.addAssetToMotionComposition(activeProject.id, assetPath);
+      }
+      setCurrentComposition((prev) => ({
+        ...prev,
+        scenes: prev.scenes.map((sc, i) =>
+          i === 0
+            ? {
+                ...sc,
+                layers: [
+                  {
+                    id: `img-${Date.now()}`,
+                    layer_type: 'image',
+                    name: 'Imagem Adicionada',
+                    content: assetPath,
+                    start_time: 0.0,
+                    duration_sec: prev.duration_sec,
+                    x: 0.1,
+                    y: 0.1,
+                    width: 0.8,
+                    height: 0.8,
+                    opacity: 1.0,
+                    scale: 1.0,
+                    rotation: 0.0,
+                    color: '#FFFFFF',
+                    z_index: 0,
+                  },
+                  ...sc.layers,
+                ],
+              }
+            : sc
+        ),
+      }));
+      setActiveTab('motion-studio');
+    } catch (err) {
+      console.error('Erro ao enviar imagem para Motion Studio:', err);
+    }
+  };
+
+  const handleOpenComparison = (items: CreativeAsset[]) => {
+    const proposals: ProposalItem[] = items.map((a, idx) => ({
+      id: a.id,
+      title: a.name,
+      subtitle: `${a.width || 1024}x${a.height || 1024}px · ${(a.file_size_bytes / 1024).toFixed(0)} KB`,
+      imageSrc: a.file_path,
+      badge: idx === 0 ? 'Original' : `Variação ${idx + 1}`,
+      metadata: a.created_at ? new Date(a.created_at).toLocaleTimeString() : undefined,
+    }));
+    setComparingProposals(proposals);
+  };
+
   // Image Generation Handler
   const handleGenerateImage = async () => {
     if (!imagePrompt.trim()) return;
@@ -207,14 +295,26 @@ export const CreativeStudioScreen: React.FC = () => {
       } else if (selectedRatio === '9:16') {
         width = 720;
         height = 1280;
+      } else if (selectedRatio === '4:3') {
+        width = 1024;
+        height = 768;
+      } else if (selectedRatio === '3:4') {
+        width = 768;
+        height = 1024;
+      } else if (selectedRatio === '21:9') {
+        width = 1344;
+        height = 576;
       }
 
       const options: NvidiaImageGenOptions = {
         prompt: imagePrompt.trim(),
+        negative_prompt: negativePrompt.trim() || undefined,
         style_preset: selectedStyle,
         aspect_ratio: selectedRatio,
         width,
         height,
+        steps,
+        cfg_scale: cfgScale,
         samples: 1,
         model_id: selectedModel,
       };
@@ -633,10 +733,27 @@ export const CreativeStudioScreen: React.FC = () => {
           </div>
         )}
 
-        {/* 2. AI IMAGE STUDIO */}
+        {/* 2. AI IMAGE STUDIO 2.0 */}
         {activeTab === 'image-studio' && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, maxWidth: 1300, margin: '0 auto' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {/* Proposal Comparator Overlay if active */}
+              {comparingProposals && (
+                <div style={{ marginBottom: 10 }}>
+                  <ProposalComparator
+                    proposals={comparingProposals}
+                    onSelect={(id) => {
+                      const sel = assets.find((a) => a.id === id);
+                      if (sel) {
+                        handleSendToMotionStudio(sel.file_path);
+                      }
+                      setComparingProposals(null);
+                    }}
+                    onCancel={() => setComparingProposals(null)}
+                  />
+                </div>
+              )}
+
               {/* Prompt Box */}
               <div
                 style={{
@@ -649,7 +766,7 @@ export const CreativeStudioScreen: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <label style={{ fontSize: 13, fontWeight: 600 }}>Descrição da Imagem (Prompt)</label>
                   <Button variant="ghost" size="sm" onClick={() => setBriefingOpen(true)}>
-                    <Icon name="sparkles" size={12} /> Aprimorar com IA
+                    <Icon name="sparkles" size={12} /> Briefing com IA
                   </Button>
                 </div>
 
@@ -673,9 +790,47 @@ export const CreativeStudioScreen: React.FC = () => {
                   }}
                 />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 }}>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    {['1:1', '16:9', '9:16'].map((r) => (
+                {/* Optional Negative Prompt (when model supports it) */}
+                {currentCapability?.supports_negative_prompt && (
+                  <div style={{ marginTop: 10 }}>
+                    <label style={{ fontSize: 11, color: 'var(--muted)', display: 'block', marginBottom: 4 }}>
+                      Prompt Negativo (elementos a evitar)
+                    </label>
+                    <input
+                      type="text"
+                      value={negativePrompt}
+                      onChange={(e) => setNegativePrompt(e.target.value)}
+                      placeholder="Ex: baixa resolução, deformações, artefatos visuais, texto borrado..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: 6,
+                        backgroundColor: 'var(--bg)',
+                        border: '1px solid var(--line)',
+                        color: 'var(--fg)',
+                        fontSize: 12,
+                        boxSizing: 'border-box',
+                        fontFamily: 'Geist, sans-serif',
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Subscription Agent Art Direction Harness */}
+                <PromptEnhancerWidget
+                  currentPrompt={imagePrompt}
+                  onApplyPrompt={(newP, recStyle, recRatio) => {
+                    setImagePrompt(newP);
+                    if (recStyle) setSelectedStyle(recStyle);
+                    if (recRatio && currentCapability?.supported_aspect_ratios.includes(recRatio)) {
+                      setSelectedRatio(recRatio);
+                    }
+                  }}
+                />
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(currentCapability?.supported_aspect_ratios || ['1:1', '16:9', '9:16']).map((r) => (
                       <button
                         key={r}
                         type="button"
@@ -684,6 +839,7 @@ export const CreativeStudioScreen: React.FC = () => {
                           padding: '6px 12px',
                           borderRadius: 6,
                           fontSize: 12,
+                          fontFamily: 'var(--mono, monospace)',
                           border: selectedRatio === r ? '1px solid var(--mint)' : '1px solid var(--line)',
                           backgroundColor: selectedRatio === r ? 'rgba(21, 245, 186, 0.1)' : 'var(--bg)',
                           color: selectedRatio === r ? 'var(--mint)' : 'var(--fg)',
@@ -722,13 +878,33 @@ export const CreativeStudioScreen: React.FC = () => {
                     padding: 20,
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--mint)' }}>
-                      Resultado da Geração ({imageResult.duration_ms}ms)
-                    </h4>
-                    <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--font-mono, monospace)' }}>
-                      Modelo: {imageResult.model_id}
-                    </span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--mint)' }}>
+                        Resultado da Geração ({imageResult.duration_ms}ms)
+                      </h4>
+                      <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono, monospace)' }}>
+                        Modelo: {imageResult.model_id} · Seed: {imageResult.seed}
+                      </span>
+                    </div>
+
+                    {imageResult.image_paths.length > 1 && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          const proposals: ProposalItem[] = imageResult.image_paths.map((p, idx) => ({
+                            id: `gen-${idx}`,
+                            title: `Variação ${idx + 1}`,
+                            imageSrc: p,
+                            badge: `${imageResult.model_id.split('/').pop()}`,
+                          }));
+                          setComparingProposals(proposals);
+                        }}
+                      >
+                        Comparar Lado a Lado
+                      </Button>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
@@ -740,53 +916,49 @@ export const CreativeStudioScreen: React.FC = () => {
                           overflow: 'hidden',
                           border: '1px solid var(--line)',
                           backgroundColor: '#000',
-                          maxWidth: 480,
+                          maxWidth: 520,
+                          flex: 1,
                         }}
                       >
                         <img
                           src={`file://${p}`}
                           alt="Generated"
-                          style={{ width: '100%', height: 'auto', display: 'block' }}
+                          style={{ width: '100%', height: 'auto', display: 'block', maxHeight: 420, objectFit: 'contain' }}
                         />
-                        <div style={{ padding: 10, display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontSize: 11, color: 'var(--muted)' }}>{p.split('/').pop()}</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setCurrentComposition((prev) => ({
-                                ...prev,
-                                scenes: [
-                                  {
-                                    ...prev.scenes[0],
-                                    layers: [
-                                      {
-                                        id: `img-${Date.now()}`,
-                                        layer_type: 'image',
-                                        name: 'Imagem Gerada',
-                                        content: p,
-                                        start_time: 0.0,
-                                        duration_sec: prev.duration_sec,
-                                        x: 0.1,
-                                        y: 0.1,
-                                        width: 0.8,
-                                        height: 0.8,
-                                        opacity: 1.0,
-                                        scale: 1.0,
-                                        rotation: 0.0,
-                                        color: '#FFFFFF',
-                                        z_index: 0,
-                                      },
-                                      ...prev.scenes[0].layers,
-                                    ],
-                                  },
-                                ],
-                              }));
-                              setActiveTab('motion-studio');
-                            }}
-                          >
-                            Usar no Motion Studio →
-                          </Button>
+                        <div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--surface-2, #141A1C)', borderTop: '1px solid var(--line)' }}>
+                          <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'var(--mono, monospace)' }}>
+                            {p.split('/').pop()}
+                          </span>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => {
+                                setEditingAsset({
+                                  id: `asset-${Date.now()}`,
+                                  project_id: null,
+                                  name: p.split('/').pop() || 'image.png',
+                                  asset_type: 'image',
+                                  file_path: p,
+                                  file_size_bytes: 1024000,
+                                  width: 1024,
+                                  height: 1024,
+                                  duration_sec: null,
+                                  mime_type: 'image/png',
+                                  created_at: new Date().toISOString(),
+                                });
+                              }}
+                            >
+                              <Icon name="tool" size={12} /> Editar
+                            </Button>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleSendToMotionStudio(p)}
+                            >
+                              Enviar ao Motion Studio →
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -795,37 +967,94 @@ export const CreativeStudioScreen: React.FC = () => {
               )}
             </div>
 
-            {/* Sidebar: Gallery & Model Config */}
+            {/* Sidebar: Model Parameters & Responsive Asset Gallery */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Model & Hyperparameter Settings */}
               <div
                 style={{
                   backgroundColor: 'var(--surface)',
                   borderRadius: 10,
                   border: '1px solid var(--line)',
                   padding: 16,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
                 }}
               >
-                <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 600 }}>Modelo de Síntese</h4>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: 6,
-                    backgroundColor: 'var(--bg)',
-                    border: '1px solid var(--line)',
-                    color: 'var(--fg)',
-                    fontSize: 12,
-                  }}
-                >
-                  <option value="black-forest-labs/flux.1-schnell">FLUX.1 [schnell] (Rápido)</option>
-                  <option value="black-forest-labs/flux.1-dev">FLUX.1 [dev] (Alta Qualidade)</option>
-                  <option value="stabilityai/stable-diffusion-3.5-large">Stable Diffusion 3.5 Large</option>
-                </select>
+                <div>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 600 }}>Modelo de Síntese</h4>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => handleModelChange(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      backgroundColor: 'var(--bg)',
+                      border: '1px solid var(--line)',
+                      color: 'var(--fg)',
+                      fontSize: 12,
+                    }}
+                  >
+                    {imageCapabilities.length > 0 ? (
+                      imageCapabilities.map((cap) => (
+                        <option key={cap.id} value={cap.id}>
+                          {cap.display_name}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="black-forest-labs/flux.1-schnell">FLUX.1 [schnell] (Ultra Rápido)</option>
+                        <option value="black-forest-labs/flux.1-dev">FLUX.1 [dev] (Alta Qualidade)</option>
+                        <option value="stabilityai/stable-diffusion-3.5-large">Stable Diffusion 3.5 Large</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Steps Slider */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--fg-dim)', marginBottom: 4 }}>
+                    <span>Passos de Difusão (Steps)</span>
+                    <span style={{ fontFamily: 'var(--mono, monospace)', color: 'var(--mint)' }}>{steps}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={currentCapability?.min_steps || 1}
+                    max={currentCapability?.max_steps || 50}
+                    value={steps}
+                    onChange={(e) => setSteps(parseInt(e.target.value, 10))}
+                    style={{ width: '100%', accentColor: 'var(--mint)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono, monospace)' }}>
+                    <span>Min: {currentCapability?.min_steps || 1}</span>
+                    <span>Max: {currentCapability?.max_steps || 50}</span>
+                  </div>
+                </div>
+
+                {/* CFG Scale Slider */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--fg-dim)', marginBottom: 4 }}>
+                    <span>Escala de Orientação (CFG)</span>
+                    <span style={{ fontFamily: 'var(--mono, monospace)', color: 'var(--mint)' }}>{cfgScale.toFixed(1)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={currentCapability?.min_cfg || 1.0}
+                    max={currentCapability?.max_cfg || 15.0}
+                    step="0.5"
+                    value={cfgScale}
+                    onChange={(e) => setCfgScale(parseFloat(e.target.value))}
+                    style={{ width: '100%', accentColor: 'var(--mint)' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--muted)', fontFamily: 'var(--mono, monospace)' }}>
+                    <span>Min: {(currentCapability?.min_cfg || 1.0).toFixed(1)}</span>
+                    <span>Max: {(currentCapability?.max_cfg || 15.0).toFixed(1)}</span>
+                  </div>
+                </div>
               </div>
 
-              {/* Image History Thumbnails */}
+              {/* Responsive Gallery with Filter Tabs */}
               <div
                 style={{
                   backgroundColor: 'var(--surface)',
@@ -833,33 +1062,157 @@ export const CreativeStudioScreen: React.FC = () => {
                   border: '1px solid var(--line)',
                   padding: 16,
                   flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
                 }}
               >
-                <h4 style={{ margin: '0 0 12px 0', fontSize: 13, fontWeight: 600 }}>
-                  Galeria de Imagens ({imageHistory.length})
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-                  {imageHistory.slice(0, 10).map((img) => (
-                    <div
-                      key={img.id}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+                    Galeria de Imagens
+                  </h4>
+                  {imageHistory.length >= 2 && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenComparison(imageHistory.slice(0, 4))}
                       style={{
-                        height: 90,
-                        borderRadius: 6,
-                        overflow: 'hidden',
-                        border: '1px solid var(--line)',
-                        backgroundColor: '#000',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--mint)',
+                        fontSize: 11,
+                        cursor: 'pointer',
+                        padding: 0,
                       }}
                     >
-                      <img
-                        src={`file://${img.file_path}`}
-                        alt={img.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    </div>
+                      Comparar
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Pills */}
+                <div style={{ display: 'flex', gap: 4, backgroundColor: 'var(--bg)', padding: 2, borderRadius: 6, border: '1px solid var(--line)' }}>
+                  {(
+                    [
+                      { id: 'all', label: 'Todas' },
+                      { id: 'ai', label: 'IA' },
+                      { id: 'edited', label: 'Editadas' },
+                      { id: 'imported', label: 'Importadas' },
+                    ] as const
+                  ).map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setGalleryFilter(f.id)}
+                      style={{
+                        flex: 1,
+                        padding: '4px 6px',
+                        borderRadius: 4,
+                        border: 'none',
+                        backgroundColor: galleryFilter === f.id ? 'var(--surface)' : 'transparent',
+                        color: galleryFilter === f.id ? 'var(--mint)' : 'var(--muted)',
+                        fontSize: 10,
+                        fontWeight: galleryFilter === f.id ? 600 : 400,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {f.label}
+                    </button>
                   ))}
+                </div>
+
+                {/* Thumbnails Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, overflowY: 'auto', maxHeight: 380 }}>
+                  {imageHistory
+                    .filter((img) => {
+                      if (galleryFilter === 'all') return true;
+                      if (galleryFilter === 'ai') return img.name.includes('gen_') || img.name.includes('ai_');
+                      if (galleryFilter === 'edited') return img.name.includes('edit_') || img.name.includes('crop_');
+                      if (galleryFilter === 'imported') return !img.name.includes('gen_') && !img.name.includes('edit_');
+                      return true;
+                    })
+                    .slice(0, 16)
+                    .map((img) => (
+                      <div
+                        key={img.id}
+                        style={{
+                          height: 96,
+                          borderRadius: 6,
+                          overflow: 'hidden',
+                          border: '1px solid var(--line)',
+                          backgroundColor: '#000',
+                          position: 'relative',
+                        }}
+                      >
+                        <img
+                          src={`file://${img.file_path}`}
+                          alt={img.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            backgroundColor: 'rgba(11, 15, 16, 0.85)',
+                            padding: '4px 6px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setEditingAsset(img)}
+                            title="Editar Imagem"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--mint)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontSize: 10,
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSendToMotionStudio(img.file_path)}
+                            title="Usar no Motion Studio"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--fg)',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontSize: 10,
+                            }}
+                          >
+                            Motion →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
+
+            {/* Local Image Editor Modal */}
+            {editingAsset && (
+              <ImageEditorModal
+                imagePath={editingAsset.file_path}
+                imageWidth={editingAsset.width}
+                imageHeight={editingAsset.height}
+                onClose={() => setEditingAsset(null)}
+                onSaved={async () => {
+                  setEditingAsset(null);
+                  const updated = await TauriService.listCreativeAssets();
+                  setAssets(updated);
+                  setImageHistory(updated.filter((a) => a.asset_type === 'image'));
+                }}
+              />
+            )}
           </div>
         )}
 

@@ -1,3 +1,4 @@
+pub mod agents;
 pub mod audio_engine;
 pub mod dependency_manager;
 pub mod document_engine;
@@ -12,6 +13,7 @@ pub mod poster_engine;
 pub mod skills;
 pub mod video_engine;
 
+pub use agents::{AgentAuthStatus, AgentInfo, AgentManager, AgentModel, EnhancePromptResult};
 pub use audio_engine::AudioEngine;
 pub use dependency_manager::DependencyManager;
 pub use document_engine::DocumentEngine;

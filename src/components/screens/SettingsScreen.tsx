@@ -6,12 +6,14 @@ import { AppSettings, ThemePreference } from '../../types/settings';
 import { TauriService } from '../../services/tauri';
 import { ErrorLogStats } from '../../types/errorLog';
 import { DependencyInfo, DependencyInstallProgress } from '../../types/dependencies';
+import { AiAgentsSettings } from './settings/AiAgentsSettings';
 
 interface SettingsScreenProps {
   settings: AppSettings;
   onUpdateSettings: (newSettings: Partial<AppSettings>) => void;
   onShowToast: (msg: string, kind?: 'ok' | 'err' | 'warn') => void;
   onOpenSetupCenter?: () => void;
+  onNavigateToImageStudio?: (prompt: string) => void;
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({
@@ -19,6 +21,7 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   onUpdateSettings,
   onShowToast,
   onOpenSetupCenter,
+  onNavigateToImageStudio,
 }) => {
   const [errorStats, setErrorStats] = useState<ErrorLogStats | null>(null);
   const [retentionDays, setRetentionDays] = useState<number>(30);
@@ -710,6 +713,12 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Agentes de IA e Assinaturas (Missão 09) */}
+      <AiAgentsSettings
+        onShowToast={onShowToast}
+        onNavigateToImageStudio={onNavigateToImageStudio}
+      />
 
       {/* Diagnostics and Error Logs Section */}
       <div

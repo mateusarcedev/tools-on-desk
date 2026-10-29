@@ -1,11 +1,15 @@
 use crate::domain::{
     CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
-    CreativeSkill, CreativeTemplate, MotionComposition, NvidiaImageGenOptions,
-    NvidiaImageGenResult, NvidiaKeyStatus, NvidiaModelInfo, NvidiaVideoGenOptions,
-    NvidiaVideoGenResult, OpenCodeStatus, RenderMotionOptions, TemplateParameter,
+    CreativeSkill, CreativeTemplate, ImageEditOptions, ImageEditResult,
+    ImageModelCapabilities, MotionAnimation, MotionComposition, MotionLayer, MotionScene,
+    NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus, NvidiaModelInfo,
+    NvidiaVideoGenOptions, NvidiaVideoGenResult, OpenCodeStatus, RenderMotionOptions,
+    TemplateParameter,
 };
+use crate::engines::agents::ExecuteAgentPromptPayload;
 use crate::engines::{
-    MotionEngine, NvidiaAIProvider, NvidiaValidationResult, OpenCodeManager, SkillManager,
+    AgentInfo, AgentManager, EnhancePromptResult, ImageEngine, MotionEngine, NvidiaAIProvider,
+    NvidiaValidationResult, OpenCodeManager, SkillManager,
 };
 use crate::error::AppError;
 use crate::storage::Db;
@@ -621,4 +625,155 @@ fn get_default_creative_templates() -> Vec<CreativeTemplate> {
             ],
         },
     ]
+}
+
+// --------------------------------------------------------------------------
+// SUBSCRIPTION AGENT ENGINES & IMAGE STUDIO 2.0 COMMANDS
+// --------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn list_agent_engines() -> Result<Vec<AgentInfo>, AppError> {
+    Ok(AgentManager::list_agents().await)
+}
+
+#[tauri::command]
+pub async fn get_agent_engine_status(agent_id: String) -> Result<AgentInfo, AppError> {
+    AgentManager::get_agent_status(&agent_id).await
+}
+
+#[tauri::command]
+pub async fn execute_agent_prompt(
+    payload: ExecuteAgentPromptPayload,
+) -> Result<String, AppError> {
+    AgentManager::execute_prompt(
+        &payload.agent_id,
+        &payload.prompt,
+        payload.model.as_deref(),
+        payload.system_instruction.as_deref(),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn enhance_image_prompt(
+    agent_id: String,
+    prompt: String,
+    style: Option<String>,
+    aspect_ratio: Option<String>,
+) -> Result<EnhancePromptResult, AppError> {
+    AgentManager::enhance_image_prompt(
+        &agent_id,
+        &prompt,
+        style.as_deref(),
+        aspect_ratio.as_deref(),
+    )
+    .await
+}
+
+#[tauri::command]
+pub fn list_image_model_capabilities() -> Result<Vec<ImageModelCapabilities>, AppError> {
+    Ok(NvidiaAIProvider::list_image_capabilities())
+}
+
+#[tauri::command]
+pub async fn edit_image_asset(
+    app: AppHandle,
+    db: State<'_, Db>,
+    mut options: ImageEditOptions,
+) -> Result<ImageEditResult, AppError> {
+    let app_data = get_app_data_path(&app);
+    let output_dir = app_data.join("creative_assets").join("images");
+    let _ = std::fs::create_dir_all(&output_dir);
+
+    if options.output_path.is_none() {
+        let src_p = Path::new(&options.source_path);
+        let stem = src_p.file_stem().and_then(|s| s.to_str()).unwrap_or("edited");
+        let ext = options.output_format.as_deref().unwrap_or("png");
+        let filename = format!("{}_edited_{}.{}", stem, chrono::Utc::now().timestamp_millis(), ext);
+        options.output_path = Some(output_dir.join(filename).to_string_lossy().to_string());
+    }
+
+    let result = ImageEngine::edit_image(options)?;
+
+    // Register into database creative_assets
+    let asset = CreativeAsset {
+        id: uuid::Uuid::new_v4().to_string(),
+        project_id: None,
+        name: Path::new(&result.output_path)
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("edited_image.png")
+            .into(),
+        asset_type: "image".into(),
+        file_path: result.output_path.clone(),
+        file_size_bytes: result.file_size_bytes,
+        width: Some(result.width),
+        height: Some(result.height),
+        duration_sec: None,
+        mime_type: Some(if result.output_path.ends_with(".jpg") || result.output_path.ends_with(".jpeg") {
+            "image/jpeg".into()
+        } else {
+            "image/png".into()
+        }),
+        created_at: chrono::Utc::now().to_rfc3339(),
+    };
+    let _ = db.insert_creative_asset(&asset);
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn add_asset_to_motion_composition(
+    composition_json: String,
+    asset_path: String,
+    animation_effect: Option<String>,
+) -> Result<String, AppError> {
+    let mut comp: MotionComposition = serde_json::from_str(&composition_json)
+        .map_err(|e| AppError::InvalidInput(format!("Composição inválida: {}", e)))?;
+
+    let file_name = Path::new(&asset_path)
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("imagem");
+
+    let layer = MotionLayer {
+        id: format!("layer-img-{}", uuid::Uuid::new_v4().simple()),
+        layer_type: "image".into(),
+        name: format!("Imagem: {}", file_name),
+        content: asset_path,
+        start_time: 0.0,
+        duration_sec: comp.duration_sec,
+        x: 0.5,
+        y: 0.5,
+        width: 0.8,
+        height: 0.8,
+        opacity: 1.0,
+        scale: 1.0,
+        rotation: 0.0,
+        color: "#ffffff".into(),
+        font_size: None,
+        font_family: None,
+        animation: Some(MotionAnimation {
+            effect: animation_effect.unwrap_or_else(|| "zoom_in".into()),
+            easing: "ease_in_out".into(),
+            duration_sec: 1.0,
+            delay_sec: 0.2,
+        }),
+        z_index: 0,
+    };
+
+    if comp.scenes.is_empty() {
+        comp.scenes.push(MotionScene {
+            id: format!("scene-{}", uuid::Uuid::new_v4().simple()),
+            title: "Cena Principal".into(),
+            start_time: 0.0,
+            duration_sec: comp.duration_sec,
+            layers: vec![layer],
+        });
+    } else {
+        comp.scenes[0].layers.push(layer);
+    }
+
+    serde_json::to_string(&comp)
+        .map_err(|e| AppError::Internal(format!("Falha ao serializar composição atualizada: {}", e)))
 }

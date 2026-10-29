@@ -216,6 +216,86 @@ export interface TemplateParameter {
   target_layer_id: string;
 }
 
+export type AgentAuthStatus =
+  | 'not_installed'
+  | 'unauthenticated'
+  | 'authenticated'
+  | 'rate_limited'
+  | 'error';
+
+export interface AgentModel {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+export interface AgentInfo {
+  id: string;
+  name: string;
+  binary_path: string | null;
+  version: string | null;
+  auth_status: AgentAuthStatus;
+  account_info: string | null;
+  default_model: string | null;
+  available_models: AgentModel[];
+  supports_streaming: boolean;
+  is_subscription: boolean;
+}
+
+export interface EnhancePromptResult {
+  original_prompt: string;
+  enhanced_prompt: string;
+  agent_id: string;
+  model: string;
+  reasoning: string | null;
+  recommended_style: string | null;
+  recommended_ratio: string | null;
+}
+
+export interface ImageModelCapabilities {
+  id: string;
+  display_name: string;
+  provider: string;
+  supports_dimensions: boolean;
+  min_steps: number;
+  max_steps: number;
+  default_steps: number;
+  min_cfg: number;
+  max_cfg: number;
+  default_cfg: number;
+  supports_negative_prompt: boolean;
+  supported_aspect_ratios: string[];
+}
+
+export interface CropArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ImageEditOptions {
+  input_path: string;
+  output_path?: string;
+  crop?: CropArea;
+  rotate_deg?: number;
+  flip_h?: boolean;
+  flip_v?: boolean;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  resize_width?: number;
+  resize_height?: number;
+  format?: 'png' | 'jpeg';
+}
+
+export interface ImageEditResult {
+  output_path: string;
+  width: number;
+  height: number;
+  file_size_bytes: number;
+}
+
 export type CreativeStudioTab =
   | 'overview'
   | 'image-studio'

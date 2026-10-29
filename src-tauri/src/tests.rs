@@ -1249,4 +1249,184 @@ mod tests {
         assert!(!macos_dirs.is_empty());
         assert!(macos_dirs.contains(&std::path::PathBuf::from("/opt/homebrew/bin")));
     }
+
+    #[tokio::test]
+    async fn test_agent_engines_discovery() {
+        let agents = crate::engines::AgentManager::list_agents().await;
+        assert_eq!(agents.len(), 4, "Deve detectar exatamente os 4 agentes principais");
+
+        let codex = agents.iter().find(|a| a.id == "codex").expect("Codex deve estar presente");
+        assert_eq!(codex.name, "OpenAI Codex");
+        assert!(codex.is_subscription);
+
+        let agy = agents.iter().find(|a| a.id == "antigravity").expect("Google Antigravity deve estar presente");
+        assert_eq!(agy.name, "Google Antigravity");
+        assert!(agy.is_subscription);
+
+        let claude = agents.iter().find(|a| a.id == "claude_code").expect("Claude Code deve estar presente");
+        assert_eq!(claude.name, "Claude Code");
+        assert!(claude.is_subscription);
+
+        let opencode = agents.iter().find(|a| a.id == "opencode").expect("OpenCode deve estar presente");
+        assert_eq!(opencode.name, "OpenCode");
+    }
+
+    #[test]
+    fn test_local_image_editing_engine() {
+        let temp_dir = std::env::temp_dir().join(format!("tod_img_edit_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // 1. Create a synthetic test image (200x150 RGBA)
+        let mut img = image::RgbaImage::new(200, 150);
+        for pixel in img.pixels_mut() {
+            *pixel = image::Rgba([50, 100, 150, 255]);
+        }
+        let input_path = temp_dir.join("test_src.png");
+        img.save(&input_path).expect("Falha ao salvar imagem de teste");
+
+        // 2. Perform editing: Crop to (10, 10, 100, 80), rotate 90 deg, brighten +20, resize to 120x120
+        let output_path = temp_dir.join("test_edited.jpg");
+        let edit_opts = crate::domain::ImageEditOptions {
+            source_path: input_path.to_string_lossy().to_string(),
+            output_path: Some(output_path.to_string_lossy().to_string()),
+            crop: Some(crate::domain::CropArea {
+                x: 10,
+                y: 10,
+                width: 100,
+                height: 80,
+            }),
+            resize_width: Some(120),
+            resize_height: Some(120),
+            rotate_deg: Some(90),
+            flip_horizontal: true,
+            flip_vertical: false,
+            brightness: Some(20),
+            contrast: Some(10.0),
+            saturation: Some(1.2),
+            output_format: Some("jpg".into()),
+            quality: Some(85),
+        };
+
+        let res = crate::engines::ImageEngine::edit_image(edit_opts).expect("Falha na edição de imagem");
+        assert_eq!(res.width, 120);
+        assert_eq!(res.height, 120);
+        assert!(res.file_size_bytes > 0);
+        assert!(std::path::Path::new(&res.output_path).exists());
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn test_motion_composition_asset_integration() {
+        let comp = crate::domain::MotionComposition {
+            id: "comp-1".into(),
+            title: "Vídeo Promocional".into(),
+            width: 1080,
+            height: 1080,
+            fps: 30,
+            duration_sec: 5.0,
+            background_color: "#0B0F10".into(),
+            scenes: vec![],
+            audio_track: None,
+        };
+        let comp_json = serde_json::to_string(&comp).unwrap();
+
+        let updated_json = crate::commands::add_asset_to_motion_composition(
+            comp_json,
+            "/path/to/asset.png".into(),
+            Some("zoom_in".into()),
+        ).expect("Falha ao inserir asset na composição");
+
+        let updated: crate::domain::MotionComposition = serde_json::from_str(&updated_json).unwrap();
+        assert_eq!(updated.scenes.len(), 1);
+        assert_eq!(updated.scenes[0].layers.len(), 1);
+        assert_eq!(updated.scenes[0].layers[0].layer_type, "image");
+        assert_eq!(updated.scenes[0].layers[0].content, "/path/to/asset.png");
+    }
+
+    #[tokio::test]
+    async fn test_motion_engine_render_with_image_layer() {
+        let temp_dir = std::env::temp_dir().join(format!("tod_motion_img_test_{}", uuid::Uuid::new_v4()));
+        let _ = std::fs::create_dir_all(&temp_dir);
+
+        // 1. Create a synthetic test image to be embedded as layer
+        let mut img = image::RgbaImage::new(160, 90);
+        for pixel in img.pixels_mut() {
+            *pixel = image::Rgba([21, 245, 186, 255]); // Mint color
+        }
+        let image_layer_path = temp_dir.join("layer_badge.png");
+        img.save(&image_layer_path).expect("Falha ao salvar layer badge");
+
+        // 2. Build composition with background and image layer
+        let comp = crate::domain::MotionComposition {
+            id: "comp-test".into(),
+            title: "Motion com Imagem".into(),
+            width: 320,
+            height: 240,
+            fps: 30,
+            duration_sec: 1.0,
+            background_color: "#0B0F10".into(),
+            scenes: vec![
+                crate::domain::MotionScene {
+                    id: "sc-1".into(),
+                    title: "Cena 1".into(),
+                    start_time: 0.0,
+                    duration_sec: 1.0,
+                    layers: vec![
+                        crate::domain::MotionLayer {
+                            id: "l-img".into(),
+                            layer_type: "image".into(),
+                            name: "Badge".into(),
+                            content: image_layer_path.to_string_lossy().to_string(),
+                            start_time: 0.0,
+                            duration_sec: 1.0,
+                            x: 0.5,
+                            y: 0.5,
+                            width: 0.5,
+                            height: 0.5,
+                            opacity: 1.0,
+                            scale: 1.0,
+                            rotation: 0.0,
+                            color: "#ffffff".into(),
+                            font_size: None,
+                            font_family: None,
+                            animation: Some(crate::domain::MotionAnimation {
+                                effect: "fade_in".into(),
+                                easing: "ease_in_out".into(),
+                                duration_sec: 0.5,
+                                delay_sec: 0.0,
+                            }),
+                            z_index: 0,
+                        },
+                    ],
+                },
+            ],
+            audio_track: None,
+        };
+
+        let opts = crate::domain::RenderMotionOptions {
+            project_id: None,
+            composition_json: serde_json::to_string(&comp).unwrap(),
+            output_filename: "motion_with_image.mp4".into(),
+            format: "mp4".into(),
+            quality: "standard".into(),
+        };
+
+        let cancel_token = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let res = crate::engines::MotionEngine::render_to_mp4(&opts, &temp_dir, cancel_token, |_| {}).await;
+        assert!(res.is_ok(), "Renderização com camada de imagem deve ter sucesso: {:?}", res.err());
+
+        let out_video = temp_dir.join("motion_with_image.mp4");
+        assert!(out_video.exists(), "Vídeo MP4 gerado deve existir no disco");
+        let meta = std::fs::metadata(&out_video).unwrap();
+        assert!(meta.len() > 1000, "Vídeo MP4 deve possuir tamanho válido maior que 1KB");
+
+        // Verify video stream validity via MediaEngine
+        let probe = crate::engines::MediaEngine::probe(&out_video.to_string_lossy()).await;
+        assert!(probe.is_ok(), "Probe FFprobe deve aprovar o vídeo MP4 gerado");
+        let info = probe.unwrap();
+        assert_eq!(info.format_name, "mov,mp4,m4a,3gp,3g2,mj2");
+
+        let _ = std::fs::remove_dir_all(&temp_dir);
+    }
 }

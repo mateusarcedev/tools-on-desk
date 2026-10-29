@@ -42,6 +42,11 @@ import {
   CreativeProject,
   CreativeSkill,
   CreativeTemplate,
+  AgentInfo,
+  EnhancePromptResult,
+  ImageModelCapabilities,
+  ImageEditOptions,
+  ImageEditResult,
   NvidiaImageGenOptions,
   NvidiaImageGenResult,
   NvidiaKeyStatus,
@@ -918,6 +923,183 @@ export const TauriService = {
   async listCreativeTemplates(): Promise<CreativeTemplate[]> {
     if (!isTauri()) return [];
     return await invoke<CreativeTemplate[]>('list_creative_templates');
+  },
+
+  // ==========================================
+  // SUBSCRIPTION AI AGENT ENGINES (M09)
+  // ==========================================
+
+  async listAgentEngines(): Promise<AgentInfo[]> {
+    if (!isTauri()) {
+      return [
+        {
+          id: 'codex',
+          name: 'OpenAI Codex',
+          binary_path: '/usr/local/bin/codex',
+          version: 'codex-cli 0.164.0',
+          auth_status: 'authenticated',
+          account_info: 'ChatGPT Subscription (Mock)',
+          default_model: 'gpt-6-sol',
+          available_models: [
+            { id: 'gpt-6-sol', name: 'GPT-6 Sol', description: 'Direção artística avançada' },
+            { id: 'o3-mini', name: 'o3-mini', description: 'Raciocínio lógico estruturado' },
+          ],
+          supports_streaming: true,
+          is_subscription: true,
+        },
+        {
+          id: 'antigravity',
+          name: 'Google Antigravity',
+          binary_path: '/usr/local/bin/agy',
+          version: '1.4.10',
+          auth_status: 'authenticated',
+          account_info: 'Google Antigravity Subscription (Mock)',
+          default_model: 'gemini-3.8-flash-high',
+          available_models: [
+            { id: 'gemini-3.8-flash-high', name: 'Gemini 3.8 Flash High', description: 'Multimodal de altíssima velocidade' },
+            { id: 'claude-sonnet-4.6', name: 'Claude Sonnet 4.6', description: 'Composição visual refinada' },
+          ],
+          supports_streaming: true,
+          is_subscription: true,
+        },
+        {
+          id: 'claude_code',
+          name: 'Claude Code',
+          binary_path: null,
+          version: null,
+          auth_status: 'not_installed',
+          account_info: null,
+          default_model: 'claude-3-7-sonnet',
+          available_models: [],
+          supports_streaming: true,
+          is_subscription: true,
+        },
+        {
+          id: 'opencode',
+          name: 'OpenCode',
+          binary_path: null,
+          version: null,
+          auth_status: 'not_installed',
+          account_info: null,
+          default_model: 'opencode-default',
+          available_models: [],
+          supports_streaming: true,
+          is_subscription: false,
+        },
+      ];
+    }
+    return await invoke<AgentInfo[]>('list_agent_engines');
+  },
+
+  async getAgentEngineStatus(agentId: string): Promise<AgentInfo> {
+    if (!isTauri()) {
+      const engines = await this.listAgentEngines();
+      return engines.find((e) => e.id === agentId) || engines[0];
+    }
+    return await invoke<AgentInfo>('get_agent_engine_status', { agentId });
+  },
+
+  async executeAgentPrompt(agentId: string, prompt: string, model?: string): Promise<string> {
+    if (!isTauri()) {
+      return `[Mock resposta de ${agentId}]: Processamento concluído com sucesso.`;
+    }
+    return await invoke<string>('execute_agent_prompt', { agentId, prompt, model });
+  },
+
+  async enhanceImagePrompt(prompt: string, agentId?: string, model?: string): Promise<EnhancePromptResult> {
+    if (!isTauri()) {
+      return {
+        original_prompt: prompt,
+        enhanced_prompt: `${prompt}, ultra-detailed, cinematic lighting, 8k resolution, photorealistic, intricate textures, master art direction`,
+        agent_id: agentId || 'codex',
+        model: model || 'gpt-6-sol',
+        reasoning: 'Adicionados modificadores de volumetria de luz e nitidez fotorrealista para o modelo FLUX/SD.',
+        recommended_style: 'cinematic',
+        recommended_ratio: '16:9',
+      };
+    }
+    return await invoke<EnhancePromptResult>('enhance_image_prompt', { prompt, agentId, model });
+  },
+
+  // ==========================================
+  // IMAGE STUDIO 2.0 CAPABILITIES & EDITING (M09)
+  // ==========================================
+
+  async listImageModelCapabilities(): Promise<ImageModelCapabilities[]> {
+    if (!isTauri()) {
+      return [
+        {
+          id: 'black-forest-labs/flux.1-schnell',
+          display_name: 'FLUX.1-schnell (Ultra Rápido)',
+          provider: 'nvidia_nim',
+          supports_dimensions: false,
+          min_steps: 1,
+          max_steps: 4,
+          default_steps: 4,
+          min_cfg: 1.0,
+          max_cfg: 5.0,
+          default_cfg: 1.0,
+          supports_negative_prompt: false,
+          supported_aspect_ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'],
+        },
+        {
+          id: 'black-forest-labs/flux.1-dev',
+          display_name: 'FLUX.1-dev (Alta Fidelidade)',
+          provider: 'nvidia_nim',
+          supports_dimensions: false,
+          min_steps: 20,
+          max_steps: 50,
+          default_steps: 28,
+          min_cfg: 1.0,
+          max_cfg: 10.0,
+          default_cfg: 3.5,
+          supports_negative_prompt: false,
+          supported_aspect_ratios: ['1:1', '16:9', '9:16', '4:3', '3:4'],
+        },
+        {
+          id: 'stabilityai/stable-diffusion-3.5-large',
+          display_name: 'Stable Diffusion 3.5 Large',
+          provider: 'nvidia_nim',
+          supports_dimensions: false,
+          min_steps: 20,
+          max_steps: 50,
+          default_steps: 30,
+          min_cfg: 1.0,
+          max_cfg: 15.0,
+          default_cfg: 4.5,
+          supports_negative_prompt: true,
+          supported_aspect_ratios: ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'],
+        },
+      ];
+    }
+    return await invoke<ImageModelCapabilities[]>('list_image_model_capabilities');
+  },
+
+  async editImageAsset(options: ImageEditOptions): Promise<ImageEditResult> {
+    if (!isTauri()) {
+      return {
+        output_path: options.output_path || options.input_path,
+        width: 1024,
+        height: 1024,
+        file_size_bytes: 512000,
+      };
+    }
+    return await invoke<ImageEditResult>('edit_image_asset', { options });
+  },
+
+  async addAssetToMotionComposition(
+    projectId: string,
+    assetPath: string,
+    sceneIndex?: number
+  ): Promise<string> {
+    if (!isTauri()) {
+      return 'layer-mock-' + Date.now();
+    }
+    return await invoke<string>('add_asset_to_motion_composition', {
+      projectId,
+      assetPath,
+      sceneIndex,
+    });
   },
 
   // ==========================================

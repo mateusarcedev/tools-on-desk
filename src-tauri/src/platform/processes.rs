@@ -18,6 +18,8 @@ impl ProcessManager {
         {
             cmd.process_group(0);
         }
+
+        cmd.stdin(std::process::Stdio::null());
     }
 
     /// Configures a standard library Command for headless background execution and process group isolation.
@@ -33,6 +35,8 @@ impl ProcessManager {
             use std::os::unix::process::CommandExt;
             cmd.process_group(0);
         }
+
+        cmd.stdin(std::process::Stdio::null());
     }
 
     /// Safely terminates a child process and all descendant subprocesses (tree kill).

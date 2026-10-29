@@ -264,6 +264,7 @@ impl ExternalToolManager {
     {
         let mut cmd = Command::new(cmd_path);
         cmd.args(args);
+        cmd.stdin(std::process::Stdio::null());
         cmd.stdout(std::process::Stdio::piped());
         cmd.stderr(std::process::Stdio::piped());
         crate::platform::ProcessManager::configure_command(&mut cmd);

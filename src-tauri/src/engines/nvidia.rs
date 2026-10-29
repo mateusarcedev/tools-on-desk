@@ -1,6 +1,6 @@
 use crate::domain::{
-    CreativeSkill, NvidiaImageGenOptions, NvidiaImageGenResult, NvidiaKeyStatus, NvidiaModelInfo,
-    NvidiaVideoGenOptions, NvidiaVideoGenResult,
+    CreativeSkill, ImageModelCapabilities, NvidiaImageGenOptions, NvidiaImageGenResult,
+    NvidiaKeyStatus, NvidiaModelInfo, NvidiaVideoGenOptions, NvidiaVideoGenResult,
 };
 use crate::error::{AppError, AppResult};
 use crate::utils::sanitizer::sanitize_error_text;
@@ -237,6 +237,65 @@ impl NvidiaAIProvider {
         ]
     }
 
+    pub fn list_image_capabilities() -> Vec<ImageModelCapabilities> {
+        vec![
+            ImageModelCapabilities {
+                model_id: "black-forest-labs/flux.1-schnell".into(),
+                name: "FLUX.1 [schnell]".into(),
+                provider: "Black Forest Labs / NVIDIA NIM".into(),
+                supported_aspect_ratios: vec![
+                    "1:1".into(),
+                    "16:9".into(),
+                    "9:16".into(),
+                    "4:3".into(),
+                    "3:4".into(),
+                ],
+                min_steps: 1,
+                max_steps: 4,
+                default_steps: 4,
+                supports_negative_prompt: false,
+                supports_reference_image: false,
+                reference_mode: "none".into(),
+            },
+            ImageModelCapabilities {
+                model_id: "black-forest-labs/flux.1-dev".into(),
+                name: "FLUX.1 [dev]".into(),
+                provider: "Black Forest Labs / NVIDIA NIM".into(),
+                supported_aspect_ratios: vec![
+                    "1:1".into(),
+                    "16:9".into(),
+                    "9:16".into(),
+                    "4:3".into(),
+                    "3:4".into(),
+                ],
+                min_steps: 20,
+                max_steps: 50,
+                default_steps: 28,
+                supports_negative_prompt: false,
+                supports_reference_image: false,
+                reference_mode: "none".into(),
+            },
+            ImageModelCapabilities {
+                model_id: "stabilityai/stable-diffusion-3.5-large".into(),
+                name: "Stable Diffusion 3.5 Large".into(),
+                provider: "Stability AI / NVIDIA NIM".into(),
+                supported_aspect_ratios: vec![
+                    "1:1".into(),
+                    "16:9".into(),
+                    "9:16".into(),
+                    "4:3".into(),
+                    "3:4".into(),
+                ],
+                min_steps: 20,
+                max_steps: 50,
+                default_steps: 25,
+                supports_negative_prompt: true,
+                supports_reference_image: false,
+                reference_mode: "none".into(),
+            },
+        ]
+    }
+
     pub async fn generate_image(
         app_data_dir: &Path,
         options: NvidiaImageGenOptions,
@@ -273,15 +332,31 @@ impl NvidiaAIProvider {
         }
 
         let seed = options.seed.unwrap_or_else(|| rand_seed());
-        let payload = serde_json::json!({
+
+        // Validate and clamp steps based on model constraints
+        let steps = match model_id.as_str() {
+            "black-forest-labs/flux.1-schnell" => options.steps.unwrap_or(4).clamp(1, 4),
+            "black-forest-labs/flux.1-dev" => options.steps.unwrap_or(28).clamp(20, 50),
+            "stabilityai/stable-diffusion-3.5-large" => options.steps.unwrap_or(25).clamp(20, 50),
+            _ => options.steps.unwrap_or(4).clamp(1, 50),
+        };
+
+        let mut payload = serde_json::json!({
             "prompt": final_prompt,
             "width": options.width,
             "height": options.height,
-            "steps": options.steps.unwrap_or(4),
+            "steps": steps,
             "cfg_scale": options.cfg_scale.unwrap_or(3.5),
             "seed": seed,
             "samples": options.samples.max(1).min(4)
         });
+
+        // Add negative_prompt for models that support it
+        if let Some(neg) = &options.negative_prompt {
+            if !neg.trim().is_empty() && model_id.contains("stable-diffusion") {
+                payload["negative_prompt"] = serde_json::Value::String(neg.clone());
+            }
+        }
 
         let resp = client
             .post(&endpoint)
@@ -316,7 +391,7 @@ impl NvidiaAIProvider {
         let _ = std::fs::create_dir_all(output_dir);
         let mut saved_paths = Vec::new();
 
-        // Check artifacts format
+        // Support NVIDIA NIM artifacts format: { "artifacts": [ { "base64": "..." } ] }
         if let Some(artifacts) = body_json.get("artifacts").and_then(|a| a.as_array()) {
             for (idx, artifact) in artifacts.iter().enumerate() {
                 if let Some(b64) = artifact.get("base64").and_then(|b| b.as_str()) {
@@ -326,16 +401,53 @@ impl NvidiaAIProvider {
                     let filename = format!("nvidia_gen_{}_{}_{}.png", chrono::Utc::now().timestamp_millis(), seed, idx);
                     let target_path = output_dir.join(&filename);
 
-                    // Ensure target_path stays inside output_dir (prevent path traversal)
                     if !target_path.starts_with(output_dir) {
                         return Err(AppError::InvalidInput("Violação de caminho de segurança ao salvar imagem".into()));
                     }
 
-                    std::fs::write(&target_path, &image_bytes)
-                        .map_err(|e| AppError::Io(e))?;
-
+                    std::fs::write(&target_path, &image_bytes)?;
                     saved_paths.push(target_path.to_string_lossy().to_string());
                 }
+            }
+        }
+
+        // Support OpenAI-compatible format: { "data": [ { "b64_json": "..." } ] }
+        if saved_paths.is_empty() {
+            if let Some(data_arr) = body_json.get("data").and_then(|d| d.as_array()) {
+                for (idx, item) in data_arr.iter().enumerate() {
+                    if let Some(b64) = item.get("b64_json").or_else(|| item.get("base64")).and_then(|b| b.as_str()) {
+                        let image_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64)
+                            .map_err(|e| AppError::Image(format!("Falha ao decodificar imagem base64: {}", e)))?;
+
+                        let filename = format!("nvidia_gen_{}_{}_{}.png", chrono::Utc::now().timestamp_millis(), seed, idx);
+                        let target_path = output_dir.join(&filename);
+
+                        if !target_path.starts_with(output_dir) {
+                            return Err(AppError::InvalidInput("Violação de caminho de segurança ao salvar imagem".into()));
+                        }
+
+                        std::fs::write(&target_path, &image_bytes)?;
+                        saved_paths.push(target_path.to_string_lossy().to_string());
+                    }
+                }
+            }
+        }
+
+        // Support single image field format: { "image": "..." }
+        if saved_paths.is_empty() {
+            if let Some(b64) = body_json.get("image").and_then(|i| i.as_str()) {
+                let image_bytes = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, b64)
+                    .map_err(|e| AppError::Image(format!("Falha ao decodificar imagem base64: {}", e)))?;
+
+                let filename = format!("nvidia_gen_{}_{}_0.png", chrono::Utc::now().timestamp_millis(), seed);
+                let target_path = output_dir.join(&filename);
+
+                if !target_path.starts_with(output_dir) {
+                    return Err(AppError::InvalidInput("Violação de caminho de segurança ao salvar imagem".into()));
+                }
+
+                std::fs::write(&target_path, &image_bytes)?;
+                saved_paths.push(target_path.to_string_lossy().to_string());
             }
         }
 
