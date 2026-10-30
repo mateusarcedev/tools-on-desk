@@ -10,9 +10,9 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-const NVIDIA_KEY_SECRET_NAME: &str = "NVIDIA_API_KEY";
-const NVIDIA_CHAT_BASE_URL: &str = "https://integrate.api.nvidia.com/v1";
-const NVIDIA_GENAI_BASE_URL: &str = "https://ai.api.nvidia.com/v1/genai";
+pub const NVIDIA_KEY_SECRET_NAME: &str = "NVIDIA_API_KEY";
+pub const NVIDIA_CHAT_BASE_URL: &str = "https://integrate.api.nvidia.com/v1";
+pub const NVIDIA_GENAI_BASE_URL: &str = "https://ai.api.nvidia.com/v1/genai";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NvidiaValidationResult {

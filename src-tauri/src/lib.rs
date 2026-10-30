@@ -136,6 +136,8 @@ pub fn run() {
             commands::list_image_model_capabilities,
             commands::edit_image_asset,
             commands::add_asset_to_motion_composition,
+            commands::generate_motion_plan,
+            commands::convert_plan_to_composition,
             commands::get_migration_status,
             commands::run_migration,
             commands::dismiss_migration_prompt,

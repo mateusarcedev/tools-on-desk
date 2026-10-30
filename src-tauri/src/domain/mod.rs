@@ -14,6 +14,7 @@ pub mod video;
 
 pub use audio::{AudioConvertOptions, AudioTrimOptions};
 pub use creative::{
+    CreativeBriefing, SceneGeneratorInput,
     CreateProjectPayload, CreativeAsset, CreativeGenerationHistoryEntry, CreativeProject,
     CreativeSkill, CreativeTemplate, CropArea, GenerationMetadata, ImageEditOptions,
     ImageEditResult, ImageModelCapabilities, MotionAnimation, MotionAudioTrack, MotionComposition,

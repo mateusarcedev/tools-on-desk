@@ -34,7 +34,8 @@ describe('Creative Studio Frontend Component Tests', () => {
     await act(async () => {
       fireEvent.click(motionTab);
     });
-    expect(screen.getByPlaceholderText(/Anime este logotipo/i)).toBeInTheDocument();
+    // New Motion Studio Flow starts with Briefing step
+    expect(screen.getByText('Crie Motion Design Profissional')).toBeInTheDocument();
 
     const imageTab = screen.getByText('AI Image Studio');
     await act(async () => {

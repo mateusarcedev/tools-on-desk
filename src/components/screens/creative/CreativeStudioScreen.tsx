@@ -5,7 +5,6 @@ import {
   CreativeSkill,
   CreativeStudioTab,
   CreativeTemplate,
-  MotionComposition,
   NvidiaImageGenOptions,
   NvidiaImageGenResult,
   NvidiaKeyStatus,
@@ -18,8 +17,7 @@ import { Button } from '../../common/Button';
 import { Icon } from '../../common/Icon';
 import { BriefingAssistant } from '../../creative/generative/BriefingAssistant';
 import { StyleSelector } from '../../creative/generative/StyleSelector';
-import { MotionPlayer } from '../../creative/motion/MotionPlayer';
-import { ParameterAdjuster } from '../../creative/generative/ParameterAdjuster';
+import { MotionStudioFlow } from '../../creative/motion/MotionStudioFlow';
 import { StoryboardApprover, StoryboardScene } from '../../creative/generative/StoryboardApprover';
 import { ProposalComparator, ProposalItem } from '../../creative/generative/ProposalComparator';
 import { PromptEnhancerWidget } from '../../creative/image/PromptEnhancerWidget';
@@ -66,56 +64,6 @@ export const CreativeStudioScreen: React.FC = () => {
   const [galleryFilter, setGalleryFilter] = useState<'all' | 'ai' | 'edited' | 'imported'>('all');
   const [referenceFiles, setReferenceFiles] = useState<ProcessedReference[]>([]);
   const [metadataModalPath, setMetadataModalPath] = useState<string | null>(null);
-
-  // Motion Studio State
-  const [motionPrompt, setMotionPrompt] = useState<string>('');
-  const [isPlanningMotion, setIsPlanningMotion] = useState<boolean>(false);
-  const [currentComposition, setCurrentComposition] = useState<MotionComposition>({
-    id: 'active-motion',
-    title: 'Anúncio de Impacto',
-    width: 1080,
-    height: 1920,
-    fps: 30,
-    duration_sec: 15.0,
-    background_color: '#0B0F10',
-    scenes: [
-      {
-        id: 'sc-1',
-        title: 'Cena 1 - Gancho',
-        start_time: 0.0,
-        duration_sec: 5.0,
-        layers: [
-          {
-            id: 'l-1',
-            layer_type: 'text',
-            name: 'Título Principal',
-            content: 'NOVA COLEÇÃO 2026',
-            start_time: 0.5,
-            duration_sec: 4.5,
-            x: 0.1,
-            y: 0.35,
-            width: 0.8,
-            height: 0.15,
-            opacity: 1.0,
-            scale: 1.0,
-            rotation: 0.0,
-            color: '#15F5BA',
-            font_size: 72.0,
-            animation: {
-              effect: 'slide_up',
-              easing: 'spring',
-              duration_sec: 0.6,
-              delay_sec: 0.2,
-            },
-            z_index: 1,
-          },
-        ],
-      },
-    ],
-  });
-  const [activeTemplate, setActiveTemplate] = useState<CreativeTemplate | null>(null);
-  const [isRenderingMp4, setIsRenderingMp4] = useState<boolean>(false);
-  const [renderedMp4Path, setRenderedMp4Path] = useState<string | null>(null);
 
   // Video Studio State
   const [videoMode, setVideoMode] = useState<'composite' | 'generative'>('composite');
@@ -189,7 +137,6 @@ export const CreativeStudioScreen: React.FC = () => {
       }
 
       if (tList.length > 0) {
-        setActiveTemplate(tList[0]);
       }
     } catch (err) {
       console.warn('Erro ao carregar dados do Creative Studio:', err);
@@ -239,37 +186,9 @@ export const CreativeStudioScreen: React.FC = () => {
       if (activeProject) {
         await TauriService.addAssetToMotionComposition(activeProject.id, assetPath);
       }
-      setCurrentComposition((prev) => ({
-        ...prev,
-        scenes: prev.scenes.map((sc, i) =>
-          i === 0
-            ? {
-                ...sc,
-                layers: [
-                  {
-                    id: `img-${Date.now()}`,
-                    layer_type: 'image',
-                    name: 'Imagem Adicionada',
-                    content: assetPath,
-                    start_time: 0.0,
-                    duration_sec: prev.duration_sec,
-                    x: 0.1,
-                    y: 0.1,
-                    width: 0.8,
-                    height: 0.8,
-                    opacity: 1.0,
-                    scale: 1.0,
-                    rotation: 0.0,
-                    color: '#FFFFFF',
-                    z_index: 0,
-                  },
-                  ...sc.layers,
-                ],
-              }
-            : sc
-        ),
-      }));
+      // Switch to motion studio tab - the new flow will handle asset import
       setActiveTab('motion-studio');
+      alert('Imagem enviada para o Motion Studio. Use o briefing para incorporá-la ao projeto.');
     } catch (err) {
       console.error('Erro ao enviar imagem para Motion Studio:', err);
     }
@@ -334,152 +253,6 @@ export const CreativeStudioScreen: React.FC = () => {
       alert(`Falha na geração: ${err?.message || err}`);
     } finally {
       setIsGeneratingImage(false);
-    }
-  };
-
-  // Natural Language Motion Planning
-  const handlePlanMotion = async () => {
-    if (!motionPrompt.trim()) return;
-    setIsPlanningMotion(true);
-    try {
-      const activeSkillIds = skills.filter((s) => s.enabled).map((s) => s.id);
-      const plan = await TauriService.generateCreativePlan(
-        motionPrompt.trim(),
-        'motion',
-        selectedStyle,
-        activeSkillIds
-      );
-      if (plan && plan.length > 0) {
-        console.info('Plano de Motion Design gerado com sucesso:', plan.slice(0, 100));
-      }
-
-      // Detect duration if specified in prompt (e.g. "8 segundos")
-      const secMatch = motionPrompt.match(/(\d+)\s*(?:segundos|seg|s\b|seconds|sec)/i);
-      const targetDuration = secMatch ? Math.min(Math.max(parseFloat(secMatch[1]), 3), 60) : 8.0;
-
-      // Extract brand or punchy headline
-      const brandMatch = motionPrompt.match(/para\s+(?:a|o|os|as)?\s*([^,\.;\n]+)/i);
-      const headlineText = brandMatch
-        ? brandMatch[1].trim().toUpperCase()
-        : (motionPrompt.length > 35 ? motionPrompt.slice(0, 32).trim() + '...' : motionPrompt).toUpperCase();
-
-      // Apply composition
-      setCurrentComposition((prev) => ({
-        ...prev,
-        title: brandMatch ? brandMatch[1].trim() : motionPrompt.slice(0, 30),
-        duration_sec: targetDuration,
-        scenes: [
-          {
-            id: 'sc-1',
-            title: 'Cena Criada por IA',
-            start_time: 0.0,
-            duration_sec: targetDuration,
-            layers: [
-              {
-                id: 'l-1',
-                layer_type: 'text',
-                name: 'Chamada Principal',
-                content: headlineText,
-                start_time: 0.3,
-                duration_sec: Math.max(targetDuration - 0.5, 1.0),
-                x: 0.1,
-                y: 0.4,
-                width: 0.8,
-                height: 0.2,
-                opacity: 1.0,
-                scale: 1.0,
-                rotation: 0.0,
-                color: '#15F5BA',
-                font_size: 64.0,
-                animation: {
-                  effect: 'bounce',
-                  easing: 'spring',
-                  duration_sec: 0.7,
-                  delay_sec: 0.2,
-                },
-                z_index: 1,
-              },
-            ],
-          },
-        ],
-      }));
-    } catch (err: any) {
-      alert(`Erro no planejamento: ${err?.message || err}`);
-    } finally {
-      setIsPlanningMotion(false);
-    }
-  };
-
-  // Render MP4 Handler
-  const handleRenderMotionMp4 = async () => {
-    setIsRenderingMp4(true);
-    setRenderedMp4Path(null);
-    try {
-      const filename = `motion_${Date.now()}.mp4`;
-      const path = await TauriService.renderMotionProject({
-        composition_json: JSON.stringify(currentComposition),
-        output_filename: filename,
-        format: 'mp4',
-        quality: 'high',
-      });
-      setRenderedMp4Path(path);
-      const updatedProjects = await TauriService.listCreativeProjects();
-      setProjects(updatedProjects);
-    } catch (err: any) {
-      alert(`Falha ao renderizar MP4: ${err?.message || err}`);
-    } finally {
-      setIsRenderingMp4(false);
-    }
-  };
-
-  // Export Remotion Project
-  const handleExportRemotion = async () => {
-    try {
-      const tsx = await TauriService.exportRemotionProject(JSON.stringify(currentComposition));
-      navigator.clipboard.writeText(tsx);
-      alert('Código TSX Remotion copiado com sucesso para a área de transferência!');
-    } catch (err: any) {
-      alert(`Erro ao exportar TSX: ${err?.message || err}`);
-    }
-  };
-
-  // Apply Template
-  const handleApplyTemplate = (template: CreativeTemplate) => {
-    setActiveTemplate(template);
-    try {
-      const comp: MotionComposition = JSON.parse(template.default_composition_json);
-      setCurrentComposition(comp);
-      setActiveTab('motion-studio');
-    } catch (e) {
-      console.error('Falha ao aplicar template:', e);
-    }
-  };
-
-  // Update Template Parameter
-  const handleUpdateParameter = (paramId: string, val: string) => {
-    if (!activeTemplate) return;
-    const updatedParams = activeTemplate.editable_parameters.map((p) =>
-      p.id === paramId ? { ...p, current_value: val } : p
-    );
-    setActiveTemplate({ ...activeTemplate, editable_parameters: updatedParams });
-
-    // Update target layer in composition
-    const targetParam = updatedParams.find((p) => p.id === paramId);
-    if (targetParam) {
-      const updatedScenes = currentComposition.scenes.map((scene) => ({
-        ...scene,
-        layers: scene.layers.map((layer) => {
-          if (layer.id === targetParam.target_layer_id) {
-            if (targetParam.param_type === 'text') {
-              return { ...layer, content: val };
-            } else if (targetParam.param_type === 'color') {
-              return { ...layer, color: val };
-            }
-          }
-          return layer;
-        }),
-      }));
-      setCurrentComposition({ ...currentComposition, scenes: updatedScenes });
     }
   };
 
@@ -642,7 +415,6 @@ export const CreativeStudioScreen: React.FC = () => {
                 {templates.map((tpl) => (
                   <div
                     key={tpl.id}
-                    onClick={() => handleApplyTemplate(tpl)}
                     style={{
                       borderRadius: 10,
                       border: '1px solid var(--line)',
@@ -653,6 +425,7 @@ export const CreativeStudioScreen: React.FC = () => {
                       display: 'flex',
                       flexDirection: 'column',
                     }}
+                    onClick={() => setActiveTab('motion-studio')}
                   >
                     <div
                       style={{
@@ -1256,139 +1029,16 @@ export const CreativeStudioScreen: React.FC = () => {
           </div>
         )}
 
-        {/* 3. MOTION DESIGN STUDIO */}
+        {/* 3. MOTION DESIGN STUDIO - 5-Step Flow */}
         {activeTab === 'motion-studio' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, maxWidth: 1300, margin: '0 auto' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Natural Language Prompt Box */}
-              <div
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  borderRadius: 12,
-                  border: '1px solid var(--line)',
-                  padding: 16,
-                  display: 'flex',
-                  gap: 10,
-                }}
-              >
-                <input
-                  type="text"
-                  value={motionPrompt}
-                  onChange={(e) => setMotionPrompt(e.target.value)}
-                  placeholder="Ex: 'Faça uma promoção com preço animado e transições rápidas' ou 'Anime este logotipo com brilho'"
-                  style={{
-                    flex: 1,
-                    padding: '10px 14px',
-                    borderRadius: 8,
-                    backgroundColor: 'var(--bg)',
-                    border: '1px solid var(--line)',
-                    color: 'var(--fg)',
-                    fontSize: 13,
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handlePlanMotion();
-                  }}
-                />
-                <Button
-                  variant="primary"
-                  disabled={isPlanningMotion || !motionPrompt.trim()}
-                  onClick={handlePlanMotion}
-                >
-                  <Icon name="sparkles" size={14} />
-                  {isPlanningMotion ? 'Animando...' : 'Gerar Animação'}
-                </Button>
-              </div>
-
-              {/* Real-time 60 FPS Motion Player */}
-              <MotionPlayer
-                composition={currentComposition}
-                onExportMp4={handleRenderMotionMp4}
-                onExportRemotion={handleExportRemotion}
-              />
-
-              {isRenderingMp4 && (
-                <div
-                  style={{
-                    padding: 12,
-                    borderRadius: 8,
-                    backgroundColor: 'rgba(21, 245, 186, 0.05)',
-                    border: '1px dashed var(--mint)',
-                    fontSize: 12,
-                    color: 'var(--mint)',
-                  }}
-                >
-                  ⏳ Renderizando composição MP4 com FFmpeg em segundo plano...
-                </div>
-              )}
-
-              {renderedMp4Path && (
-                <div
-                  style={{
-                    padding: 14,
-                    borderRadius: 8,
-                    backgroundColor: 'rgba(21, 245, 186, 0.1)',
-                    border: '1px solid var(--mint)',
-                    fontSize: 13,
-                    color: 'var(--mint)',
-                  }}
-                >
-                  ✓ Vídeo renderizado em MP4 com sucesso: <strong>{renderedMp4Path}</strong>
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar: Parameters Adjuster */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {activeTemplate && (
-                <ParameterAdjuster
-                  parameters={activeTemplate.editable_parameters}
-                  onChange={handleUpdateParameter}
-                />
-              )}
-
-              {/* Layer Inspector */}
-              <div
-                style={{
-                  backgroundColor: 'var(--surface)',
-                  borderRadius: 10,
-                  border: '1px solid var(--line)',
-                  padding: 16,
-                }}
-              >
-                <h4 style={{ margin: '0 0 10px 0', fontSize: 13, fontWeight: 600 }}>Camadas da Composição</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {currentComposition.scenes[0]?.layers.map((layer) => (
-                    <div
-                      key={layer.id}
-                      style={{
-                        padding: '8px 10px',
-                        borderRadius: 6,
-                        backgroundColor: 'var(--bg)',
-                        border: '1px solid var(--line)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: 12, fontWeight: 600 }}>{layer.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--muted)' }}>
-                          {layer.layer_type.toUpperCase()} · {layer.animation?.effect || 'Estático'}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: 2,
-                          backgroundColor: layer.color || 'var(--mint)',
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+          <div style={{ height: '100%', minHeight: 'calc(100vh - 200px)' }}>
+            <MotionStudioFlow 
+              skills={skills} 
+              onProjectCreated={(_projectId) => {
+                // Refresh projects list
+                loadStudioData();
+              }} 
+            />
           </div>
         )}
 
@@ -1841,7 +1491,6 @@ export const CreativeStudioScreen: React.FC = () => {
               setImagePrompt(briefing.prompt);
               setSelectedStyle(briefing.style);
               setSelectedRatio(briefing.aspectRatio);
-              setMotionPrompt(briefing.prompt);
               setBriefingOpen(false);
               setActiveTab('image-studio');
             }}

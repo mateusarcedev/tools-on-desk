@@ -401,3 +401,29 @@ pub struct TemplateParameter {
     pub options: Option<Vec<String>>,
     pub target_layer_id: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreativeBriefing {
+    pub goal: String,
+    pub niche: String,
+    pub tone: String,
+    pub format: String,      // "reels", "story", "feed", "youtube", "ads", "brand"
+    pub headline: String,
+    pub offer: String,
+    pub duration_sec: f32,
+    pub aspect_ratio: String, // "9:16", "16:9", "1:1", "4:5"
+    pub target_audience: Option<String>,
+    pub brand_colors: Option<Vec<String>>,
+    pub brand_font: Option<String>,
+    pub logo_path: Option<String>,
+    pub cta_text: Option<String>,
+    pub cta_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SceneGeneratorInput {
+    pub briefing: CreativeBriefing,
+    pub enabled_skills: Vec<CreativeSkill>,
+    pub references: Vec<ProcessedReference>,
+    pub template: Option<CreativeTemplate>,
+}

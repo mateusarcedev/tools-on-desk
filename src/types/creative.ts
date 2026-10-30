@@ -360,6 +360,186 @@ export interface GenerationMetadata {
   created_at: string;
 }
 
+// Motion Director Types (Mission 10)
+export interface MotionDirectorPlan {
+  project: MotionProjectPlan;
+  scenes: ScenePlan[];
+  audio?: AudioPlan;
+  metadata: PlanMetadata;
+}
+
+export interface MotionProjectPlan {
+  title: string;
+  concept: string;
+  style: string;
+  width: number;
+  height: number;
+  fps: number;
+  duration_sec: number;
+  background_color: string;
+  color_palette: string[];
+  typography: TypographyPlan;
+}
+
+export interface TypographyPlan {
+  primary_font: string;
+  secondary_font: string;
+  heading_size: number;
+  body_size: number;
+  accent_color: string;
+}
+
+export interface ScenePlan {
+  id: string;
+  order: number;
+  title: string;
+  duration_sec: number;
+  start_time: number;
+  description: string;
+  visual_cue: string;
+  camera_movement?: string;
+  layers: LayerPlan[];
+  transition_in?: TransitionPlan;
+  transition_out?: TransitionPlan;
+}
+
+export type LayerType = 
+  | 'text' | 'image' | 'video' | 'shape' | 'gradient' 
+  | 'svg' | 'icon' | 'screenshot' | 'chart' | 'group' | 'audio';
+
+export interface LayerPlan {
+  id: string;
+  layer_type: LayerType;
+  name: string;
+  content: string;
+  asset_id?: string;
+  start_time: number;
+  duration_sec: number;
+  transform: TransformPlan;
+  style: StylePlan;
+  animation?: AnimationPlan;
+  z_index: number;
+}
+
+export interface TransformPlan {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  scale: number;
+  opacity: number;
+  anchor_x: number;
+  anchor_y: number;
+}
+
+export interface StylePlan {
+  color: string;
+  background_color?: string;
+  font_size?: number;
+  font_family?: string;
+  font_weight?: string;
+  text_align?: string;
+  line_height?: number;
+  letter_spacing?: number;
+  border_radius?: number;
+  border_width?: number;
+  border_color?: string;
+  shadow?: ShadowPlan;
+  gradient?: GradientPlan;
+}
+
+export interface ShadowPlan {
+  offset_x: number;
+  offset_y: number;
+  blur: number;
+  color: string;
+}
+
+export interface GradientPlan {
+  type: 'linear' | 'radial';
+  stops: GradientStop[];
+  angle: number;
+}
+
+export interface GradientStop {
+  color: string;
+  position: number;
+}
+
+export interface AnimationPlan {
+  tracks: AnimationTrack[];
+  preset?: string;
+}
+
+export interface AnimationTrack {
+  property: string;
+  keyframes: Keyframe[];
+  easing: string;
+}
+
+export interface Keyframe {
+  time: number;
+  value: number | string;
+}
+
+export interface TransitionPlan {
+  type: string;
+  duration_sec: number;
+  easing: string;
+  direction?: string;
+}
+
+export interface AudioPlan {
+  tracks: AudioTrackPlan[];
+  master_volume: number;
+}
+
+export interface AudioTrackPlan {
+  id: string;
+  name: string;
+  asset_path: string;
+  start_time: number;
+  duration_sec?: number;
+  volume: number;
+  fade_in_sec: number;
+  fade_out_sec: number;
+  loop_audio: boolean;
+}
+
+export interface PlanMetadata {
+  created_at: string;
+  generator: string;
+  skills_used: string[];
+  references_used: string[];
+  version: string;
+}
+
+// Briefing Input
+export interface MotionBriefing {
+  prompt: string;
+  title?: string;
+  project_type: string;
+  style: string;
+  duration_sec?: number;
+  fps?: number;
+  width?: number;
+  height?: number;
+  aspect_ratio: string;
+  platform?: string;
+  audience?: string;
+  brand_identity?: string;
+  references: ReferenceInput[];
+}
+
+export interface ReferenceInput {
+  id: string;
+  file_path: string;
+  file_name: string;
+  file_type: string;
+  purpose: string;
+}
+
 export type CreativeStudioTab =
   | 'overview'
   | 'image-studio'

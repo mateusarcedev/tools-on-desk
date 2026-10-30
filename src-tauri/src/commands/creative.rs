@@ -8,8 +8,9 @@ use crate::domain::{
 };
 use crate::engines::agents::ExecuteAgentPromptPayload;
 use crate::engines::{
-    AgentInfo, AgentManager, EnhancePromptResult, ImageEngine, MotionEngine, NvidiaAIProvider,
-    NvidiaValidationResult, OpenCodeManager, ReferenceEngine, SkillManager,
+    AgentInfo, AgentManager, EnhancePromptResult, ImageEngine, MotionEngine, MotionDirector,
+    MotionBriefing, NvidiaAIProvider, NvidiaValidationResult, OpenCodeManager, ReferenceEngine,
+    SkillManager,
 };
 use crate::error::AppError;
 use crate::storage::Db;
@@ -888,4 +889,32 @@ pub fn add_asset_to_motion_composition(
 
     serde_json::to_string(&comp)
         .map_err(|e| AppError::Internal(format!("Falha ao serializar composição atualizada: {}", e)))
+}
+
+// --------------------------------------------------------------------------
+// MOTION DIRECTOR COMMANDS (Mission 10)
+// --------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn generate_motion_plan(
+    _app: AppHandle,
+    briefing: MotionBriefing,
+) -> Result<String, AppError> {
+    let app_data_dir = crate::utils::PathManager::app_root_dir();
+    let director = MotionDirector::new();
+    let plan = director.generate_plan(&app_data_dir, &briefing).await?;
+    serde_json::to_string(&plan)
+        .map_err(|e| AppError::Internal(format!("Failed to serialize plan: {}", e)))
+}
+
+#[tauri::command]
+pub fn convert_plan_to_composition(
+    plan_json: String,
+) -> Result<String, AppError> {
+    let plan: crate::engines::motion_director::MotionDirectorPlan = serde_json::from_str(&plan_json)
+        .map_err(|e| AppError::InvalidInput(format!("Invalid plan JSON: {}", e)))?;
+    let director = MotionDirector::new();
+    let composition = director.plan_to_composition(&plan);
+    serde_json::to_string(&composition)
+        .map_err(|e| AppError::Internal(format!("Failed to serialize composition: {}", e)))
 }

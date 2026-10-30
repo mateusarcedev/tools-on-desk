@@ -59,6 +59,8 @@ import {
   NvidiaVideoGenResult,
   OpenCodeStatus,
   RenderMotionOptions,
+  MotionBriefing,
+  MotionDirectorPlan,
 } from '../types/creative';
 import { MigrationProgressEvent, MigrationStatus } from '../types/migration';
 
@@ -1249,5 +1251,396 @@ export const TauriService = {
     return () => {
       if (unlistenFn) unlistenFn();
     };
+  },
+
+  // ==========================================
+  // MOTION DIRECTOR (Mission 10)
+  // ==========================================
+
+  async generateMotionPlan(briefing: MotionBriefing): Promise<MotionDirectorPlan> {
+    if (!isTauri()) {
+      // Return a mock plan for web development
+      const width = briefing.width || 1080;
+      const height = briefing.height || 1920;
+      const duration = briefing.duration_sec || 15;
+      const fps = briefing.fps || 30;
+      const sceneDuration = duration / 4;
+      return {
+        project: {
+          title: briefing.title || 'Motion Project',
+          concept: briefing.prompt,
+          style: briefing.style,
+          width,
+          height,
+          fps,
+          duration_sec: duration,
+          background_color: '#0B0F10',
+          color_palette: ['#0B0F10', '#141A1C', '#15F5BA', '#F3F4F6'],
+          typography: {
+            primary_font: 'Geist',
+            secondary_font: 'Geist Mono',
+            heading_size: 72,
+            body_size: 24,
+            accent_color: '#15F5BA',
+          },
+        },
+        scenes: [
+          {
+            id: 'scene-1',
+            order: 1,
+            title: 'Gancho / Hook',
+            duration_sec: sceneDuration,
+            start_time: 0,
+            description: 'Abertura impactante com gancho visual e textual',
+            visual_cue: 'Entrada cinética do título principal com partículas ou brilho mint',
+            camera_movement: 'Dolly In Suave',
+            layers: [
+              {
+                id: 'bg-1',
+                layer_type: 'gradient',
+                name: 'Background',
+                content: '',
+                start_time: 0,
+                duration_sec: sceneDuration,
+                transform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: 'transparent',
+                  gradient: { type: 'linear', stops: [{ color: '#0B0F10', position: 0 }, { color: '#141A1C', position: 1 }], angle: 135 },
+                },
+                z_index: -100,
+              },
+              {
+                id: 'headline-1',
+                layer_type: 'text',
+                name: 'Título Principal',
+                content: 'TOOLSONDESK CREATIVE STUDIO',
+                start_time: 0.3,
+                duration_sec: sceneDuration - 0.3,
+                transform: { x: 0.08, y: 0.25, width: 0.84, height: 0.18, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#15F5BA',
+                  font_size: 72,
+                  font_family: 'Geist',
+                  font_weight: '700',
+                  text_align: 'left',
+                  line_height: 1.1,
+                  letter_spacing: -0.02,
+                  shadow: { offset_x: 0, offset_y: 4, blur: 20, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.y', keyframes: [{ time: 0, value: 0.33 }, { time: 0.5, value: 0.25 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_up',
+                },
+                z_index: 20,
+              },
+            ],
+            transition_in: undefined,
+            transition_out: { type: 'wipe', duration_sec: 0.6, easing: 'ease_in_out', direction: 'left' },
+          },
+          {
+            id: 'scene-2',
+            order: 2,
+            title: 'Produto / Valor',
+            duration_sec: sceneDuration * 1.5,
+            start_time: sceneDuration,
+            description: 'Apresentação do produto com benefícios visuais',
+            visual_cue: 'Screenshot real da aplicação com zoom e pan simulado (Ken Burns)',
+            camera_movement: 'Pan Lateral + Zoom',
+            layers: [
+              {
+                id: 'bg-2',
+                layer_type: 'gradient',
+                name: 'Background',
+                content: '',
+                start_time: 0,
+                duration_sec: sceneDuration * 1.5,
+                transform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: 'transparent',
+                  gradient: { type: 'linear', stops: [{ color: '#0B0F10', position: 0 }, { color: '#141A1C', position: 1 }], angle: 135 },
+                },
+                z_index: -100,
+              },
+              {
+                id: 'feat-2-0',
+                layer_type: 'shape',
+                name: 'Feature Card',
+                content: '✨ FERRAMENTAS CRIATIVAS',
+                start_time: 0.3,
+                duration_sec: sceneDuration * 1.5 - 0.3,
+                transform: { x: 0.08, y: 0.2, width: 0.84, height: 0.2, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#F3F4F6',
+                  background_color: '#141A1C',
+                  font_size: 28,
+                  font_family: 'Geist',
+                  font_weight: '500',
+                  text_align: 'left',
+                  line_height: 1.3,
+                  border_radius: 12,
+                  border_width: 1,
+                  border_color: '#1F292B',
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.x', keyframes: [{ time: 0, value: -0.02 }, { time: 0.5, value: 0.08 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_right',
+                },
+                z_index: 15,
+              },
+              {
+                id: 'feat-2-1',
+                layer_type: 'shape',
+                name: 'Feature Card',
+                content: '⚡ PRODUTIVIDADE IA',
+                start_time: 0.45,
+                duration_sec: sceneDuration * 1.5 - 0.45,
+                transform: { x: 0.08, y: 0.45, width: 0.84, height: 0.2, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#F3F4F6',
+                  background_color: '#141A1C',
+                  font_size: 28,
+                  font_family: 'Geist',
+                  font_weight: '500',
+                  text_align: 'left',
+                  line_height: 1.3,
+                  border_radius: 12,
+                  border_width: 1,
+                  border_color: '#1F292B',
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.x', keyframes: [{ time: 0, value: -0.02 }, { time: 0.5, value: 0.08 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_right',
+                },
+                z_index: 15,
+              },
+            ],
+            transition_in: { type: 'fade', duration_sec: 0.5, easing: 'ease_in_out', direction: undefined },
+            transition_out: { type: 'wipe', duration_sec: 0.6, easing: 'ease_in_out', direction: 'left' },
+          },
+          {
+            id: 'scene-3',
+            order: 3,
+            title: 'Funcionalidades',
+            duration_sec: sceneDuration * 1.2,
+            start_time: sceneDuration * 2.5,
+            description: 'Destaque de 3+ funcionalidades com animações independentes',
+            visual_cue: 'Cards animados em cascade/stagger com ícones e métricas',
+            camera_movement: 'Parallax em camadas',
+            layers: [
+              {
+                id: 'bg-3',
+                layer_type: 'gradient',
+                name: 'Background',
+                content: '',
+                start_time: 0,
+                duration_sec: sceneDuration * 1.2,
+                transform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: 'transparent',
+                  gradient: { type: 'linear', stops: [{ color: '#0B0F10', position: 0 }, { color: '#141A1C', position: 1 }], angle: 135 },
+                },
+                z_index: -100,
+              },
+              {
+                id: 'feat-3-0',
+                layer_type: 'shape',
+                name: 'Feature Card',
+                content: '🎬 MOTION DESIGN',
+                start_time: 0.3,
+                duration_sec: sceneDuration * 1.2 - 0.3,
+                transform: { x: 0.08, y: 0.2, width: 0.84, height: 0.2, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#F3F4F6',
+                  background_color: '#141A1C',
+                  font_size: 28,
+                  font_family: 'Geist',
+                  font_weight: '500',
+                  text_align: 'left',
+                  line_height: 1.3,
+                  border_radius: 12,
+                  border_width: 1,
+                  border_color: '#1F292B',
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.x', keyframes: [{ time: 0, value: -0.02 }, { time: 0.5, value: 0.08 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_right',
+                },
+                z_index: 15,
+              },
+              {
+                id: 'feat-3-1',
+                layer_type: 'shape',
+                name: 'Feature Card',
+                content: '🖼️ AI IMAGE STUDIO',
+                start_time: 0.45,
+                duration_sec: sceneDuration * 1.2 - 0.45,
+                transform: { x: 0.08, y: 0.45, width: 0.84, height: 0.2, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#F3F4F6',
+                  background_color: '#141A1C',
+                  font_size: 28,
+                  font_family: 'Geist',
+                  font_weight: '500',
+                  text_align: 'left',
+                  line_height: 1.3,
+                  border_radius: 12,
+                  border_width: 1,
+                  border_color: '#1F292B',
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.x', keyframes: [{ time: 0, value: -0.02 }, { time: 0.5, value: 0.08 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_right',
+                },
+                z_index: 15,
+              },
+              {
+                id: 'feat-3-2',
+                layer_type: 'shape',
+                name: 'Feature Card',
+                content: '📱 MULTI-PLATAFORMA',
+                start_time: 0.6,
+                duration_sec: sceneDuration * 1.2 - 0.6,
+                transform: { x: 0.08, y: 0.7, width: 0.84, height: 0.2, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: '#F3F4F6',
+                  background_color: '#141A1C',
+                  font_size: 28,
+                  font_family: 'Geist',
+                  font_weight: '500',
+                  text_align: 'left',
+                  line_height: 1.3,
+                  border_radius: 12,
+                  border_width: 1,
+                  border_color: '#1F292B',
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#000000' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.x', keyframes: [{ time: 0, value: -0.02 }, { time: 0.5, value: 0.08 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'slide_right',
+                },
+                z_index: 15,
+              },
+            ],
+            transition_in: { type: 'fade', duration_sec: 0.5, easing: 'ease_in_out', direction: undefined },
+            transition_out: { type: 'wipe', duration_sec: 0.6, easing: 'ease_in_out', direction: 'left' },
+          },
+          {
+            id: 'scene-4',
+            order: 4,
+            title: 'CTA / Encerramento',
+            duration_sec: sceneDuration,
+            start_time: sceneDuration * 3.7,
+            description: 'Logotipo, chamada para ação e saída animada',
+            visual_cue: 'Logo com animação spring + brilho sweep + botão CTA pulsante',
+            camera_movement: undefined,
+            layers: [
+              {
+                id: 'bg-4',
+                layer_type: 'gradient',
+                name: 'Background',
+                content: '',
+                start_time: 0,
+                duration_sec: sceneDuration,
+                transform: { x: 0, y: 0, width: 1, height: 1, rotation: 0, scale: 1, opacity: 1, anchor_x: 0, anchor_y: 0 },
+                style: {
+                  color: 'transparent',
+                  gradient: { type: 'linear', stops: [{ color: '#0B0F10', position: 0 }, { color: '#141A1C', position: 1 }], angle: 135 },
+                },
+                z_index: -100,
+              },
+              {
+                id: 'logo-4',
+                layer_type: 'svg',
+                name: 'Logo ToolsOnDesk',
+                content: '',
+                start_time: 0.3,
+                duration_sec: sceneDuration - 0.3,
+                transform: { x: 0.35, y: 0.25, width: 0.3, height: 0.3, rotation: 0, scale: 1, opacity: 1, anchor_x: 0.5, anchor_y: 0.5 },
+                style: {
+                  color: '#15F5BA',
+                  shadow: { offset_x: 0, offset_y: 0, blur: 30, color: '#15F5BA' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.scale', keyframes: [{ time: 0, value: 0.5 }, { time: 0.4, value: 1.1 }, { time: 0.6, value: 1.0 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.2, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'spring',
+                },
+                z_index: 50,
+              },
+              {
+                id: 'cta-4',
+                layer_type: 'text',
+                name: 'Call to Action',
+                content: 'BAIXE AGORA',
+                start_time: 0.6,
+                duration_sec: sceneDuration - 0.6,
+                transform: { x: 0.2, y: 0.65, width: 0.6, height: 0.12, rotation: 0, scale: 1, opacity: 1, anchor_x: 0.5, anchor_y: 0.5 },
+                style: {
+                  color: '#0B0F10',
+                  background_color: '#15F5BA',
+                  font_size: 36,
+                  font_family: 'Geist',
+                  font_weight: '700',
+                  text_align: 'center',
+                  line_height: 1.0,
+                  letter_spacing: 0.05,
+                  border_radius: 50,
+                  shadow: { offset_x: 0, offset_y: 8, blur: 24, color: '#15F5BA' },
+                },
+                animation: {
+                  tracks: [
+                    { property: 'transform.scale', keyframes: [{ time: 0, value: 0.9 }, { time: 0.5, value: 1.05 }, { time: 1, value: 1.0 }], easing: 'spring' },
+                    { property: 'opacity', keyframes: [{ time: 0, value: 0 }, { time: 0.3, value: 1 }], easing: 'ease_in_out' },
+                  ],
+                  preset: 'pulse',
+                },
+                z_index: 40,
+              },
+            ],
+            transition_in: { type: 'fade', duration_sec: 0.5, easing: 'ease_in_out', direction: undefined },
+            transition_out: undefined,
+          },
+        ],
+        audio: undefined,
+        metadata: {
+          created_at: new Date().toISOString(),
+          generator: 'local_fallback',
+          skills_used: ['storyboard-creation', 'short-form-storytelling', 'advertising-design', 'kinetic-typography', 'logo-animation'],
+          references_used: briefing.references.map(r => r.file_path),
+          version: '1.0',
+        },
+      };
+    }
+    const planJson = await invoke<string>('generate_motion_plan', { briefing });
+    return JSON.parse(planJson);
+  },
+
+  async convertPlanToComposition(planJson: string): Promise<string> {
+    if (!isTauri()) return planJson; // In web, plan and composition are similar
+    return await invoke<string>('convert_plan_to_composition', { planJson });
   },
 };
