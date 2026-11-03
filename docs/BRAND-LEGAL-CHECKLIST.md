@@ -25,6 +25,12 @@
 
 ---
 
+## Licença do Código Próprio
+
+O código-fonte autoral do ToolsOnDesk é disponibilizado sob a **GNU General Public License versão 3 somente** (SPDX: `GPL-3.0-only`), cujo texto integral está em [../LICENSE](../LICENSE). A licença do código não implica registro da marca nem concede direitos sobre nomes, logotipos, fontes ou componentes de terceiros fora do escopo da licença. A distribuição de binários e modificações deve cumprir as obrigações aplicáveis da GPL e as licenças dos respectivos componentes distribuídos.
+
+---
+
 ## 3. Conformidade com Licenças Open Source e Terceiros
 
 | Componente Integrado | Licença Original | Conformidade no ToolsOnDesk |
