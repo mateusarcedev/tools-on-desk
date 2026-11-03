@@ -1,6 +1,7 @@
 [package]
 name = "toolsondesk"
 version = "0.1.0"
+license = "GPL-3.0-only"
 description = "ToolsOnDesk - Desktop Creative & Media Studio"
 authors = ["ToolsOnDesk Contributors"]
 edition = "2024"
