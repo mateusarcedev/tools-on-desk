@@ -8,6 +8,7 @@
 
 [![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0-15F5BA?style=flat-square&labelColor=141A1C)](#status-do-projeto)
 [![Tauri](https://img.shields.io/badge/Tauri-2-15F5BA?style=flat-square&labelColor=141A1C)](https://tauri.app/)
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-15F5BA?style=flat-square&labelColor=141A1C)](./LICENSE)
 [![Rust](https://img.shields.io/badge/Rust-native-15F5BA?style=flat-square&labelColor=141A1C)](https://www.rust-lang.org/)
 [![React](https://img.shields.io/badge/React-19-15F5BA?style=flat-square&labelColor=141A1C)](https://react.dev/)
 [![Testes](https://img.shields.io/badge/testes-63%20aprovados-15F5BA?style=flat-square&labelColor=141A1C)](#desenvolvimento)
@@ -322,7 +323,8 @@ Os resultados de testes automatizados e builds reportados representam validaçõ
 - **Isolamento Local vs Nuvem:** Processamento local (áudio, vídeo, documentos, pôsteres e motion) opera 100% offline; integrações em nuvem (NVIDIA NIM) exigem configuração consciente de chave e acesso de rede.
 - **Proteção de Dados:** Credenciais são cifradas nativamente via Windows DPAPI e buffers de memória são higienizados com `zeroize_bytes`.
 - **Softwares de Terceiros:** FFmpeg (LGPL/GPL), yt-dlp (The Unlicense), LibreOffice (MPL v2.0) e outros utilitários são invocados como subprocessos externos isolados em estrita conformidade com suas respectivas licenças.
-- **Propriedade e Direitos:** A marca ToolsOnDesk e o código da aplicação são de uso e distribuição restritos até definição formal de licença de lançamento.
+- **Licença do Código:** O código autoral do ToolsOnDesk está licenciado sob **GNU GPL v3.0 (somente versão 3; SPDX: `GPL-3.0-only`)**. Consulte [LICENSE](./LICENSE). Redistribuições e modificações devem cumprir os requisitos dessa licença, inclusive os relativos à disponibilização do código-fonte quando aplicáveis.
+- **Marcas e Terceiros:** A GPL não concede direitos de marca sobre o nome e logotipo ToolsOnDesk. Bibliotecas, fontes e ferramentas de terceiros mantêm suas próprias licenças e avisos de atribuição. Consulte [Checklist Jurídico](./docs/BRAND-LEGAL-CHECKLIST.md).
 
 ---
 
