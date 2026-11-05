@@ -1,0 +1,101 @@
+{
+  "id": "etapa2-proof-composition",
+  "title": "Prova Mínima de Captura Real",
+  "width": 1280,
+  "height": 720,
+  "fps": 30,
+  "duration_sec": 2.0,
+  "background_color": "#0B0F10",
+  "scenes": [
+    {
+      "id": "scene-01",
+      "title": "Prova Mínima 2 Segundos",
+      "start_time": 0.0,
+      "duration_sec": 2.0,
+      "layers": [
+        {
+          "id": "layer-title",
+          "layer_type": "text",
+          "name": "Título",
+          "content": "ToolsOnDesk: Captura Real HTML/Canvas",
+          "start_time": 0.0,
+          "duration_sec": 2.0,
+          "x": 0.08,
+          "y": 0.1,
+          "width": 0.8,
+          "height": 0.1,
+          "opacity": 1.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "color": "#F3F4F6",
+          "font_size": 42.0,
+          "font_family": "Geist",
+          "z_index": 1
+        },
+        {
+          "id": "layer-mint-rect",
+          "layer_type": "shape",
+          "name": "Retângulo Verde-Menta",
+          "content": "",
+          "start_time": 0.0,
+          "duration_sec": 2.0,
+          "x": 0.08,
+          "y": 0.28,
+          "width": 0.35,
+          "height": 0.22,
+          "opacity": 1.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "color": "#15F5BA",
+          "background_color": "#15F5BA",
+          "border_radius": 12.0,
+          "z_index": 2
+        },
+        {
+          "id": "layer-counter",
+          "layer_type": "progresscounter",
+          "name": "Contador Numérico",
+          "content": "Contador: 60",
+          "start_time": 0.0,
+          "duration_sec": 2.0,
+          "x": 0.52,
+          "y": 0.28,
+          "width": 0.4,
+          "height": 0.22,
+          "opacity": 1.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "color": "#15F5BA",
+          "background_color": "#141A1C",
+          "border_color": "#15F5BA",
+          "z_index": 3
+        },
+        {
+          "id": "layer-moving-circle",
+          "layer_type": "circle",
+          "name": "Círculo em Movimento",
+          "content": "",
+          "start_time": 0.0,
+          "duration_sec": 2.0,
+          "x": 0.08,
+          "y": 0.65,
+          "width": 0.09,
+          "height": 0.16,
+          "opacity": 1.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "color": "#15F5BA",
+          "background_color": "#15F5BA",
+          "border_radius": 50.0,
+          "animation": {
+            "effect": "move_right",
+            "easing": "linear",
+            "duration_sec": 2.0,
+            "delay_sec": 0.0
+          },
+          "z_index": 4
+        }
+      ]
+    }
+  ]
+}

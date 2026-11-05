@@ -10,7 +10,7 @@ use crate::engines::agents::ExecuteAgentPromptPayload;
 use crate::engines::{
     AgentInfo, AgentManager, EnhancePromptResult, ImageEngine, MotionEngine, MotionDirector,
     MotionBriefing, NvidiaAIProvider, NvidiaValidationResult, OpenCodeManager, ReferenceEngine,
-    SkillManager,
+    SkillManager, WebRenderer,
 };
 use crate::error::AppError;
 use crate::storage::Db;
@@ -351,12 +351,22 @@ pub async fn render_motion_project(
     let export_dir = get_export_path(&app);
     let cancel_token = Arc::new(std::sync::atomic::AtomicBool::new(false));
 
-    let res = MotionEngine::render_to_mp4(
-        &options,
-        &export_dir,
-        cancel_token,
-        |_progress| {},
-    ).await?;
+    // HTML-first renderer by default; legacy FFmpeg only when explicitly requested
+    let res = if options.quality == "legacy_ffmpeg" || options.format == "legacy_ffmpeg" {
+        MotionEngine::render_to_mp4(
+            &options,
+            &export_dir,
+            cancel_token,
+            |_progress| {},
+        ).await?
+    } else {
+        WebRenderer::render_to_mp4(
+            &options,
+            &export_dir,
+            cancel_token,
+            |_progress| {},
+        ).await?
+    };
 
     // Update project status if project_id is given
     if let Some(ref pid) = options.project_id {
@@ -873,6 +883,12 @@ pub fn add_asset_to_motion_composition(
             delay_sec: 0.2,
         }),
         z_index: 0,
+        background_color: None,
+        border_radius: None,
+        border_width: None,
+        border_color: None,
+        gradient: None,
+        shadow: None,
     };
 
     if comp.scenes.is_empty() {

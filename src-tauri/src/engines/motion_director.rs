@@ -1,6 +1,7 @@
 use crate::domain::{
     CreativeSkill, MotionAnimation, MotionAudioTrack, MotionComposition, MotionLayer, MotionScene,
 };
+use crate::domain::creative::{GradientPlan, GradientStopPlan, ShadowPlan};
 use crate::engines::nvidia::{NVIDIA_CHAT_BASE_URL, NVIDIA_KEY_SECRET_NAME};
 use crate::engines::{SkillManager};
 use crate::utils::vault::SecureVault;
@@ -117,27 +118,6 @@ pub struct StylePlan {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ShadowPlan {
-    pub offset_x: f32,
-    pub offset_y: f32,
-    pub blur: f32,
-    pub color: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GradientPlan {
-    pub type_: String, // "linear" | "radial"
-    pub stops: Vec<GradientStop>,
-    pub angle: f32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GradientStop {
-    pub color: String,
-    pub position: f32, // 0.0 - 1.0
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnimationPlan {
     pub tracks: Vec<AnimationTrack>,
     pub preset: Option<String>, // "fade_in", "slide_up", "zoom_in", "bounce", "typewriter", etc.
@@ -158,6 +138,7 @@ pub struct Keyframe {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitionPlan {
+    #[serde(rename = "type")]
     pub type_: String, // "wipe", "fade", "zoom", "slide", "none"
     pub duration_sec: f32,
     pub easing: String,
@@ -781,8 +762,8 @@ Generate a professional motion design plan now."#,
                 gradient: Some(GradientPlan {
                     type_: "linear".to_string(),
                     stops: vec![
-                        GradientStop { color: "#0B0F10".to_string(), position: 0.0 },
-                        GradientStop { color: "#141A1C".to_string(), position: 1.0 },
+                        GradientStopPlan { color: "#0B0F10".to_string(), position: 0.0 },
+                        GradientStopPlan { color: "#141A1C".to_string(), position: 1.0 },
                     ],
                     angle: 135.0,
                 }),
@@ -1277,6 +1258,21 @@ Generate a professional motion design plan now."#,
                 })
             }),
             z_index: plan.z_index,
+            background_color: plan.style.background_color.clone(),
+            border_radius: plan.style.border_radius,
+            border_width: plan.style.border_width,
+            border_color: plan.style.border_color.clone(),
+            gradient: plan.style.gradient.clone().map(|g| GradientPlan {
+                type_: g.type_,
+                stops: g.stops.into_iter().map(|s| GradientStopPlan { color: s.color, position: s.position }).collect(),
+                angle: g.angle,
+            }),
+            shadow: plan.style.shadow.clone().map(|s| ShadowPlan {
+                offset_x: s.offset_x,
+                offset_y: s.offset_y,
+                blur: s.blur,
+                color: s.color,
+            }),
         }
     }
 }

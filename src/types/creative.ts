@@ -153,9 +153,27 @@ export interface MotionScene {
   layers: MotionLayer[];
 }
 
+export interface GradientStopPlan {
+  color: string;
+  position: number;
+}
+
+export interface GradientPlan {
+  type: string;
+  stops: GradientStopPlan[];
+  angle: number;
+}
+
+export interface ShadowPlan {
+  offset_x: number;
+  offset_y: number;
+  blur: number;
+  color: string;
+}
+
 export interface MotionLayer {
   id: string;
-  layer_type: 'text' | 'image' | 'shape' | 'badge';
+  layer_type: string; // 'text' | 'image' | 'shape' | 'badge' | 'gradient' | 'svg' | 'icon' | 'chart' | components
   name: string;
   content: string;
   start_time: number;
@@ -172,11 +190,19 @@ export interface MotionLayer {
   font_family?: string;
   animation?: MotionAnimation;
   z_index: number;
+  background_color?: string;
+  border_radius?: number;
+  border_width?: number;
+  border_color?: string;
+  gradient?: GradientPlan;
+  shadow?: ShadowPlan;
+  component_type?: string;
+  component_data?: any;
 }
 
 export interface MotionAnimation {
-  effect: 'fade_in' | 'slide_up' | 'zoom_in' | 'bounce' | 'glow' | 'wipe';
-  easing: 'linear' | 'ease_in_out' | 'spring' | 'bounce';
+  effect: 'fade_in' | 'slide_up' | 'zoom_in' | 'bounce' | 'glow' | 'wipe' | 'typewriter' | 'pulse' | string;
+  easing: 'linear' | 'ease_in_out' | 'spring' | 'bounce' | 'ease_out' | 'ease_in' | string;
   duration_sec: number;
   delay_sec: number;
 }

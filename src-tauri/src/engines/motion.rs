@@ -49,6 +49,20 @@ impl MotionEngine {
         let mut filter_complex = String::new();
         let mut last_stream = "[0:v]".to_string();
 
+        // Pre-assign input indices to image layers
+        let mut image_input_indices = std::collections::HashMap::new();
+        for (s_idx, scene) in composition.scenes.iter().enumerate() {
+            for (l_idx, layer) in scene.layers.iter().enumerate() {
+                if layer.layer_type == "image" && !layer.content.is_empty() {
+                    image_input_indices.insert((s_idx, l_idx), input_idx);
+                    input_idx += 1;
+                }
+            }
+        }
+
+        // Reset input_idx for use in filter graph (images start at 1, input 0 is background)
+        input_idx = 1;
+
         // Process scenes and layers
         for (s_idx, scene) in composition.scenes.iter().enumerate() {
             let s_start = scene.start_time;
@@ -93,10 +107,12 @@ impl MotionEngine {
                         let x_pos = (layer.x * width as f32) as i32;
                         let y_pos = (layer.y * height as f32) as i32;
 
-                        let scaled_stream = format!("[img_scaled_{}]", input_idx);
+                        // Use pre-assigned input index for this image
+                        let img_input_idx = *image_input_indices.get(&(s_idx, l_idx)).unwrap_or(&1);
+                        let scaled_stream = format!("[img_scaled_{}]", img_input_idx);
                         filter_complex.push_str(&format!(
                             "[{}:v]scale={}:{}{};",
-                            input_idx, img_w, img_h, scaled_stream
+                            img_input_idx, img_w, img_h, scaled_stream
                         ));
 
                         let next_stream = format!("[ov_{}_{}]", s_idx, l_idx);
@@ -112,7 +128,7 @@ impl MotionEngine {
                         ));
 
                         last_stream = next_stream;
-                        input_idx += 1;
+                        
                     }
                 }
             }

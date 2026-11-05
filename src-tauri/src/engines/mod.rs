@@ -12,6 +12,7 @@ pub mod nvidia;
 pub mod opencode;
 pub mod poster_engine;
 pub mod reference_engine;
+pub mod renderer;
 pub mod skills;
 pub mod video_engine;
 
@@ -29,5 +30,6 @@ pub use nvidia::{NvidiaAIProvider, NvidiaValidationResult};
 pub use reference_engine::ReferenceEngine;
 pub use opencode::OpenCodeManager;
 pub use poster_engine::PosterEngine;
+pub use renderer::{WebRenderer, save_frame, frames_complete, render_motion_web};
 pub use skills::SkillManager;
 pub use video_engine::VideoEngine;

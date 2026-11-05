@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { MotionComposition } from '../../../types/creative';
 import { Button } from '../../common/Button';
 import { Icon } from '../../common/Icon';
+import { renderMotionCanvasFrame } from '../../../services/motionCanvasRenderer';
 
 interface MotionPlayerProps {
   composition: MotionComposition;
@@ -48,7 +49,7 @@ export const MotionPlayer: React.FC<MotionPlayerProps> = ({
     }
   };
 
-  // Render a single frame onto the canvas
+  // Render a single frame onto the canvas using shared Motion Canvas Renderer
   const renderFrame = useCallback(
     (timeSec: number) => {
       const canvas = canvasRef.current;
@@ -56,110 +57,7 @@ export const MotionPlayer: React.FC<MotionPlayerProps> = ({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      const w = canvas.width;
-      const h = canvas.height;
-
-      // 1. Draw Background
-      ctx.fillStyle = composition.background_color || '#0B0F10';
-      ctx.fillRect(0, 0, w, h);
-
-      // 2. Iterate scenes
-      for (const scene of composition.scenes) {
-        const sStart = scene.start_time;
-        const sEnd = sStart + scene.duration_sec;
-
-        if (timeSec < sStart || timeSec > sEnd) continue;
-
-        // Iterate layers sorted by z_index
-        const sortedLayers = [...scene.layers].sort((a, b) => a.z_index - b.z_index);
-
-        for (const layer of sortedLayers) {
-          const lStart = sStart + layer.start_time;
-          const lEnd = lStart + layer.duration_sec;
-
-          if (timeSec < lStart || timeSec > lEnd) continue;
-
-          // Compute animation progress
-          const anim = layer.animation;
-          let progress = 1.0;
-          if (anim) {
-            const animStart = lStart + anim.delay_sec;
-            const animDuration = anim.duration_sec || 0.6;
-            if (timeSec < animStart) {
-              progress = 0;
-            } else {
-              const rawT = (timeSec - animStart) / animDuration;
-              progress = calculateEasing(rawT, anim.easing);
-            }
-          }
-
-          // Layer transform
-          ctx.save();
-
-          let opacity = layer.opacity !== undefined ? layer.opacity : 1.0;
-          let scale = layer.scale !== undefined ? layer.scale : 1.0;
-          let yOffset = 0;
-
-          if (anim) {
-            switch (anim.effect) {
-              case 'fade_in':
-                opacity *= progress;
-                break;
-              case 'zoom_in':
-                scale *= 0.5 + 0.5 * progress;
-                opacity *= Math.min(1, progress * 1.5);
-                break;
-              case 'slide_up':
-                yOffset = (1 - progress) * (h * 0.15);
-                opacity *= Math.min(1, progress * 2);
-                break;
-              case 'bounce':
-                scale *= 0.8 + 0.2 * progress;
-                break;
-              case 'glow':
-                ctx.shadowColor = layer.color || '#15F5BA';
-                ctx.shadowBlur = 20 * progress;
-                break;
-            }
-          }
-
-          ctx.globalAlpha = Math.max(0, Math.min(1, opacity));
-
-          // Draw layer text or shape
-          if (layer.layer_type === 'text') {
-            const fontSize = (layer.font_size || 48) * (scale || 1.0);
-            ctx.font = `bold ${fontSize}px Geist, sans-serif`;
-            ctx.fillStyle = layer.color || '#FFFFFF';
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-
-            const x = layer.x * w;
-            const y = layer.y * h + yOffset;
-
-            ctx.fillText(layer.content, x, y);
-          } else if (layer.layer_type === 'shape' || layer.layer_type === 'badge') {
-            const x = layer.x * w;
-            const y = layer.y * h + yOffset;
-            const rw = layer.width * w * scale;
-            const rh = layer.height * h * scale;
-
-            ctx.fillStyle = layer.color || '#15F5BA';
-            ctx.beginPath();
-            ctx.roundRect(x, y, rw, rh, 8);
-            ctx.fill();
-
-            if (layer.content) {
-              ctx.fillStyle = '#0B0F10';
-              ctx.font = `bold ${rh * 0.45}px Geist, sans-serif`;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-              ctx.fillText(layer.content, x + rw / 2, y + rh / 2);
-            }
-          }
-
-          ctx.restore();
-        }
-      }
+      renderMotionCanvasFrame(ctx, composition, timeSec, canvas.width, canvas.height);
     },
     [composition]
   );

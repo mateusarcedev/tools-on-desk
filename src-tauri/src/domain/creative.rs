@@ -320,9 +320,31 @@ pub struct MotionScene {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShadowPlan {
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub blur: f32,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GradientStopPlan {
+    pub color: String,
+    pub position: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GradientPlan {
+    #[serde(rename = "type")]
+    pub type_: String, // "linear" | "radial"
+    pub stops: Vec<GradientStopPlan>,
+    pub angle: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotionLayer {
     pub id: String,
-    pub layer_type: String, // "text", "image", "shape", "badge"
+    pub layer_type: String, // "text", "image", "shape", "badge", "gradient", "svg"
     pub name: String,
     pub content: String,
     pub start_time: f32,
@@ -339,6 +361,13 @@ pub struct MotionLayer {
     pub font_family: Option<String>,
     pub animation: Option<MotionAnimation>,
     pub z_index: i32,
+    // Extended style properties (from LayerPlan conversion)
+    pub background_color: Option<String>,
+    pub border_radius: Option<f32>,
+    pub border_width: Option<f32>,
+    pub border_color: Option<String>,
+    pub gradient: Option<GradientPlan>,
+    pub shadow: Option<ShadowPlan>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
