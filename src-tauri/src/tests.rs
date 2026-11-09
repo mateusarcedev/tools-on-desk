@@ -1403,6 +1403,7 @@ mod tests {
                             border_color: None,
                             gradient: None,
                             shadow: None,
+                            component_type: None,
                         },
                     ],
                 },

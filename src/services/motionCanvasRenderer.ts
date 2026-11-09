@@ -1,7 +1,7 @@
 // ToolsOnDesk Motion Canvas Renderer
 // Shared 60 FPS deterministic canvas drawing engine for preview and export parity
 
-import { MotionComposition, MotionLayer, MotionScene } from '../types/creative';
+import { MotionComposition, MotionLayer } from '../types/creative';
 
 // Easing functions
 export function calculateEasing(t: number, easing?: string): number {
@@ -33,7 +33,7 @@ export function calculateEasing(t: number, easing?: string): number {
 // Global image cache for canvas rendering (browser & headless)
 const imageCache: Map<string, HTMLImageElement> = new Map();
 
-export function preloadImage(src: string): Promise<HTMLImageElement> {
+export function preloadImage(src: string, dataUri?: string): Promise<HTMLImageElement> {
   if (imageCache.has(src)) {
     return Promise.resolve(imageCache.get(src)!);
   }
@@ -45,10 +45,14 @@ export function preloadImage(src: string): Promise<HTMLImageElement> {
     img.crossOrigin = 'anonymous';
     img.onload = () => {
       imageCache.set(src, img);
+      if (dataUri) imageCache.set(dataUri, img);
       resolve(img);
     };
-    img.onerror = (e) => reject(e);
-    img.src = src;
+    img.onerror = (e) => {
+      console.warn('Failed to load image:', src, e);
+      resolve(img);
+    };
+    img.src = dataUri || src;
   });
 }
 
@@ -82,7 +86,7 @@ export function drawRoundRect(
 }
 
 // Draw a glowing border or stroke
-function strokeGlow(
+export function strokeGlow(
   ctx: CanvasRenderingContext2D,
   color: string,
   lineWidth: number = 2,
@@ -105,7 +109,7 @@ function renderAnimatedGrid(
   y: number,
   w: number,
   h: number,
-  progress: number,
+  _progress: number,
   sceneTime: number
 ) {
   ctx.save();
@@ -155,7 +159,7 @@ function renderAnimatedArray(
   y: number,
   w: number,
   h: number,
-  progress: number,
+  _progress: number,
   sceneTime: number
 ) {
   ctx.save();
@@ -243,13 +247,13 @@ function renderAnimatedArray(
 // Component 3: AnimatedChart
 function renderAnimatedChart(
   ctx: CanvasRenderingContext2D,
-  layer: MotionLayer,
+  _layer: MotionLayer,
   x: number,
   y: number,
   w: number,
   h: number,
   progress: number,
-  sceneTime: number
+  _sceneTime: number
 ) {
   ctx.save();
   // Chart background
@@ -461,7 +465,7 @@ function renderDiagramNode(
   y: number,
   w: number,
   h: number,
-  progress: number
+  _progress: number
 ) {
   ctx.save();
   drawRoundRect(ctx, x, y, w, h, 12);
@@ -547,7 +551,7 @@ function renderFeatureCard(
   y: number,
   w: number,
   h: number,
-  progress: number
+  _progress: number
 ) {
   ctx.save();
   drawRoundRect(ctx, x, y, w, h, 14);
@@ -609,7 +613,7 @@ function renderScreenshotShowcase(
   y: number,
   w: number,
   h: number,
-  progress: number
+  _progress: number
 ) {
   ctx.save();
   // Window container
@@ -724,11 +728,18 @@ function renderLogoReveal(
   ctx.shadowBlur = 18;
   ctx.stroke();
 
-  // Inner stylized 'T' or desk glyph
-  ctx.fillStyle = '#15F5BA';
-  ctx.shadowBlur = 10;
-  ctx.fillRect(-size * 0.5, -size * 0.35, size, size * 0.2);
-  ctx.fillRect(-size * 0.12, -size * 0.15, size * 0.24, size * 0.6);
+  // Inner logo content: preloaded image or stylized glyph
+  const cachedLogo = layer.content ? imageCache.get(layer.content) : null;
+  if (cachedLogo) {
+    const logoW = size * 1.2;
+    const logoH = size * 1.2;
+    ctx.drawImage(cachedLogo, -logoW / 2, -logoH / 2, logoW, logoH);
+  } else {
+    ctx.fillStyle = '#15F5BA';
+    ctx.shadowBlur = 10;
+    ctx.fillRect(-size * 0.5, -size * 0.35, size, size * 0.2);
+    ctx.fillRect(-size * 0.12, -size * 0.15, size * 0.24, size * 0.6);
+  }
   ctx.restore();
 
   // Brand title below
@@ -779,7 +790,7 @@ function renderShapeReveal(
 // Component 12: ComparisonChart
 function renderComparisonChart(
   ctx: CanvasRenderingContext2D,
-  layer: MotionLayer,
+  _layer: MotionLayer,
   x: number,
   y: number,
   w: number,
@@ -945,38 +956,61 @@ export function renderMotionCanvasFrame(
       // Check for component dispatch
       const lType = layer.layer_type.toLowerCase();
       const compType = (layer.component_type || '').toLowerCase();
+      const nameLower = (layer.name || '').toLowerCase();
 
-      if (lType === 'animatedgrid' || compType === 'animatedgrid') {
+      const isComp = (target: string) =>
+        lType === target ||
+        compType === target ||
+        nameLower === target ||
+        nameLower.startsWith(target) ||
+        (target === 'featurecard' && (nameLower.includes('feature card') || nameLower.includes('feature')));
+
+      if (isComp('animatedgrid')) {
         renderAnimatedGrid(ctx, layer, lx, ly, lw, lh, progress, sceneTime);
-      } else if (lType === 'animatedarray' || compType === 'animatedarray') {
+      } else if (isComp('animatedarray')) {
         renderAnimatedArray(ctx, layer, lx, ly, lw, lh, progress, sceneTime);
-      } else if (lType === 'animatedchart' || compType === 'animatedchart') {
+      } else if (isComp('animatedchart')) {
         renderAnimatedChart(ctx, layer, lx, ly, lw, lh, progress, sceneTime);
-      } else if (lType === 'progresscounter' || compType === 'progresscounter') {
+      } else if (isComp('progresscounter')) {
         renderProgressCounter(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'animatedbar' || compType === 'animatedbar') {
+      } else if (isComp('animatedbar')) {
         renderAnimatedBar(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'diagramnode' || compType === 'diagramnode') {
+      } else if (isComp('diagramnode')) {
         renderDiagramNode(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'animatedconnector' || compType === 'animatedconnector') {
+      } else if (isComp('animatedconnector')) {
         renderAnimatedConnector(ctx, layer, lx, ly, lw, lh, progress, sceneTime);
-      } else if (lType === 'featurecard' || compType === 'featurecard') {
+      } else if (isComp('featurecard')) {
         renderFeatureCard(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'screenshotshowcase' || compType === 'screenshotshowcase') {
+      } else if (isComp('screenshotshowcase')) {
         renderScreenshotShowcase(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'logoreveal' || compType === 'logoreveal') {
+      } else if (isComp('logoreveal')) {
         renderLogoReveal(ctx, layer, lx, ly, lw, lh, progress, sceneTime);
-      } else if (lType === 'shapereveal' || compType === 'shapereveal') {
+      } else if (isComp('shapereveal')) {
         renderShapeReveal(ctx, layer, lx, ly, lw, lh, progress);
-      } else if (lType === 'comparisonchart' || compType === 'comparisonchart') {
+      } else if (isComp('comparisonchart')) {
         renderComparisonChart(ctx, layer, lx, ly, lw, lh, progress);
       } else if (lType === 'text') {
         const fontSize = (layer.font_size || 48) * scale;
         const fontFam = layer.font_family || 'Geist';
-        ctx.font = `bold ${fontSize}px ${fontFam}, sans-serif`;
+        const fontWeight = layer.font_weight || 'bold';
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFam}, sans-serif`;
         ctx.fillStyle = layer.color || '#F3F4F6';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
+        
+        const align = (layer.text_align || 'left') as CanvasTextAlign;
+        ctx.textAlign = align;
+        
+        let textX = lx;
+        let textY = ly;
+        if (align === 'center') {
+          textX = lx + lw / 2;
+          ctx.textBaseline = 'middle';
+          textY = ly + lh / 2;
+        } else if (align === 'right') {
+          textX = lx + lw;
+          ctx.textBaseline = 'top';
+        } else {
+          ctx.textBaseline = 'top';
+        }
 
         // Check typewriter animation
         let textToShow = layer.content;
@@ -985,8 +1019,8 @@ export function renderMotionCanvasFrame(
           textToShow = textToShow.slice(0, charCount);
         }
 
-        ctx.fillText(textToShow, lx, ly);
-      } else if (lType === 'shape' || lType === 'badge' || lType === 'circle') {
+        ctx.fillText(textToShow, textX, textY);
+      } else if (lType === 'shape' || lType === 'badge' || lType === 'circle' || lType === 'gradient') {
         if (layer.shadow) {
           ctx.shadowColor = layer.shadow.color;
           ctx.shadowOffsetX = layer.shadow.offset_x;
@@ -1002,7 +1036,7 @@ export function renderMotionCanvasFrame(
         }
 
         if (layer.gradient && layer.gradient.stops && layer.gradient.stops.length > 0) {
-          let g;
+          let g: CanvasGradient;
           if (layer.gradient.type === 'radial') {
             g = ctx.createRadialGradient(lx + lw / 2, ly + lh / 2, 2, lx + lw / 2, ly + lh / 2, Math.max(lw, lh) / 2);
           } else {
@@ -1028,15 +1062,19 @@ export function renderMotionCanvasFrame(
           ctx.stroke();
         }
 
-        if (layer.content) {
+        if (layer.content && lType !== 'gradient') {
           ctx.fillStyle = '#0B0F10';
           ctx.font = `bold ${Math.round(lh * 0.45)}px 'Geist', sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(layer.content, lx + lw / 2, ly + lh / 2);
         }
-      } else if (lType === 'image' || lType === 'screenshot') {
-        const img = layer.content ? imageCache.get(layer.content) : null;
+      } else if (lType === 'image' || lType === 'screenshot' || lType === 'svg') {
+        const basename = layer.content ? (layer.content.split('/').pop() || '') : '';
+        const img = (layer.content && imageCache.get(layer.content)) ||
+                    (layer.asset_id && imageCache.get(layer.asset_id)) ||
+                    (basename && imageCache.get(basename)) ||
+                    null;
         if (img) {
           ctx.drawImage(img, lx, ly, lw, lh);
         } else {

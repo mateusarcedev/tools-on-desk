@@ -30,12 +30,57 @@ pub async fn save_frame(
 }
 
 pub async fn frames_complete(
-    _output_dir: String,
+    output_dir: String,
     fps: u32,
     duration: f32,
-) -> AppResult<()> {
-    println!("Frames captured: {} fps, {:.2}s duration", fps, duration);
-    Ok(())
+) -> AppResult<String> {
+    let output_path = Path::new(&output_dir);
+    let frames_pattern = output_path.join("frame_%06d.png");
+    let target_video = output_path.join("output.mp4");
+
+    let ffmpeg_path = crate::engines::ExternalToolManager::get_ffmpeg()?;
+
+    let mut cmd = tokio::process::Command::new(ffmpeg_path);
+    #[cfg(target_os = "windows")]
+    {
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let fps_str = fps.clamp(15, 60).to_string();
+    let dur_str = format!("{:.2}", duration);
+
+    cmd.args([
+        "-y",
+        "-framerate",
+        &fps_str,
+        "-i",
+        &frames_pattern.to_string_lossy(),
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-t",
+        &dur_str,
+        &target_video.to_string_lossy(),
+    ]);
+
+    let output = cmd.output().await.map_err(|e| {
+        AppError::Creative(format!("Falha ao invocar FFmpeg para frames_complete: {}", e))
+    })?;
+
+    if !output.status.success() {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        return Err(AppError::Creative(format!(
+            "FFmpeg falhou ao codificar frames: {}",
+            err_msg
+        )));
+    }
+
+    Ok(target_video.to_string_lossy().to_string())
 }
 
 pub async fn render_motion_web(

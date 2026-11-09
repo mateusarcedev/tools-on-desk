@@ -1,0 +1,187 @@
+{
+  "mission": "10.3",
+  "mission_title": "Recuperação do Renderizador HTML-First: Captura Real de Frames, Paridade Visual e Renderização MP4",
+  "generated_at": "2026-11-05T18:13:38.612Z",
+  "primary_renderer": "ToolsOnDesk WebRenderer (Headless HTML/Canvas Deterministic Frame Capture via Chromium + FFmpeg pipe)",
+  "legacy_engine_fallback": "DISABLED for HTML-First (Never called silently)",
+  "deterministic_timing": {
+    "seed": "deterministic",
+    "clock_mode": "virtual_frame_stepping (frame_index / fps)",
+    "preloaded_fonts": [
+      "Geist",
+      "Geist Mono"
+    ],
+    "offline_assets": "local_base64_data_uris"
+  },
+  "deliverables": {
+    "educational_big_o": {
+      "title": "Big O Notation Explained",
+      "mp4_file": "big_o/big_o_educational_60s.mp4",
+      "sha256": "47bfddfbf17f592ad3100d281730a5a9d9ac9351376a187d725f3aa01451e1fd",
+      "file_size_bytes": 2589780,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1080,
+            "height": 1920,
+            "r_frame_rate": "30/1",
+            "nb_frames": "1800"
+          }
+        ],
+        "format": {
+          "duration": "60.000000",
+          "size": "2589780",
+          "bit_rate": "345304"
+        }
+      },
+      "plan_file": "big_o/big_o_plan.json",
+      "plan_sha256": "924725de496d61afa5a5ce1d557ca32c0e15af14162c1b88a70e2fb162981516",
+      "composition_file": "big_o/big_o_composition.json",
+      "composition_sha256": "3be89b049dbc4f011d6bbe87b768cb78081b2b35181cd4c586f64e7ea722e42f",
+      "contact_sheet": "big_o/contact_sheet_big_o_6_scenes.png",
+      "contact_sheet_sha256": "e29f017bcd206e119228bed85413371a6f1ec15b678cd78e5e0e87b9ecd26451",
+      "stills": [
+        {
+          "file": "scene_01_intro.png",
+          "bytes": 159631,
+          "sha256": "4d2abddd4b171101b28d348d272ab3f973e652dbc21f270b68cfef415b8df46e"
+        },
+        {
+          "file": "scene_02_o1.png",
+          "bytes": 254176,
+          "sha256": "7b3dea172411423c9b4839f513fb5e9b5cc51471f8393a3703b42359f8c105a1"
+        },
+        {
+          "file": "scene_03_ologn.png",
+          "bytes": 261302,
+          "sha256": "d024e367cea51b134a040f3557121f15a1fdd7f5e6ec21baf0a2e5c89ef0543c"
+        },
+        {
+          "file": "scene_04_on.png",
+          "bytes": 248398,
+          "sha256": "2342ddadee04c8529a96fc379c1371c1503fad7b8e1382e83f517cb298c067d6"
+        },
+        {
+          "file": "scene_05_on2.png",
+          "bytes": 202080,
+          "sha256": "c81712dc6369786210baf816c26723cc913aa0352c6392840361eb4d95dc8b33"
+        },
+        {
+          "file": "scene_06_summary.png",
+          "bytes": 233086,
+          "sha256": "b0e8531d443dfc589b29345e6ca18aa8d69c0a980f07c1e0771360581863ea2e"
+        }
+      ]
+    },
+    "promotional_brand_spot": {
+      "title": "ToolsOnDesk — Brand Spot 20s",
+      "generator": "OpenAI Codex v0.166.0 (Authenticated live agent execution)",
+      "mp4_file": "promo/toolsondesk_promo_20s.mp4",
+      "sha256": "6e5994a1313eb351f5a3743ff69f67295e2384ba1f5b885022df45136406772c",
+      "file_size_bytes": 792541,
+      "ffprobe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "width": 1920,
+            "height": 1080,
+            "r_frame_rate": "30/1",
+            "nb_frames": "600"
+          }
+        ],
+        "format": {
+          "duration": "20.000000",
+          "size": "792541",
+          "bit_rate": "317016"
+        }
+      },
+      "plan_file": "promo/toolsondesk_promo_plan.json",
+      "plan_sha256": "1b84dece36c563cf694ae49ffd2148d355adc62c0780aef8bbd8b756523472db",
+      "composition_file": "promo/toolsondesk_promo_composition.json",
+      "composition_sha256": "8bdb9126aa6d0bd0693ed4a22eddc18ce7275694cee312fa61f966cc11b013c3",
+      "contact_sheet": "promo/contact_sheet_promo_4_scenes.png",
+      "contact_sheet_sha256": "bd50fb2ed06b1db07a36f3e71241c0736dbbb323cea49c9689a9efe4d257da73",
+      "stills": [
+        {
+          "file": "scene_01_hook.png",
+          "bytes": 410376,
+          "sha256": "d054b0949d1168030cc89b2f5f6b94933677f0883e266963fe1130271214d007"
+        },
+        {
+          "file": "scene_02_interface.png",
+          "bytes": 186079,
+          "sha256": "5189db77f02c32d7152380e3f94936b6a0e597dc587203510459a1eceb14f310"
+        },
+        {
+          "file": "scene_03_studios.png",
+          "bytes": 345481,
+          "sha256": "931b263041ba509a842d53fec968129645329e911949afd6f5703c7702060190"
+        },
+        {
+          "file": "scene_04_cta.png",
+          "bytes": 508453,
+          "sha256": "1e263556d13b67ee066a791c6247e5d3885856b6f7daf02ac62bbab27becdc77"
+        }
+      ],
+      "verified_elements": [
+        "Scene 1: Kinetic typography with mint accents",
+        "Scene 2: Real ToolsOnDesk desktop application screenshot (1920x1080) in window frame",
+        "Scene 3: 3 feature cards (AI Image Studio, Motion Studio, Vector Studio)",
+        "Scene 4: Animated SVG logo and mint CTA button with brand footer"
+      ]
+    },
+    "visual_parity": {
+      "test_time_sec": 2,
+      "export_frame": "/home/mateusarcedev/projetos/arce-tools/exports/mission_10_3/parity/export_frame_2s.png",
+      "preview_frame": "/home/mateusarcedev/projetos/arce-tools/exports/mission_10_3/parity/preview_frame_2s.png",
+      "ssim": 0.960547,
+      "psnr_db": 21.20547,
+      "ssim_summary": "[Parsed_ssim_0 @ 0x722e64003b00] SSIM R:0.962909 (14.307349) G:0.959135 (13.886444) B:0.959597 (13.935906) All:0.960547 (14.039211)",
+      "psnr_summary": "[Parsed_psnr_0 @ 0x7905c8003b00] PSNR r:21.846730 g:20.568588 b:21.296198 average:21.205470 min:21.205470 max:21.205470",
+      "status": "PASSED"
+    },
+    "etapa_2_minimal_proof": {
+      "description": "2-second 30fps minimal proof with moving circle centroid verification",
+      "status": "PASSED (Frame 0: 100px, Frame 30: 646.4px, Frame 59: 1180px)"
+    },
+    "etapa_6_components_showcase": {
+      "description": "All 12 programmatic components proven in HTML/Canvas, frames, and MP4",
+      "components_verified": [
+        "AnimatedGrid",
+        "AnimatedArray",
+        "AnimatedChart",
+        "ProgressCounter",
+        "AnimatedBar",
+        "DiagramNode",
+        "AnimatedConnector",
+        "FeatureCard",
+        "ScreenshotShowcase",
+        "LogoReveal",
+        "ShapeReveal",
+        "ComparisonChart"
+      ],
+      "status": "PASSED (100% components verified)"
+    },
+    "anti_regression_tests": {
+      "black_frame_detection": "PASSED (YAVG luminance verified)",
+      "no_dropped_components": "PASSED (12 of 12 components mapped and preserved)",
+      "cancellation_safety": "PASSED (token cancel immediately stops process & cleans up)",
+      "exact_frame_count": "PASSED (60 frames for 2.0s @ 30fps)",
+      "security_sandbox": "PASSED (Path traversal, file://, SSRF blocked)"
+    }
+  },
+  "security_isolation": {
+    "network_policy": "All external network requests blocked via route abort",
+    "asset_allowlist": "Only local disk assets registered during composition scan are allowed",
+    "sandbox_mode": "Chromium headless --no-sandbox with isolated blank page",
+    "credential_store": "Not exposed to renderer environment",
+    "tauri_ipc": "Not exposed to renderer browser page"
+  },
+  "persistence_locations": [
+    "/home/mateusarcedev/projetos/arce-tools/exports/mission_10_3",
+    "/home/mateusarcedev/.local/share/ToolsOnDesk/exports/mission_10_3"
+  ]
+}

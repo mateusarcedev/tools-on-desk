@@ -885,6 +885,7 @@ pub fn add_asset_to_motion_composition(
         z_index: 0,
         background_color: None,
         border_radius: None,
+        component_type: None,
         border_width: None,
         border_color: None,
         gradient: None,

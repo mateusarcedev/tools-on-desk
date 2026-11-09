@@ -26,29 +26,6 @@ export const MotionPlayer: React.FC<MotionPlayerProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const lastTimestampRef = useRef<number | null>(null);
 
-  // Easing calculators
-  const calculateEasing = (t: number, easing?: string): number => {
-    const clamped = Math.max(0, Math.min(1, t));
-    switch (easing) {
-      case 'ease_in_out':
-        return clamped < 0.5
-          ? 4 * clamped * clamped * clamped
-          : 1 - Math.pow(-2 * clamped + 2, 3) / 2;
-      case 'spring':
-      case 'bounce': {
-        const c4 = (2 * Math.PI) / 3;
-        return clamped === 0
-          ? 0
-          : clamped === 1
-          ? 1
-          : Math.pow(2, -10 * clamped) * Math.sin((clamped * 10 - 0.75) * c4) + 1;
-      }
-      case 'linear':
-      default:
-        return clamped;
-    }
-  };
-
   // Render a single frame onto the canvas using shared Motion Canvas Renderer
   const renderFrame = useCallback(
     (timeSec: number) => {

@@ -368,6 +368,8 @@ pub struct MotionLayer {
     pub border_color: Option<String>,
     pub gradient: Option<GradientPlan>,
     pub shadow: Option<ShadowPlan>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub component_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

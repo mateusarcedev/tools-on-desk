@@ -69,6 +69,8 @@ pub struct LayerPlan {
     pub style: StylePlan,
     pub animation: Option<AnimationPlan>,
     pub z_index: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub component_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -770,6 +772,7 @@ Generate a professional motion design plan now."#,
             },
             animation: None,
             z_index: -100,
+            component_type: None,
         });
 
         // Reference images as layers
@@ -829,6 +832,7 @@ Generate a professional motion design plan now."#,
                         preset: Some("zoom_in".to_string()),
                     }),
                     z_index: 10 + ref_idx as i32,
+                component_type: None,
                 });
             }
         }
@@ -955,6 +959,7 @@ Generate a professional motion design plan now."#,
                         preset: Some("spring".to_string()),
                     }),
                     z_index: 50,
+                    component_type: Some("logoreveal".to_string()),
                 });
             }
         } else {
@@ -1019,6 +1024,7 @@ Generate a professional motion design plan now."#,
                     preset: Some("scale_in".to_string()),
                 }),
                 z_index: 5,
+                component_type: None,
             });
         }
 
@@ -1084,6 +1090,7 @@ Generate a professional motion design plan now."#,
             style,
             animation,
             z_index: 20,
+            component_type: None,
         }
     }
 
@@ -1159,6 +1166,7 @@ Generate a professional motion design plan now."#,
                 })
             },
             z_index: 15,
+            component_type: None,
         }
     }
 
@@ -1219,21 +1227,45 @@ Generate a professional motion design plan now."#,
     }
 
     fn layer_plan_to_layer(&self, plan: &LayerPlan) -> MotionLayer {
+        let name_lower = plan.name.to_lowercase();
+        let content_lower = plan.content.to_lowercase();
+        let comp_type = plan.component_type.clone().or_else(|| {
+            let known = [
+                "animatedgrid", "animatedarray", "animatedchart", "progresscounter",
+                "animatedbar", "diagramnode", "animatedconnector", "featurecard",
+                "screenshotshowcase", "logoreveal", "shapereveal", "comparisonchart",
+            ];
+            for k in &known {
+                if name_lower.contains(k) || content_lower.contains(k) {
+                    return Some(k.to_string());
+                }
+            }
+            if matches!(plan.layer_type, LayerType::Chart) {
+                return Some("animatedchart".to_string());
+            }
+            if matches!(plan.layer_type, LayerType::Screenshot) {
+                return Some("screenshotshowcase".to_string());
+            }
+            None
+        });
+
+        let layer_type_str = match plan.layer_type {
+            LayerType::Text => "text".to_string(),
+            LayerType::Image => "image".to_string(),
+            LayerType::Video => "video".to_string(),
+            LayerType::Shape => "shape".to_string(),
+            LayerType::Gradient => "gradient".to_string(),
+            LayerType::Svg => "svg".to_string(),
+            LayerType::Icon => "icon".to_string(),
+            LayerType::Screenshot => "screenshot".to_string(),
+            LayerType::Chart => "chart".to_string(),
+            LayerType::Group => "group".to_string(),
+            LayerType::Audio => "audio".to_string(),
+        };
+
         MotionLayer {
             id: plan.id.clone(),
-            layer_type: match plan.layer_type {
-                LayerType::Text => "text".to_string(),
-                LayerType::Image => "image".to_string(),
-                LayerType::Video => "video".to_string(),
-                LayerType::Shape => "shape".to_string(),
-                LayerType::Gradient => "gradient".to_string(),
-                LayerType::Svg => "svg".to_string(),
-                LayerType::Icon => "icon".to_string(),
-                LayerType::Screenshot => "image".to_string(),
-                LayerType::Chart => "shape".to_string(),
-                LayerType::Group => "group".to_string(),
-                LayerType::Audio => "audio".to_string(),
-            },
+            layer_type: layer_type_str,
             name: plan.name.clone(),
             content: plan.content.clone(),
             start_time: plan.start_time,
@@ -1273,6 +1305,7 @@ Generate a professional motion design plan now."#,
                 blur: s.blur,
                 color: s.color,
             }),
+            component_type: comp_type,
         }
     }
 }

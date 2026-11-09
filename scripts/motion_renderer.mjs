@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ToolsOnDesk Headless HTML/Canvas Motion Renderer
+ * ToolsOnDesk Headless HTML/Canvas Motion Renderer (Mission 10.3)
  * Captures real canvas frames deterministically and encodes them to MP4 via FFmpeg.
  */
 
@@ -46,11 +46,23 @@ function parseArgs() {
   return options;
 }
 
-// Security: Validate file paths to avoid path traversal
+// Security: Validate file paths to avoid path traversal (ETAPA 4)
 function validateSafePath(p) {
   if (!p) return null;
   const resolved = path.resolve(p);
   return resolved;
+}
+
+function getSafeMimeType(filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case '.png': return 'image/png';
+    case '.jpg':
+    case '.jpeg': return 'image/jpeg';
+    case '.svg': return 'image/svg+xml';
+    case '.webp': return 'image/webp';
+    default: return 'application/octet-stream';
+  }
 }
 
 async function main() {
@@ -75,10 +87,11 @@ async function main() {
     }
   }
 
-  const width = Math.max(320, composition.width || 1080);
-  const height = Math.max(240, composition.height || 1080);
+  // Enforce resource & security limits (ETAPA 4)
+  const width = Math.min(3840, Math.max(320, composition.width || 1080));
+  const height = Math.min(2160, Math.max(240, composition.height || 1080));
   const fps = Math.min(60, Math.max(15, options.fps || composition.fps || 30));
-  const durationSec = Math.max(0.5, composition.duration_sec || 5.0);
+  const durationSec = Math.min(180, Math.max(0.5, composition.duration_sec || 5.0));
   const totalFrames = Math.ceil(durationSec * fps);
 
   const outputPath = validateSafePath(options.output);
@@ -93,14 +106,73 @@ async function main() {
     fs.mkdirSync(framesDir, { recursive: true });
   }
 
-  // Load motion canvas bundle
+  // Ensure motion canvas bundle exists
   const bundlePath = path.join(__dirname, 'dist', 'motion_canvas.js');
+  if (!fs.existsSync(bundlePath)) {
+    console.log('Building motion_canvas.js bundle...');
+    const { bundleMotionCanvas } = await import('./bundle_motion_canvas.mjs');
+    await bundleMotionCanvas();
+  }
+
   let bundleCode = '';
   if (fs.existsSync(bundlePath)) {
     bundleCode = fs.readFileSync(bundlePath, 'utf-8');
   } else {
     console.error('Bundle not found at', bundlePath);
     process.exit(1);
+  }
+
+  // Load local font binaries for deterministic offline rendering
+  const publicFontsDir = path.resolve(__dirname, '..', 'public', 'fonts');
+  let geistBase64 = '';
+  let geistMonoBase64 = '';
+  const geistPath = path.join(publicFontsDir, 'Geist.woff2');
+  const geistMonoPath = path.join(publicFontsDir, 'GeistMono.woff2');
+  if (fs.existsSync(geistPath)) {
+    geistBase64 = fs.readFileSync(geistPath).toString('base64');
+  }
+  if (fs.existsSync(geistMonoPath)) {
+    geistMonoBase64 = fs.readFileSync(geistMonoPath).toString('base64');
+  }
+
+  // Gather and convert all local asset images to Data URIs (ETAPA 4 & ETAPA 6)
+  const imageMap = {};
+  function registerImage(rawPath) {
+    if (!rawPath || typeof rawPath !== 'string') return;
+    if (rawPath.startsWith('data:')) {
+      imageMap[rawPath] = rawPath;
+      return;
+    }
+    let resolved = path.isAbsolute(rawPath) ? rawPath : path.resolve(process.cwd(), rawPath);
+    if (!fs.existsSync(resolved)) {
+      const rootResolved = path.resolve(__dirname, '..', rawPath);
+      if (fs.existsSync(rootResolved)) {
+        resolved = rootResolved;
+      }
+    }
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+      const mime = getSafeMimeType(resolved);
+      const buf = fs.readFileSync(resolved);
+      const uri = `data:${mime};base64,${buf.toString('base64')}`;
+      imageMap[rawPath] = uri;
+      imageMap[resolved] = uri;
+    }
+  }
+
+  for (const scene of composition.scenes || []) {
+    for (const layer of scene.layers || []) {
+      const lType = (layer.layer_type || '').toLowerCase();
+      const compType = (layer.component_type || '').toLowerCase();
+      if (
+        lType === 'image' ||
+        lType === 'screenshot' ||
+        compType === 'screenshotshowcase' ||
+        compType === 'logoreveal' ||
+        (layer.content && (layer.content.endsWith('.png') || layer.content.endsWith('.jpg') || layer.content.endsWith('.jpeg') || layer.content.endsWith('.svg') || layer.content.endsWith('.webp')))
+      ) {
+        registerImage(layer.content);
+      }
+    }
   }
 
   // Setup Chromium browser
@@ -118,6 +190,25 @@ async function main() {
     ],
   });
 
+  let ffmpegProc = null;
+  const cleanup = async () => {
+    try {
+      if (ffmpegProc && !ffmpegProc.killed) {
+        ffmpegProc.kill('SIGKILL');
+      }
+      await browser.close();
+    } catch {}
+  };
+
+  process.on('SIGINT', async () => {
+    await cleanup();
+    process.exit(130);
+  });
+  process.on('SIGTERM', async () => {
+    await cleanup();
+    process.exit(143);
+  });
+
   const page = await browser.newPage({
     viewport: { width, height },
   });
@@ -132,14 +223,30 @@ async function main() {
     }
   });
 
-  // Prepare HTML page
+  // Prepare HTML page with offline embedded fonts
+  const fontStyles = `
+    @font-face {
+      font-family: 'Geist';
+      src: url('data:font/woff2;base64,${geistBase64}') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    @font-face {
+      font-family: 'Geist Mono';
+      src: url('data:font/woff2;base64,${geistMonoBase64}') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+    }
+  `;
+
   const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
+    ${fontStyles}
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0B0F10; overflow: hidden; width: ${width}px; height: ${height}px; }
+    body { background: ${composition.background_color || '#0B0F10'}; overflow: hidden; width: ${width}px; height: ${height}px; font-family: 'Geist', sans-serif; }
     #canvas { display: block; width: ${width}px; height: ${height}px; }
   </style>
 </head>
@@ -150,6 +257,17 @@ async function main() {
     window.COMPOSITION = ${JSON.stringify(composition)};
     window.CANVAS = document.getElementById('canvas');
     window.CTX = window.CANVAS.getContext('2d', { willReadFrequently: true });
+
+    window.initEnvironment = async function(images) {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      if (window.ToolsOnDeskMotion && window.ToolsOnDeskMotion.preloadImage) {
+        for (const [origPath, dataUri] of Object.entries(images)) {
+          await window.ToolsOnDeskMotion.preloadImage(origPath, dataUri);
+        }
+      }
+    };
 
     window.renderFrame = function(timeSec) {
       if (window.ToolsOnDeskMotion && window.ToolsOnDeskMotion.renderMotionCanvasFrame) {
@@ -162,6 +280,11 @@ async function main() {
 </html>`;
 
   await page.setContent(htmlContent, { waitUntil: 'load' });
+
+  // Preload fonts and images inside Chromium
+  await page.evaluate(async (images) => {
+    await window.initEnvironment(images);
+  }, imageMap);
 
   // Prepare FFmpeg process
   const crf = options.quality === 'ultra' ? '16' : options.quality === 'standard' ? '23' : '20';
@@ -196,7 +319,7 @@ async function main() {
     outputPath
   );
 
-  const ffmpegProc = spawn(options.ffmpeg, ffmpegArgs, {
+  ffmpegProc = spawn(options.ffmpeg, ffmpegArgs, {
     stdio: ['pipe', 'inherit', 'inherit'],
   });
 
@@ -224,7 +347,7 @@ async function main() {
     // Pipe to FFmpeg
     ffmpegProc.stdin.write(buffer);
 
-    // Progress report every 15 frames or at the end
+    // Progress report
     if (frame % 15 === 0 || frame === totalFrames - 1) {
       const progress = (frame + 1) / totalFrames;
       const jsonStatus = JSON.stringify({
@@ -260,7 +383,7 @@ async function main() {
   })}`);
 }
 
-main().catch((err) => {
+main().catch(async (err) => {
   console.error('Render error:', err);
   process.exit(1);
 });

@@ -153,14 +153,15 @@ export interface MotionScene {
   layers: MotionLayer[];
 }
 
-export interface GradientStopPlan {
+export interface GradientStop {
   color: string;
   position: number;
 }
+export type GradientStopPlan = GradientStop;
 
 export interface GradientPlan {
   type: string;
-  stops: GradientStopPlan[];
+  stops: GradientStop[];
   angle: number;
 }
 
@@ -188,6 +189,9 @@ export interface MotionLayer {
   color: string;
   font_size?: number;
   font_family?: string;
+  font_weight?: string;
+  text_align?: string;
+  asset_id?: string;
   animation?: MotionAnimation;
   z_index: number;
   background_color?: string;
@@ -475,23 +479,6 @@ export interface StylePlan {
   gradient?: GradientPlan;
 }
 
-export interface ShadowPlan {
-  offset_x: number;
-  offset_y: number;
-  blur: number;
-  color: string;
-}
-
-export interface GradientPlan {
-  type: 'linear' | 'radial';
-  stops: GradientStop[];
-  angle: number;
-}
-
-export interface GradientStop {
-  color: string;
-  position: number;
-}
 
 export interface AnimationPlan {
   tracks: AnimationTrack[];

@@ -14,7 +14,7 @@ pub async fn frames_complete(
     output_dir: String,
     fps: u32,
     duration: f32,
-) -> Result<(), crate::error::AppError> {
+) -> Result<String, crate::error::AppError> {
     crate::engines::renderer::frames_complete(output_dir, fps, duration).await
 }
 

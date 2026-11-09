@@ -197,8 +197,15 @@ async fn test_big_o_educational_video() {
     };
 
     let composition = MotionDirector::new().plan_to_composition(&plan);
-    let output_dir = Path::new("target/export/big_o_proof");
+    let output_dir = Path::new("exports/mission_10_3/big_o");
     std::fs::create_dir_all(output_dir).unwrap();
+    std::fs::write(output_dir.join("big_o_plan.json"), serde_json::to_string_pretty(&plan).unwrap()).unwrap();
+    std::fs::write(output_dir.join("big_o_composition.json"), serde_json::to_string_pretty(&composition).unwrap()).unwrap();
+
+    let persistent_dir = Path::new("/home/mateusarcedev/.local/share/ToolsOnDesk/exports/mission_10_3/big_o");
+    let _ = std::fs::create_dir_all(persistent_dir);
+    let _ = std::fs::write(persistent_dir.join("big_o_plan.json"), serde_json::to_string_pretty(&plan).unwrap());
+    let _ = std::fs::write(persistent_dir.join("big_o_composition.json"), serde_json::to_string_pretty(&composition).unwrap());
 
     let output_filename = "big_o_educational_60s.mp4".to_string();
     let target_video_path = output_dir.join(&output_filename);
@@ -271,6 +278,41 @@ async fn test_big_o_educational_video() {
 
     assert!(contact_sheet_path.is_file(), "Contact sheet não gerada!");
     println!("Contact sheet gerada com sucesso em: {}", contact_sheet_path.display());
+
+    // Copy to persistent directory
+    let persistent_mp4 = persistent_dir.join(&output_filename);
+    let persistent_sheet = persistent_dir.join("contact_sheet_big_o_6_scenes.png");
+    let _ = std::fs::copy(&target_video_path, &persistent_mp4);
+    let _ = std::fs::copy(&contact_sheet_path, &persistent_sheet);
+
+    // Extract individual scene stills
+    let stills_dir = output_dir.join("stills");
+    let _ = std::fs::create_dir_all(&stills_dir);
+    let persistent_stills = persistent_dir.join("stills");
+    let _ = std::fs::create_dir_all(&persistent_stills);
+
+    let stills = [
+        (120, "scene_01_intro.png"),
+        (420, "scene_02_o1.png"),
+        (720, "scene_03_ologn.png"),
+        (1020, "scene_04_on.png"),
+        (1320, "scene_05_on2.png"),
+        (1620, "scene_06_summary.png"),
+    ];
+
+    for (fn_idx, fname) in stills {
+        let still_path = stills_dir.join(fname);
+        let _ = std::process::Command::new("ffmpeg")
+            .args([
+                "-y",
+                "-i", &target_video_path.to_string_lossy(),
+                "-vf", &format!("select='eq(n\\,{})'", fn_idx),
+                "-vframes", "1",
+                still_path.to_str().unwrap(),
+            ])
+            .output();
+        let _ = std::fs::copy(&still_path, persistent_stills.join(fname));
+    }
 }
 
 fn create_layer(
@@ -334,5 +376,18 @@ fn create_layer(
             preset: Some("fade_in".to_string()),
         }),
         z_index,
+        component_type: {
+            let known = [
+                "animatedgrid", "animatedarray", "animatedchart", "progresscounter",
+                "animatedbar", "diagramnode", "animatedconnector", "featurecard",
+                "screenshotshowcase", "logoreveal", "shapereveal", "comparisonchart",
+            ];
+            let n = name.to_lowercase();
+            if known.iter().any(|k| n.contains(k)) {
+                Some(name.to_string())
+            } else {
+                None
+            }
+        },
     }
 }

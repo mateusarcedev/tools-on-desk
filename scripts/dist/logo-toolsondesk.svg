@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 120" width="600" height="120">
+  <defs>
+    <linearGradient id="logoMint" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#36FFCE" />
+      <stop offset="100%" stop-color="#15F5BA" />
+    </linearGradient>
+    <linearGradient id="logoTeal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#15F5BA" />
+      <stop offset="100%" stop-color="#076B39" />
+    </linearGradient>
+  </defs>
+
+  <!-- Left Icon Mark -->
+  <g transform="translate(16, 16) scale(0.17)">
+    <rect width="512" height="512" rx="104" fill="#141A1C" stroke="#1F292B" stroke-width="8" />
+    <path d="M120 160 C120 148, 130 140, 142 140 L370 140 C382 140, 392 148, 392 160 L392 188 C392 200, 382 208, 370 208 L142 208 C130 208, 120 200, 120 188 Z" fill="url(#logoMint)" />
+    <path d="M224 208 L288 208 L288 352 C288 364, 278 372, 266 372 L246 372 C234 372, 224 364, 224 352 Z" fill="url(#logoTeal)" />
+    <path d="M288 224 C348 224, 388 260, 388 310 C388 360, 348 396, 288 396 L220 396 C206 396, 196 386, 196 372 L196 348 L266 348 C306 348, 332 328, 332 310 C332 292, 306 272, 266 272 L224 272 L224 224 Z" fill="url(#logoMint)" opacity="0.95" />
+    <polygon points="156,268 184,240 184,296" fill="#36FFCE" opacity="0.8" />
+  </g>
+
+  <!-- Wordmark Text -->
+  <text x="130" y="68" font-family="'Geist', -apple-system, BlinkMacSystemFont, sans-serif" font-weight="700" font-size="40" fill="#F3F4F6" letter-spacing="-1px">
+    Tools<tspan fill="#15F5BA">OnDesk</tspan>
+  </text>
+  <text x="132" y="94" font-family="'Geist Mono', monospace" font-weight="500" font-size="13" fill="#6B7280" letter-spacing="1.5px">
+    CREATIVE &amp; MEDIA STUDIO
+  </text>
+</svg>

@@ -73,6 +73,7 @@ async fn test_manual_plan_with_asset() {
                         },
                         animation: None,
                         z_index: -100,
+                        component_type: None,
                     },
                     toolsondesk_lib::engines::motion_director::LayerPlan {
                         id: "logo".to_string(),
@@ -123,6 +124,7 @@ async fn test_manual_plan_with_asset() {
                             preset: Some("zoom_in".to_string()),
                         }),
                         z_index: 10,
+                        component_type: None,
                     },
                 ],
                 transition_in: None,

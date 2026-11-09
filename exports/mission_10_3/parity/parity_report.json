@@ -1,0 +1,10 @@
+{
+  "test_time_sec": 2,
+  "export_frame": "/home/mateusarcedev/projetos/arce-tools/exports/mission_10_3/parity/export_frame_2s.png",
+  "preview_frame": "/home/mateusarcedev/projetos/arce-tools/exports/mission_10_3/parity/preview_frame_2s.png",
+  "ssim": 0.960547,
+  "psnr_db": 21.20547,
+  "ssim_summary": "[Parsed_ssim_0 @ 0x722e64003b00] SSIM R:0.962909 (14.307349) G:0.959135 (13.886444) B:0.959597 (13.935906) All:0.960547 (14.039211)",
+  "psnr_summary": "[Parsed_psnr_0 @ 0x7905c8003b00] PSNR r:21.846730 g:20.568588 b:21.296198 average:21.205470 min:21.205470 max:21.205470",
+  "status": "PASSED"
+}
